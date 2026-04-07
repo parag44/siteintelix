@@ -68,7 +68,7 @@ add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 function siteintelix_register_admin_menu() {
 	add_menu_page(
 		__( 'SiteIntelix', 'siteintelix' ), // Browser <title>.
-		__( 'Insight Panel', 'siteintelix' ),          // Menu label.
+	__( 'SiteIntelix Panel', 'siteintelix' ),          // Menu label.
 		'manage_options',                                       // Capability.
 		'siteintelix',                                  // Menu slug.
 		'siteintelix_render_admin_page',                                // Callback.

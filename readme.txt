@@ -95,11 +95,11 @@ Requires Administrator authentication:
 2. Upload the `siteintelix` folder to `/wp-content/plugins/`.
 3. Activate from the **Plugins** screen.
 
-After activation, find **Insight Panel** in the left-hand admin menu.
+After activation, find **SiteIntelix Panel** in the left-hand admin menu.
 
 == Frequently Asked Questions ==
 
-= Who can see the Insight Panel? =
+= Who can see the SiteIntelix Panel? =
 Only users with the `manage_options` capability (Administrators by default).
 
 = Does this plugin slow down my site? =
