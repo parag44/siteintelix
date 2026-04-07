@@ -200,6 +200,9 @@ function siteintelix_row( $label, $value ) {
 				<table class="siteintelix-table">
 					<tbody>
 					<?php
+					$uploads = $siteintelix_info['server']['uploads_dir'];
+					$extensions_enabled = implode( ', ', array_keys( array_filter( $siteintelix_info['server']['php_extensions'] ) ) );
+
 						siteintelix_row( __( 'PHP Version', 'siteintelix' ), esc_html( $siteintelix_info['server']['php_version'] ) . ' ' . siteintelix_badge( $siteintelix_checks['php_version']['status'] ) );
 						siteintelix_row( __( 'PHP SAPI', 'siteintelix' ), esc_html( $siteintelix_info['server']['php_sapi'] ) );
 						siteintelix_row( __( 'Server Software', 'siteintelix' ), esc_html( $siteintelix_info['server']['server_software'] ) );
@@ -211,12 +214,11 @@ function siteintelix_row( $label, $value ) {
 						siteintelix_row( __( 'Operating System', 'siteintelix' ), esc_html( $siteintelix_info['server']['os'] ) );
 						siteintelix_row( __( 'Architecture', 'siteintelix' ), esc_html( $siteintelix_info['server']['architecture'] ) );
 						siteintelix_row( __( 'OPcache', 'siteintelix' ), $siteintelix_info['server']['opcache'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
-						<?php $uploads = $siteintelix_info['server']['uploads_dir']; ?>
 						siteintelix_row( __( 'Uploads Directory', 'siteintelix' ), esc_html( $uploads['basedir'] ) );
 						siteintelix_row( __( 'Disk Free', 'siteintelix' ), esc_html( $siteintelix_info['server']['disk_free'] ) );
 						siteintelix_row( __( 'Database Host', 'siteintelix' ), esc_html( $siteintelix_info['server']['db_host'] ) );
 						siteintelix_row( __( 'Database Name', 'siteintelix' ), esc_html( $siteintelix_info['server']['db_name'] ) );
-						siteintelix_row( __( 'Key PHP Extensions', 'siteintelix' ), esc_html( implode( ', ', array_keys( array_filter( $siteintelix_info['server']['php_extensions'] ) ) ) ) );
+						siteintelix_row( __( 'Key PHP Extensions', 'siteintelix' ), esc_html( $extensions_enabled ) );
 					?>
 				</tbody>
 			</table>
