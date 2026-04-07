@@ -146,10 +146,14 @@ function siteintelix_row( $label, $value ) {
 			<div class="siteintelix-card__body">
 				<table class="siteintelix-table">
 					<tbody>
-						<?php
+					<?php
+						siteintelix_row( __( 'Site Title', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['site_title'] ) );
 						siteintelix_row( __( 'WP Version', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['wp_version'] ) . ' ' . siteintelix_badge( $siteintelix_checks['wp_version']['status'] ) );
 						siteintelix_row( __( 'Site URL', 'siteintelix' ), '<a href="' . esc_url( $siteintelix_info['wordpress']['site_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $siteintelix_info['wordpress']['site_url'] ) . '</a>' );
 						siteintelix_row( __( 'Home URL', 'siteintelix' ), '<a href="' . esc_url( $siteintelix_info['wordpress']['home_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $siteintelix_info['wordpress']['home_url'] ) . '</a>' );
+						siteintelix_row( __( 'Permalinks', 'siteintelix' ), $siteintelix_info['wordpress']['permalink'] ? esc_html( $siteintelix_info['wordpress']['permalink'] ) : esc_html__( 'Plain (?p=ID)', 'siteintelix' ) );
+						siteintelix_row( __( 'Timezone', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['timezone'] ) );
+						siteintelix_row( __( 'Admin Email', 'siteintelix' ), '<a href="mailto:' . esc_attr( $siteintelix_info['wordpress']['admin_email'] ) . '">' . esc_html( $siteintelix_info['wordpress']['admin_email'] ) . '</a>' );
 						siteintelix_row( __( 'Active Theme', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['active_theme'] ) );
 						siteintelix_row( __( 'Language', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['language'] ) );
 						siteintelix_row( __( 'Charset', 'siteintelix' ), esc_html( $siteintelix_info['wordpress']['charset'] ) );
@@ -195,7 +199,7 @@ function siteintelix_row( $label, $value ) {
 			<div class="siteintelix-card__body">
 				<table class="siteintelix-table">
 					<tbody>
-						<?php
+					<?php
 						siteintelix_row( __( 'PHP Version', 'siteintelix' ), esc_html( $siteintelix_info['server']['php_version'] ) . ' ' . siteintelix_badge( $siteintelix_checks['php_version']['status'] ) );
 						siteintelix_row( __( 'PHP SAPI', 'siteintelix' ), esc_html( $siteintelix_info['server']['php_sapi'] ) );
 						siteintelix_row( __( 'Server Software', 'siteintelix' ), esc_html( $siteintelix_info['server']['server_software'] ) );
@@ -206,10 +210,17 @@ function siteintelix_row( $label, $value ) {
 						siteintelix_row( __( 'Post Max Size', 'siteintelix' ), esc_html( $siteintelix_info['server']['post_max_size'] ) );
 						siteintelix_row( __( 'Operating System', 'siteintelix' ), esc_html( $siteintelix_info['server']['os'] ) );
 						siteintelix_row( __( 'Architecture', 'siteintelix' ), esc_html( $siteintelix_info['server']['architecture'] ) );
-						?>
-					</tbody>
-				</table>
-			</div>
+						siteintelix_row( __( 'OPcache', 'siteintelix' ), $siteintelix_info['server']['opcache'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
+						<?php $uploads = $siteintelix_info['server']['uploads_dir']; ?>
+						siteintelix_row( __( 'Uploads Directory', 'siteintelix' ), esc_html( $uploads['basedir'] ) );
+						siteintelix_row( __( 'Disk Free', 'siteintelix' ), esc_html( $siteintelix_info['server']['disk_free'] ) );
+						siteintelix_row( __( 'Database Host', 'siteintelix' ), esc_html( $siteintelix_info['server']['db_host'] ) );
+						siteintelix_row( __( 'Database Name', 'siteintelix' ), esc_html( $siteintelix_info['server']['db_name'] ) );
+						siteintelix_row( __( 'Key PHP Extensions', 'siteintelix' ), esc_html( implode( ', ', array_keys( array_filter( $siteintelix_info['server']['php_extensions'] ) ) ) ) );
+					?>
+				</tbody>
+			</table>
+		</div>
 		</section>
 
 		<!-- ── Environment card ───────────────────────────────────────── -->
@@ -225,7 +236,7 @@ function siteintelix_row( $label, $value ) {
 			<div class="siteintelix-card__body">
 				<table class="siteintelix-table">
 					<tbody>
-						<?php
+					<?php
 						siteintelix_row( __( 'REST API', 'siteintelix' ), esc_html( $siteintelix_checks['rest_api']['value'] ) . ' ' . siteintelix_badge( $siteintelix_checks['rest_api']['status'] ) );
 						siteintelix_row( __( 'WP_DEBUG', 'siteintelix' ), esc_html( $siteintelix_checks['debug_mode']['value'] ) . ' ' . siteintelix_badge( $siteintelix_checks['debug_mode']['status'] ) );
 						siteintelix_row( __( 'Debug Log', 'siteintelix' ), $siteintelix_info['environment']['debug_log'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
@@ -234,10 +245,15 @@ function siteintelix_row( $label, $value ) {
 						siteintelix_row( __( 'Environment Type', 'siteintelix' ), esc_html( $siteintelix_info['environment']['environment'] ) );
 						siteintelix_row( __( 'Object Cache', 'siteintelix' ), $siteintelix_info['environment']['cache'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
 						siteintelix_row( __( 'Script Debug', 'siteintelix' ), $siteintelix_info['environment']['script_debug'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
-						?>
-					</tbody>
-				</table>
-			</div>
+						siteintelix_row( __( 'File Editor', 'siteintelix' ), $siteintelix_info['environment']['file_edit'] ? esc_html__( 'Disabled', 'siteintelix' ) : esc_html__( 'Enabled', 'siteintelix' ) );
+						siteintelix_row( __( 'File Modifications', 'siteintelix' ), $siteintelix_info['environment']['file_mods'] ? esc_html__( 'Disabled', 'siteintelix' ) : esc_html__( 'Enabled', 'siteintelix' ) );
+						siteintelix_row( __( 'Core Auto-Updates', 'siteintelix' ), is_string( $siteintelix_info['environment']['auto_update'] ) ? esc_html( $siteintelix_info['environment']['auto_update'] ) : ( $siteintelix_info['environment']['auto_update'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) ) );
+						siteintelix_row( __( 'Alternate Cron', 'siteintelix' ), $siteintelix_info['environment']['alt_cron'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
+						siteintelix_row( __( 'Cron Lock Timeout', 'siteintelix' ), $siteintelix_info['environment']['cron_lock'] ? esc_html( $siteintelix_info['environment']['cron_lock'] . 's' ) : esc_html__( 'Default', 'siteintelix' ) );
+					?>
+				</tbody>
+			</table>
+		</div>
 
 			<!-- Health warnings -->
 			<?php

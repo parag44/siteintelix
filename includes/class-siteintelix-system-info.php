@@ -53,8 +53,12 @@ class SITEINTELIX_System_Info {
 
 		return array(
 			'wp_version'     => get_bloginfo( 'version' ),
+			'site_title'     => get_bloginfo( 'name' ),
 			'site_url'       => get_site_url(),
 			'home_url'       => get_home_url(),
+			'permalink'     => get_option( 'permalink_structure', '' ),
+			'timezone'      => self::get_timezone_string(),
+			'admin_email'   => get_bloginfo( 'admin_email' ),
 			'active_theme'   => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
 			'active_plugins' => self::get_active_plugins_list(),
 			'multisite'      => is_multisite(),
@@ -116,6 +120,12 @@ class SITEINTELIX_System_Info {
 			'post_max_size'   => ini_get( 'post_max_size' ),
 			'os'              => PHP_OS,
 			'architecture'    => PHP_INT_SIZE === 8 ? '64-bit' : '32-bit',
+			'opcache'         => (bool) ini_get( 'opcache.enable' ),
+			'php_extensions'  => self::get_extensions_snapshot(),
+			'uploads_dir'     => wp_get_upload_dir(),
+			'disk_free'       => self::get_disk_free(),
+			'db_name'         => isset( $wpdb->dbname ) ? $wpdb->dbname : '',
+			'db_host'         => isset( $wpdb->dbhost ) ? $wpdb->dbhost : '',
 		);
 	}
 
@@ -180,6 +190,11 @@ class SITEINTELIX_System_Info {
 			'environment'  => defined( 'WP_ENVIRONMENT_TYPE' ) ? WP_ENVIRONMENT_TYPE : 'production',
 			'cache'        => defined( 'WP_CACHE' ) && WP_CACHE,
 			'script_debug' => defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG,
+			'file_edit'    => defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT,
+			'file_mods'    => defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS,
+			'auto_update'  => defined( 'WP_AUTO_UPDATE_CORE' ) ? WP_AUTO_UPDATE_CORE : 'minor',
+			'alt_cron'     => defined( 'ALTERNATE_WP_CRON' ) && ALTERNATE_WP_CRON,
+			'cron_lock'    => defined( 'WP_CRON_LOCK_TIMEOUT' ) ? WP_CRON_LOCK_TIMEOUT : '',
 		);
 	}
 
@@ -204,5 +219,53 @@ class SITEINTELIX_System_Info {
 		}
 
 		return 200 === (int) wp_remote_retrieve_response_code( $response );
+	}
+
+	// -----------------------------------------------------------------------
+	// Helpers
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Return a trimmed list of key PHP extensions useful to surface.
+	 *
+	 * @return array<string, bool>
+	 */
+	private static function get_extensions_snapshot() {
+		$keys = array( 'curl', 'mbstring', 'intl', 'openssl', 'imagick', 'gd', 'zip', 'pdo', 'pdo_mysql' );
+		$result = array();
+
+		foreach ( $keys as $ext ) {
+			$result[ $ext ] = extension_loaded( $ext );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Human-readable free disk space for the WordPress root, if available.
+	 *
+	 * @return string
+	 */
+	private static function get_disk_free() {
+		$bytes = @disk_free_space( ABSPATH ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		return $bytes ? size_format( $bytes ) : __( 'Unknown', 'siteintelix' );
+	}
+
+	/**
+	 * Prefer timezone_string; fall back to gmt_offset.
+	 *
+	 * @return string
+	 */
+	private static function get_timezone_string() {
+		$tz = get_option( 'timezone_string' );
+		if ( ! empty( $tz ) ) {
+			return $tz;
+		}
+
+		$offset = get_option( 'gmt_offset', 0 );
+		$hours  = (int) $offset;
+		$mins   = ( $offset - $hours );
+		$sign   = $offset >= 0 ? '+' : '-';
+		return sprintf( 'UTC%s%02d:%02d', $sign, abs( $hours ), abs( $mins * 60 ) );
 	}
 }
