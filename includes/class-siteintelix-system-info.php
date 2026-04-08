@@ -195,7 +195,8 @@ class SITEINTELIX_System_Info {
 			rest_url( '/' ),
 			array(
 				'timeout'   => 5,
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+				// Local loopback check only; no remote third-party call is made.
+				'sslverify' => false,
 			)
 		);
 

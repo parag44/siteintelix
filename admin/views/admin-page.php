@@ -74,12 +74,12 @@ function siteintelix_row( $label, $value ) {
 				<span class="siteintelix-overall__dot" aria-hidden="true"></span>
 				<span class="siteintelix-overall__label">
 					<?php
-					$overall_labels = array(
+					$siteintelix_overall_labels = array(
 						'good'     => __( 'System Healthy', 'siteintelix' ),
 						'warning'  => __( 'Needs Attention', 'siteintelix' ),
 						'critical' => __( 'Critical Issues Found', 'siteintelix' ),
 					);
-					echo esc_html( isset( $overall_labels[ $siteintelix_overall ] ) ? $overall_labels[ $siteintelix_overall ] : $siteintelix_overall );
+					echo esc_html( isset( $siteintelix_overall_labels[ $siteintelix_overall ] ) ? $siteintelix_overall_labels[ $siteintelix_overall ] : $siteintelix_overall );
 					?>
 				</span>
 			</div>
@@ -111,21 +111,26 @@ function siteintelix_row( $label, $value ) {
 
 	<!-- Hidden JSON data island — consumed by admin.js, never rendered. -->
 	<script id="siteintelix-data-json" type="application/json">
-		<?php echo wp_json_encode( $siteintelix_info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ); ?>
+		<?php
+		echo wp_json_encode(
+			$siteintelix_info,
+			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+		);
+		?>
 	</script>
 
 	<!-- ===== Health check strip ===== -->
 	<div class="siteintelix-health-strip" role="list" aria-label="<?php esc_attr_e( 'Health check summary', 'siteintelix' ); ?>">
-		<?php foreach ( $siteintelix_checks as $check ) : ?>
+		<?php foreach ( $siteintelix_checks as $siteintelix_check ) : ?>
 			<div
-				class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $check['status'] ); ?>"
-				title="<?php echo esc_attr( $check['message'] ); ?>"
+				class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $siteintelix_check['status'] ); ?>"
+				title="<?php echo esc_attr( $siteintelix_check['message'] ); ?>"
 				role="listitem"
 				tabindex="0"
 			>
 				<span class="siteintelix-health-pill__dot" aria-hidden="true"></span>
-				<span class="siteintelix-health-pill__name"><?php echo esc_html( $check['label'] ); ?></span>
-				<span class="siteintelix-health-pill__value"><?php echo esc_html( $check['value'] ); ?></span>
+				<span class="siteintelix-health-pill__name"><?php echo esc_html( $siteintelix_check['label'] ); ?></span>
+				<span class="siteintelix-health-pill__value"><?php echo esc_html( $siteintelix_check['value'] ); ?></span>
 			</div>
 		<?php endforeach; ?>
 	</div>
@@ -140,7 +145,7 @@ function siteintelix_row( $label, $value ) {
 				<h2 class="siteintelix-card__title" id="siteintelix-card-wp-title">
 					<?php esc_html_e( 'WordPress', 'siteintelix' ); ?>
 				</h2>
-				<?php echo siteintelix_badge( $siteintelix_checks['wp_version']['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+				<?php echo wp_kses_post( siteintelix_badge( $siteintelix_checks['wp_version']['status'] ) ); ?>
 			</div>
 
 			<div class="siteintelix-card__body">
@@ -171,10 +176,10 @@ function siteintelix_row( $label, $value ) {
 						?>
 					</h3>
 					<ul class="siteintelix-plugin-list">
-						<?php foreach ( $siteintelix_info['wordpress']['active_plugins'] as $plugin_name ) : ?>
+						<?php foreach ( $siteintelix_info['wordpress']['active_plugins'] as $siteintelix_plugin_name ) : ?>
 							<li class="siteintelix-plugin-list__item">
 								<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>
-								<?php echo esc_html( $plugin_name ); ?>
+								<?php echo esc_html( $siteintelix_plugin_name ); ?>
 							</li>
 						<?php endforeach; ?>
 					</ul>
@@ -189,7 +194,7 @@ function siteintelix_row( $label, $value ) {
 				<h2 class="siteintelix-card__title" id="siteintelix-card-server-title">
 					<?php esc_html_e( 'Server', 'siteintelix' ); ?>
 				</h2>
-				<?php echo siteintelix_badge( $siteintelix_checks['php_version']['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+				<?php echo wp_kses_post( siteintelix_badge( $siteintelix_checks['php_version']['status'] ) ); ?>
 			</div>
 
 			<div class="siteintelix-card__body">
@@ -219,7 +224,7 @@ function siteintelix_row( $label, $value ) {
 				<h2 class="siteintelix-card__title" id="siteintelix-card-env-title">
 					<?php esc_html_e( 'Environment', 'siteintelix' ); ?>
 				</h2>
-				<?php echo siteintelix_badge( $siteintelix_overall ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+				<?php echo wp_kses_post( siteintelix_badge( $siteintelix_overall ) ); ?>
 			</div>
 
 			<div class="siteintelix-card__body">
@@ -255,10 +260,10 @@ function siteintelix_row( $label, $value ) {
 					<?php esc_html_e( 'Health Warnings', 'siteintelix' ); ?>
 				</h3>
 				<ul class="siteintelix-warnings__list">
-					<?php foreach ( $siteintelix_warnings as $chk ) : ?>
-						<li class="siteintelix-warnings__item siteintelix-warnings__item--<?php echo esc_attr( $chk['status'] ); ?>">
-							<strong><?php echo esc_html( $chk['label'] ); ?>:</strong>
-							<?php echo esc_html( $chk['message'] ); ?>
+					<?php foreach ( $siteintelix_warnings as $siteintelix_warning ) : ?>
+						<li class="siteintelix-warnings__item siteintelix-warnings__item--<?php echo esc_attr( $siteintelix_warning['status'] ); ?>">
+							<strong><?php echo esc_html( $siteintelix_warning['label'] ); ?>:</strong>
+							<?php echo esc_html( $siteintelix_warning['message'] ); ?>
 						</li>
 					<?php endforeach; ?>
 				</ul>
@@ -280,12 +285,12 @@ function siteintelix_row( $label, $value ) {
 				array( rest_url( 'siteintelix/v1/info' ), __( 'Full system information', 'siteintelix' ) ),
 				array( rest_url( 'siteintelix/v1/health' ), __( 'Health check results', 'siteintelix' ) ),
 			);
-			foreach ( $siteintelix_endpoints as $ep ) :
+			foreach ( $siteintelix_endpoints as $siteintelix_endpoint ) :
 				?>
 				<div class="siteintelix-endpoint">
 					<span class="siteintelix-endpoint__method">GET</span>
-					<code class="siteintelix-endpoint__url"><?php echo esc_html( $ep[0] ); ?></code>
-					<span class="siteintelix-endpoint__desc"><?php echo esc_html( $ep[1] ); ?></span>
+					<code class="siteintelix-endpoint__url"><?php echo esc_html( $siteintelix_endpoint[0] ); ?></code>
+					<span class="siteintelix-endpoint__desc"><?php echo esc_html( $siteintelix_endpoint[1] ); ?></span>
 				</div>
 			<?php endforeach; ?>
 		</div>

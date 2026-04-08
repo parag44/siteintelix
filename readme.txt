@@ -1,7 +1,7 @@
 === SiteIntelix ===
 Contributors:      parag44
 Donate link:       https://parag.bd/donate
-Tags:              system info, server info, site health, admin dashboard, php info, debug, environment
+Tags:              system info, server info, site health, admin dashboard, environment
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
