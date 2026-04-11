@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.0.0
+Stable tag:        1.1.1
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,11 +95,11 @@ Requires Administrator authentication:
 2. Upload the `siteintelix` folder to `/wp-content/plugins/`.
 3. Activate from the **Plugins** screen.
 
-After activation, find **Insight Panel** in the left-hand admin menu.
+After activation, find **SiteIntelix Panel** in the left-hand admin menu.
 
 == Frequently Asked Questions ==
 
-= Who can see the Insight Panel? =
+= Who can see the SiteIntelix Panel? =
 Only users with the `manage_options` capability (Administrators by default).
 
 = Does this plugin slow down my site? =
@@ -132,6 +132,18 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
+= 1.1.1 — 2026-04-11 =
+* Bumped plugin version to 1.1.1.
+* Synced release metadata for distribution and deployment consistency.
+
+= 1.1.0 — 2026-04-11 =
+* Updated plugin version to 1.1.0.
+* Improved output escaping in admin dashboard rendering.
+* Hardened inline JSON output encoding for safer script embedding.
+* Renamed internal template variables to plugin-prefixed names for better coding standards compliance.
+* Reduced readme tags to WordPress.org-supported limits.
+* Minor admin label and quality improvements.
+
 = 1.0.0 — 2026-03-27 =
 * Initial release.
 * WordPress info: version, site/home URL, active theme, active plugins.
@@ -146,6 +158,12 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Maintenance release with metadata/version alignment updates.
+
+= 1.1.0 =
+Security, standards, and readme compliance update. Recommended for all users.
 
 = 1.0.0 =
 Initial release — no upgrade steps required.

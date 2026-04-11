@@ -3,7 +3,7 @@
  * Plugin Name:       SiteIntelix
  * Plugin URI:        https://parag.bd/siteintelix
  * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           1.0.0
+ * Version:           1.1.1
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '1.0.0' );
+define( 'SITEINTELIX_VERSION', '1.1.1' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -68,7 +68,7 @@ add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 function siteintelix_register_admin_menu() {
 	add_menu_page(
 		__( 'SiteIntelix', 'siteintelix' ), // Browser <title>.
-		__( 'Insight Panel', 'siteintelix' ),          // Menu label.
+	__( 'SiteIntelix Panel', 'siteintelix' ),          // Menu label.
 		'manage_options',                                       // Capability.
 		'siteintelix',                                  // Menu slug.
 		'siteintelix_render_admin_page',                                // Callback.
