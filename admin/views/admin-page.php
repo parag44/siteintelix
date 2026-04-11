@@ -56,6 +56,9 @@ function siteintelix_row( $label, $value ) {
 ?>
 <div class="wrap siteintelix-wrap" id="siteintelix-dashboard">
 
+	<!-- Third-party admin notices are rendered here above SiteIntelix UI. -->
+	<div id="siteintelix-notices-slot" class="siteintelix-notices-slot" aria-live="polite"></div>
+
 	<!-- ===== Page Header ===== -->
 	<div class="siteintelix-header">
 		<div class="siteintelix-header__inner">

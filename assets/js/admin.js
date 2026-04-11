@@ -50,6 +50,37 @@
 	}
 
 	// -----------------------------------------------------------------------
+	// Keep third-party notices above SiteIntelix UI
+	// -----------------------------------------------------------------------
+	function moveThirdPartyNotices() {
+		var dashboard = document.getElementById( 'siteintelix-dashboard' );
+		var slot      = document.getElementById( 'siteintelix-notices-slot' );
+		if ( ! dashboard || ! slot ) { return; }
+
+		var candidates = dashboard.querySelectorAll( '.notice, .update-nag, .error, .updated' );
+		candidates.forEach( function ( el ) {
+			if ( el.closest( '#siteintelix-notices-slot' ) ) {
+				return;
+			}
+
+			slot.appendChild( el );
+		} );
+	}
+
+	function initNoticeRelocation() {
+		var dashboard = document.getElementById( 'siteintelix-dashboard' );
+		if ( ! dashboard ) { return; }
+
+		moveThirdPartyNotices();
+
+		var observer = new MutationObserver( function () {
+			moveThirdPartyNotices();
+		} );
+
+		observer.observe( dashboard, { childList: true, subtree: true } );
+	}
+
+	// -----------------------------------------------------------------------
 	// Read JSON data island
 	// -----------------------------------------------------------------------
 	function getSystemData() {
@@ -215,6 +246,7 @@
 	// Init
 	// -----------------------------------------------------------------------
 	document.addEventListener( 'DOMContentLoaded', function () {
+		initNoticeRelocation();
 		initCopyButton();
 		initExportButton();
 		initA11y();

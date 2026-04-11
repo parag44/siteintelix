@@ -87,6 +87,18 @@
 	padding:     var(--siteintelix-lg) var(--siteintelix-xl) var(--siteintelix-2xl);
 }
 
+/* Keep external plugin/core notices above our custom dashboard UI. */
+.siteintelix-notices-slot:empty {
+	display: none;
+}
+
+.siteintelix-notices-slot .notice,
+.siteintelix-notices-slot .update-nag,
+.siteintelix-notices-slot .error,
+.siteintelix-notices-slot .updated {
+	margin: 0 0 var(--siteintelix-md) 0;
+}
+
 /* ============================================================
    3. Header
    ============================================================ */

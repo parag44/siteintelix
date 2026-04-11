@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.1.1
+Stable tag:        1.1.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,10 +132,6 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
-= 1.1.1 — 2026-04-11 =
-* Bumped plugin version to 1.1.1.
-* Synced release metadata for distribution and deployment consistency.
-
 = 1.1.0 — 2026-04-11 =
 * Updated plugin version to 1.1.0.
 * Improved output escaping in admin dashboard rendering.
@@ -158,9 +154,6 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
-
-= 1.1.1 =
-Maintenance release with metadata/version alignment updates.
 
 = 1.1.0 =
 Security, standards, and readme compliance update. Recommended for all users.
