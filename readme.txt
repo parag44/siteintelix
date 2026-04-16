@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.1.0
+Stable tag:        1.1.2
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,15 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
+= 1.1.2 — 2026-04-16 =
+* Added a dedicated **Debug Log Viewer** submenu under SiteIntelix Panel.
+* Added severity-aware parsing for debug log entries (`FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `OTHER`).
+* Improved Debug Log Viewer UI to match SiteIntelix panel styling.
+* Improved third-party admin notice handling so notices render above plugin UI.
+* Added live/recorded log status messaging based on `WP_DEBUG_LOG` runtime state.
+* Added `wp-config.php` snippet guidance when debug logging is disabled.
+* Improved log source path display with compact critical path highlighting.
+
 = 1.1.0 — 2026-04-11 =
 * Updated plugin version to 1.1.0.
 * Improved output escaping in admin dashboard rendering.
@@ -154,6 +163,9 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+Debug Log Viewer release with improved notice handling, runtime logging guidance, and enhanced admin UX.
 
 = 1.1.0 =
 Security, standards, and readme compliance update. Recommended for all users.

@@ -53,11 +53,11 @@
 	// Keep third-party notices above SiteIntelix UI
 	// -----------------------------------------------------------------------
 	function moveThirdPartyNotices() {
-		var dashboard = document.getElementById( 'siteintelix-dashboard' );
-		var slot      = document.getElementById( 'siteintelix-notices-slot' );
-		if ( ! dashboard || ! slot ) { return; }
+		var root = document.querySelector( '#siteintelix-dashboard, #siteintelix-debug-log-page' );
+		var slot = document.getElementById( 'siteintelix-notices-slot' );
+		if ( ! root || ! slot ) { return; }
 
-		var candidates = dashboard.querySelectorAll( '.notice, .update-nag, .error, .updated' );
+		var candidates = root.querySelectorAll( '.notice, .update-nag, .error, .updated, .tutor-admin-notice, .tutor-notice, [class*="notice-"]' );
 		candidates.forEach( function ( el ) {
 			if ( el.closest( '#siteintelix-notices-slot' ) ) {
 				return;
@@ -68,8 +68,8 @@
 	}
 
 	function initNoticeRelocation() {
-		var dashboard = document.getElementById( 'siteintelix-dashboard' );
-		if ( ! dashboard ) { return; }
+		var root = document.querySelector( '#siteintelix-dashboard, #siteintelix-debug-log-page' );
+		if ( ! root ) { return; }
 
 		moveThirdPartyNotices();
 
@@ -77,7 +77,7 @@
 			moveThirdPartyNotices();
 		} );
 
-		observer.observe( dashboard, { childList: true, subtree: true } );
+		observer.observe( root, { childList: true, subtree: true } );
 	}
 
 	// -----------------------------------------------------------------------

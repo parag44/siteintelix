@@ -3,7 +3,7 @@
  * Plugin Name:       SiteIntelix
  * Plugin URI:        https://parag.bd/siteintelix
  * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           1.1.0
+ * Version:           1.1.2
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '1.1.0' );
+define( 'SITEINTELIX_VERSION', '1.1.2' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -53,6 +53,7 @@ function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-system-info.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-health-check.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-rest-api.php';
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-log.php';
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 
@@ -68,12 +69,21 @@ add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 function siteintelix_register_admin_menu() {
 	add_menu_page(
 		__( 'SiteIntelix', 'siteintelix' ), // Browser <title>.
-	__( 'SiteIntelix Panel', 'siteintelix' ),          // Menu label.
+		__( 'SiteIntelix Panel', 'siteintelix' ), // Menu label.
 		'manage_options',                                       // Capability.
 		'siteintelix',                                  // Menu slug.
 		'siteintelix_render_admin_page',                                // Callback.
 		'dashicons-chart-area',                                 // Icon.
 		80                                                      // Position.
+	);
+
+	add_submenu_page(
+		'siteintelix',
+		__( 'Debug Log Viewer', 'siteintelix' ),
+		__( 'Debug Log Viewer', 'siteintelix' ),
+		'manage_options',
+		'siteintelix-debug-log',
+		'siteintelix_render_debug_log_page'
 	);
 }
 add_action( 'admin_menu', 'siteintelix_register_admin_menu' );
@@ -95,6 +105,16 @@ function siteintelix_render_admin_page() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'admin/views/admin-page.php';
 }
 
+/**
+ * Render the debug log viewer page.
+ */
+function siteintelix_render_debug_log_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'siteintelix' ) );
+	}
+	require_once SITEINTELIX_PLUGIN_DIR . 'admin/views/debug-log-page.php';
+}
+
 // ---------------------------------------------------------------------------
 // Enqueue admin assets
 // ---------------------------------------------------------------------------
@@ -105,7 +125,8 @@ function siteintelix_render_admin_page() {
  * @param string $hook_suffix Current admin page hook suffix.
  */
 function siteintelix_enqueue_admin_assets( $hook_suffix ) {
-	if ( 'toplevel_page_siteintelix' !== $hook_suffix ) {
+	// Hook suffix can vary by context; keep a stable prefix check for plugin screens.
+	if ( false === strpos( (string) $hook_suffix, 'siteintelix' ) ) {
 		return;
 	}
 

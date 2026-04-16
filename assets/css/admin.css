@@ -606,6 +606,219 @@
 }
 
 /* ============================================================
+   12a. Debug log viewer
+   ============================================================ */
+.siteintelix-debug-wrap {
+	background: #edf1f7;
+}
+
+.siteintelix-log-status-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: var(--siteintelix-md);
+}
+
+.siteintelix-log-runtime {
+	border: 1px solid transparent;
+	border-radius: var(--siteintelix-radius-sm);
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0;
+	padding: 10px 12px;
+}
+
+.siteintelix-log-runtime--live {
+	background: var(--siteintelix-good-bg);
+	border-color: var(--siteintelix-good-border);
+	color: var(--siteintelix-good-text);
+}
+
+.siteintelix-log-runtime--recorded {
+	background: var(--siteintelix-warn-bg);
+	border-color: var(--siteintelix-warn-border);
+	color: var(--siteintelix-warn-text);
+}
+
+.siteintelix-log-runtime-help {
+	color: var(--siteintelix-text-muted);
+	font-size: 12.5px;
+	font-weight: 600;
+	margin: 8px 0 6px;
+}
+
+.siteintelix-log-runtime-snippet {
+	background: #111827;
+	border: 1px solid #1f2937;
+	border-radius: var(--siteintelix-radius-sm);
+	color: #e5e7eb;
+	font-family: var(--siteintelix-font-mono);
+	font-size: 12px;
+	line-height: 1.55;
+	margin: 0;
+	max-width: 760px;
+	overflow-x: auto;
+	padding: 10px 12px;
+	white-space: pre;
+}
+
+.siteintelix-log-runtime-snippet code {
+	background: transparent;
+	color: inherit;
+	padding: 0;
+}
+
+.siteintelix-log-card {
+	margin-bottom: var(--siteintelix-md);
+}
+
+.siteintelix-log-level {
+	border: 1px solid transparent;
+	border-radius: var(--siteintelix-radius-pill);
+	display: inline-flex;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .2px;
+	line-height: 1;
+	padding: 7px 12px;
+	text-transform: none;
+}
+
+.siteintelix-log-level--all {
+	background: #5b5ce2;
+	border-color: #5b5ce2;
+	color: #fff;
+}
+
+.siteintelix-log-level--fatal,
+.siteintelix-log-level--error {
+	background: var(--siteintelix-crit-bg);
+	border-color: var(--siteintelix-crit-border);
+	color: var(--siteintelix-crit-text);
+}
+
+.siteintelix-log-level--warn {
+	background: var(--siteintelix-warn-bg);
+	border-color: var(--siteintelix-warn-border);
+	color: var(--siteintelix-warn-text);
+}
+
+.siteintelix-log-level--info,
+.siteintelix-log-level--debug,
+.siteintelix-log-level--other {
+	background: var(--siteintelix-good-bg);
+	border-color: var(--siteintelix-good-border);
+	color: var(--siteintelix-good-text);
+}
+
+.siteintelix-log-source {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+	justify-content: space-between;
+}
+
+.siteintelix-log-source__main {
+	min-width: 0;
+}
+
+.siteintelix-log-source__path {
+	align-items: center;
+	display: inline-flex;
+	font-size: 13px;
+	gap: 7px;
+	margin: 0 !important;
+	max-width: 100%;
+	padding: 0 !important;
+}
+
+.siteintelix-log-path-label {
+	color: var(--siteintelix-text-muted);
+	font-weight: 600;
+}
+
+.siteintelix-log-path-critical {
+	background: #fff6e6;
+	border: 1px solid #f6d08d;
+	border-radius: var(--siteintelix-radius-pill);
+	color: #7a4a00;
+	display: inline-flex;
+	font-family: var(--siteintelix-font-mono);
+	font-size: 12px;
+	max-width: 100%;
+	overflow: hidden;
+	padding: 3px 10px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.siteintelix-log-size-badge {
+	background: var(--siteintelix-good-bg);
+	border: 1px solid var(--siteintelix-good-border);
+	border-radius: var(--siteintelix-radius-pill);
+	color: var(--siteintelix-good-text);
+	display: inline-flex;
+	font-size: 12px;
+	font-weight: 700;
+	padding: 4px 10px;
+}
+
+.siteintelix-log-console-wrap {
+	border-radius: 10px;
+	box-shadow: var(--siteintelix-shadow-sm);
+	overflow: hidden;
+}
+
+.siteintelix-log-console {
+	background: #101723;
+	border: 1px solid #1f2a3a;
+	font-family: var(--siteintelix-font-mono);
+	font-size: 14px;
+	line-height: 1.5;
+	max-height: 560px;
+	overflow: auto;
+	padding: 14px 16px;
+}
+
+.siteintelix-log-line {
+	align-items: flex-start;
+	display: flex;
+	gap: 8px;
+	padding: 2px 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.siteintelix-log-line__ts {
+	color: #93a3b8;
+	flex-shrink: 0;
+}
+
+.siteintelix-log-line__level {
+	font-weight: 700;
+	min-width: 62px;
+}
+
+.siteintelix-log-line__msg {
+	color: #e2e8f0;
+}
+
+.siteintelix-log-line--fatal .siteintelix-log-line__level,
+.siteintelix-log-line--error .siteintelix-log-line__level {
+	color: #f87171;
+}
+
+.siteintelix-log-line--warn .siteintelix-log-line__level {
+	color: #fbbf24;
+}
+
+.siteintelix-log-line--info .siteintelix-log-line__level,
+.siteintelix-log-line--debug .siteintelix-log-line__level,
+.siteintelix-log-line--other .siteintelix-log-line__level {
+	color: #34d399;
+}
+
+/* ============================================================
    12. Toast notification
    ============================================================ */
 .siteintelix-toast {
@@ -670,10 +883,20 @@
 	.siteintelix-btn { flex: 1; justify-content: center; }
 
 	.siteintelix-grid { grid-template-columns: 1fr; }
+
+	.siteintelix-log-source {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 }
 
 @media ( max-width: 600px ) {
 	.siteintelix-health-strip { gap: 4px; }
 	.siteintelix-health-pill  { font-size: 11px; padding: 4px 8px; }
 	.siteintelix-api-panel__list { flex-direction: column; }
+
+	.siteintelix-log-console {
+		font-size: 12px;
+		padding: 10px;
+	}
 }
