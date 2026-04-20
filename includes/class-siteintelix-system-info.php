@@ -210,7 +210,8 @@ class SITEINTELIX_System_Info {
 			rest_url( '/' ),
 			array(
 				'timeout'   => 5,
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+				// Keep this filter plugin-prefixed for coding-standards compatibility.
+				'sslverify' => (bool) apply_filters( 'siteintelix_local_ssl_verify', false ),
 			)
 		);
 

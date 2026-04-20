@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.1.2
+Stable tag:        1.1.4
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,14 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
+= 1.1.4 — 2026-04-20 =
+* Refined top header hierarchy and visual polish for a cleaner, more professional first impression.
+* Improved action button emphasis and spacing in the header (`Export JSON` primary, `Copy Report` secondary).
+* Softened the header gradient and upgraded radius/shadow styles to better match modern WordPress admin UI expectations.
+* Enhanced responsive behavior for the header layout on smaller viewports.
+* Replaced a non-prefixed hook usage with a plugin-prefixed filter (`siteintelix_local_ssl_verify`) for stronger coding standards compatibility.
+* Updated release metadata for WordPress.org submission.
+
 = 1.1.2 — 2026-04-16 =
 * Added a dedicated **Debug Log Viewer** submenu under SiteIntelix Panel.
 * Added severity-aware parsing for debug log entries (`FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `OTHER`).
@@ -163,6 +171,9 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 1.1.4 =
+Header UX and standards polish update. Recommended for all users.
 
 = 1.1.2 =
 Debug Log Viewer release with improved notice handling, runtime logging guidance, and enhanced admin UX.
