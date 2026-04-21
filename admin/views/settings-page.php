@@ -2,7 +2,8 @@
 /**
  * Settings page view for SiteIntelix.
  *
- * Debug mode configuration with method selection cards.
+ * Debug mode configuration — selecting a method automatically enables it.
+ * No separate "enable capture" toggle; the method choice is the switch.
  *
  * @package SiteIntelix
  * @since   1.2.0
@@ -16,12 +17,14 @@ $siteintelix_debug_source  = SITEINTELIX_Debug_Source::detect();
 $siteintelix_debug_label   = SITEINTELIX_Debug_Source::get_label();
 $siteintelix_debug_status  = SITEINTELIX_Debug_Source::get_status();
 $siteintelix_debug_method  = SITEINTELIX_Debug_Source::get_method();
-$siteintelix_mu_enabled    = (bool) get_option( 'siteintelix_enable_debug_capture', false );
 $siteintelix_wpc_writable  = SITEINTELIX_WP_Config::is_writable();
 $siteintelix_wpc_has_block = SITEINTELIX_WP_Config::has_siteintelix_block();
 $siteintelix_external_dbg  = SITEINTELIX_Debug_Source::has_external_wp_debug();
-$siteintelix_log_path      = 'wp-content/siteintelix-debug.log';
 $siteintelix_form_url      = admin_url( 'admin-post.php' );
+
+// Log file paths for display.
+$siteintelix_log_mu  = 'wp-content/siteintelix-debug.log';
+$siteintelix_log_wpc = 'wp-content/debug.log';
 ?>
 <div class="wrap siteintelix-wrap siteintelix-settings-wrap" id="siteintelix-settings-page">
 
@@ -35,7 +38,7 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 
 	<?php if ( isset( $_GET['siteintelix_settings_error'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 		<div class="notice notice-error">
-			<p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['siteintelix_settings_error'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?></p>
+			<p><?php echo esc_html( urldecode( sanitize_text_field( wp_unslash( $_GET['siteintelix_settings_error'] ) ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?></p>
 		</div>
 	<?php endif; ?>
 
@@ -43,7 +46,7 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 		<div class="notice notice-warning">
 			<p>
 				<strong><?php esc_html_e( 'Notice:', 'siteintelix' ); ?></strong>
-				<?php esc_html_e( 'WP_DEBUG is currently defined directly in wp-config.php outside of SiteIntelix control.', 'siteintelix' ); ?>
+				<?php esc_html_e( 'WP_DEBUG is currently defined in wp-config.php outside of SiteIntelix control. The wp-config.php method may conflict.', 'siteintelix' ); ?>
 			</p>
 		</div>
 	<?php endif; ?>
@@ -73,7 +76,11 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 			</div>
 		</div>
 		<div class="siteintelix-settings-status__meta">
-			<code><?php echo esc_html( $siteintelix_log_path ); ?></code>
+			<?php if ( 'wp_config' === $siteintelix_debug_method ) : ?>
+				<code><?php echo esc_html( $siteintelix_log_wpc ); ?></code>
+			<?php else : ?>
+				<code><?php echo esc_html( $siteintelix_log_mu ); ?></code>
+			<?php endif; ?>
 		</div>
 	</div>
 
@@ -86,6 +93,10 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 			<span class="dashicons dashicons-admin-tools" aria-hidden="true"></span>
 			<?php esc_html_e( 'Debug Mode Configuration', 'siteintelix' ); ?>
 		</h2>
+
+		<p class="siteintelix-settings-help">
+			<?php esc_html_e( 'Select a debug method and click Save. The selected method is automatically activated — no separate enable step needed.', 'siteintelix' ); ?>
+		</p>
 
 		<div class="siteintelix-method-grid">
 
@@ -104,24 +115,16 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 					<span class="siteintelix-badge siteintelix-badge--good"><?php esc_html_e( 'Recommended', 'siteintelix' ); ?></span>
 				</div>
 				<p class="siteintelix-method-card__desc">
-					<?php esc_html_e( 'Safe and non-invasive. Creates an MU-plugin that captures errors without editing any core files. Errors are logged to a dedicated SiteIntelix log file.', 'siteintelix' ); ?>
+					<?php esc_html_e( 'Safe and non-invasive. Creates an MU-plugin that captures PHP errors without editing any core files. Fully reversible at any time.', 'siteintelix' ); ?>
 				</p>
 				<ul class="siteintelix-method-card__features">
 					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'No core file edits', 'siteintelix' ); ?></li>
-					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Isolated debug log', 'siteintelix' ); ?></li>
-					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Safe to use on production', 'siteintelix' ); ?></li>
+					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Isolated log: wp-content/siteintelix-debug.log', 'siteintelix' ); ?></li>
+					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Safe for staging and production', 'siteintelix' ); ?></li>
 				</ul>
-				<div class="siteintelix-method-card__toggle">
-					<span class="siteintelix-method-card__toggle-label"><?php esc_html_e( 'Enable capture', 'siteintelix' ); ?></span>
-					<label class="siteintelix-toggle">
-						<input
-							type="checkbox"
-							name="siteintelix_mu_enabled"
-							value="1"
-							<?php checked( $siteintelix_mu_enabled ); ?>
-						>
-						<span class="siteintelix-toggle__slider"></span>
-					</label>
+				<div class="siteintelix-method-card__log-path">
+					<span class="dashicons dashicons-editor-code" aria-hidden="true"></span>
+					<code><?php echo esc_html( $siteintelix_log_mu ); ?></code>
 				</div>
 			</label>
 
@@ -140,31 +143,22 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 					<span class="siteintelix-badge siteintelix-badge--warning"><?php esc_html_e( 'Advanced', 'siteintelix' ); ?></span>
 				</div>
 				<p class="siteintelix-method-card__desc">
-					<?php esc_html_e( 'Enables native WP_DEBUG constants directly in wp-config.php. Logs to the standard WordPress debug.log file. A backup is created before any edit.', 'siteintelix' ); ?>
+					<?php esc_html_e( 'Enables native WP_DEBUG constants directly in wp-config.php. WordPress logs to the standard debug.log file. A backup is created before any edit.', 'siteintelix' ); ?>
 				</p>
 				<ul class="siteintelix-method-card__features">
-					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Native WordPress debugging', 'siteintelix' ); ?></li>
-					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Automatic backup created', 'siteintelix' ); ?></li>
-					<li><span class="dashicons dashicons-warning" aria-hidden="true"></span> <?php esc_html_e( 'Modifies wp-config.php', 'siteintelix' ); ?></li>
+					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Native WordPress WP_DEBUG + WP_DEBUG_LOG', 'siteintelix' ); ?></li>
+					<li><span class="dashicons dashicons-yes" aria-hidden="true"></span> <?php esc_html_e( 'Automatic backup: wp-config.php.bak', 'siteintelix' ); ?></li>
+					<li><span class="dashicons dashicons-warning" aria-hidden="true"></span> <?php esc_html_e( 'Modifies wp-config.php directly', 'siteintelix' ); ?></li>
 				</ul>
 				<?php if ( ! $siteintelix_wpc_writable ) : ?>
 					<div class="siteintelix-method-card__warning">
 						<span class="dashicons dashicons-lock" aria-hidden="true"></span>
-						<?php esc_html_e( 'wp-config.php is not writable. Check file permissions.', 'siteintelix' ); ?>
+						<?php esc_html_e( 'wp-config.php is not writable. Check file permissions to use this method.', 'siteintelix' ); ?>
 					</div>
 				<?php endif; ?>
-				<div class="siteintelix-method-card__toggle">
-					<span class="siteintelix-method-card__toggle-label"><?php esc_html_e( 'Enable WP_DEBUG', 'siteintelix' ); ?></span>
-					<label class="siteintelix-toggle">
-						<input
-							type="checkbox"
-							name="siteintelix_wpconfig_enabled"
-							value="1"
-							<?php checked( $siteintelix_wpc_has_block ); ?>
-							<?php disabled( ! $siteintelix_wpc_writable ); ?>
-						>
-						<span class="siteintelix-toggle__slider"></span>
-					</label>
+				<div class="siteintelix-method-card__log-path">
+					<span class="dashicons dashicons-editor-code" aria-hidden="true"></span>
+					<code><?php echo esc_html( $siteintelix_log_wpc ); ?></code>
 				</div>
 			</label>
 
@@ -173,8 +167,12 @@ $siteintelix_form_url      = admin_url( 'admin-post.php' );
 		<div class="siteintelix-settings-submit">
 			<button type="submit" class="siteintelix-btn siteintelix-btn--save" id="siteintelix-save-settings-btn">
 				<span class="dashicons dashicons-saved" aria-hidden="true"></span>
-				<?php esc_html_e( 'Save Settings', 'siteintelix' ); ?>
+				<?php esc_html_e( 'Save & Activate Selected Method', 'siteintelix' ); ?>
 			</button>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=siteintelix-debug-log' ) ); ?>" class="siteintelix-settings-view-log-link">
+				<span class="dashicons dashicons-media-text" aria-hidden="true"></span>
+				<?php esc_html_e( 'View Debug Log', 'siteintelix' ); ?>
+			</a>
 		</div>
 	</form>
 

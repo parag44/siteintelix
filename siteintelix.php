@@ -270,16 +270,15 @@ function siteintelix_save_debug_settings() {
 	$error_msg = '';
 
 	if ( 'mu' === $method ) {
-		// Handle MU-plugin toggle.
-		$mu_enabled = isset( $_POST['siteintelix_mu_enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['siteintelix_mu_enabled'] ) ) ? 1 : 0;
-		update_option( SITEINTELIX_MU_DEBUG_OPTION, $mu_enabled );
+		// MU mode: always enable capture (method selection = activation).
+		update_option( SITEINTELIX_MU_DEBUG_OPTION, 1 );
 
 		$ensure_result = SITEINTELIX_MU_Debug::ensure_mu_plugin_file();
 		if ( is_wp_error( $ensure_result ) ) {
 			$error_msg = $ensure_result->get_error_message();
 		}
 
-		// Disable wp-config method if switching away.
+		// Remove wp-config block if switching from that method.
 		if ( SITEINTELIX_WP_Config::has_siteintelix_block() ) {
 			$disable_result = SITEINTELIX_WP_Config::disable();
 			if ( is_wp_error( $disable_result ) ) {
@@ -287,19 +286,10 @@ function siteintelix_save_debug_settings() {
 			}
 		}
 	} else {
-		// Handle wp-config method.
-		$wpc_enabled = isset( $_POST['siteintelix_wpconfig_enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['siteintelix_wpconfig_enabled'] ) ) ? 1 : 0;
-
-		if ( $wpc_enabled ) {
-			$result = SITEINTELIX_WP_Config::enable();
-			if ( is_wp_error( $result ) ) {
-				$error_msg = $result->get_error_message();
-			}
-		} else {
-			$result = SITEINTELIX_WP_Config::disable();
-			if ( is_wp_error( $result ) ) {
-				$error_msg = $result->get_error_message();
-			}
+		// wp-config mode: enable debug block in wp-config.php (always on when selected).
+		$result = SITEINTELIX_WP_Config::enable();
+		if ( is_wp_error( $result ) ) {
+			$error_msg = $result->get_error_message();
 		}
 
 		// Disable MU capture when switching to wp-config.
@@ -362,8 +352,10 @@ function siteintelix_clear_debug_log() {
 
 	check_admin_referer( 'siteintelix_clear_debug_log' );
 
-	$log_path = trailingslashit( WP_CONTENT_DIR ) . SITEINTELIX_DEBUG_LOG_FILENAME;
-	$cleared  = 0;
+	// Resolve log path based on active debug method.
+	$active_method = get_option( 'siteintelix_debug_method', 'mu' );
+	$log_path      = SITEINTELIX_Debug_Log::get_path_for_mode( $active_method );
+	$cleared       = 0;
 
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -401,7 +393,10 @@ function siteintelix_download_debug_log() {
 
 	check_admin_referer( 'siteintelix_download_debug_log' );
 
-	$log_path = trailingslashit( WP_CONTENT_DIR ) . SITEINTELIX_DEBUG_LOG_FILENAME;
+	// Resolve log path and download filename based on active debug method.
+	$active_method    = get_option( 'siteintelix_debug_method', 'mu' );
+	$log_path         = SITEINTELIX_Debug_Log::get_path_for_mode( $active_method );
+	$download_filename = ( 'wp_config' === $active_method ) ? 'debug.log' : 'siteintelix-debug.log';
 
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -421,7 +416,7 @@ function siteintelix_download_debug_log() {
 
 	nocache_headers();
 	header( 'Content-Type: text/plain; charset=utf-8' );
-	header( 'Content-Disposition: attachment; filename="siteintelix-debug.log"' );
+	header( 'Content-Disposition: attachment; filename="' . $download_filename . '"' );
 	header( 'Content-Length: ' . strlen( $contents ) );
 	echo $contents; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	exit;

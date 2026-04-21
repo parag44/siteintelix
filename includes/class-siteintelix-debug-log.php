@@ -1,6 +1,10 @@
 <?php
 /**
- * SITEINTELIX_Debug_Log - reads and classifies entries from wp-content/siteintelix-debug.log.
+ * SITEINTELIX_Debug_Log - reads and classifies log entries.
+ *
+ * Reads from wp-content/siteintelix-debug.log (MU-plugin mode)
+ * or wp-content/debug.log (wp-config.php mode) based on the
+ * selected debug method option.
  *
  * @package SiteIntelix
  * @since   1.1.0
@@ -22,8 +26,10 @@ class SITEINTELIX_Debug_Log {
 	 * @return array<string, mixed>
 	 */
 	public static function get_data( $limit = 300 ) {
-		$path = self::get_path();
+		$method = get_option( 'siteintelix_debug_method', 'mu' );
+		$path   = self::get_path_for_mode( $method );
 		$data = array(
+			'method'   => $method,
 			'path'     => $path,
 			'exists'   => file_exists( $path ),
 			'readable' => is_readable( $path ),
@@ -68,12 +74,29 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
-	 * Get the custom SiteIntelix debug log path.
+	 * Get the log file path for a given debug method.
 	 *
+	 * @param string $method 'mu' or 'wp_config'.
+	 * @return string  Absolute path to the log file.
+	 */
+	public static function get_path_for_mode( $method = 'mu' ) {
+		if ( 'wp_config' === $method ) {
+			return trailingslashit( WP_CONTENT_DIR ) . 'debug.log';
+		}
+		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
+	}
+
+	/**
+	 * Return a short human-readable description of the active mode's log source.
+	 *
+	 * @param string $method 'mu' or 'wp_config'.
 	 * @return string
 	 */
-	private static function get_path() {
-		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
+	public static function get_mode_label( $method = 'mu' ) {
+		if ( 'wp_config' === $method ) {
+			return __( 'wp-config.php mode — logging to wp-content/debug.log', 'siteintelix' );
+		}
+		return __( 'MU Plugin mode — logging to wp-content/siteintelix-debug.log', 'siteintelix' );
 	}
 
 	/**
