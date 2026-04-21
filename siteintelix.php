@@ -92,6 +92,17 @@ function siteintelix_register_admin_menu() {
 		80                                                      // Position.
 	);
 
+	// Overwrite the first submenu item to be "Overview" instead of the parent label.
+	add_submenu_page(
+		'siteintelix',
+		__( 'SiteIntelix Overview', 'siteintelix' ),
+		__( 'Overview', 'siteintelix' ),
+		'manage_options',
+		'siteintelix',
+		'siteintelix_render_admin_page'
+	);
+
+
 	add_submenu_page(
 		'siteintelix',
 		__( 'Debug Log Viewer', 'siteintelix' ),
