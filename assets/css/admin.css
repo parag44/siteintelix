@@ -1311,3 +1311,388 @@
 		row-gap: 4px;
 	}
 }
+
+/* ============================================================
+   16. Settings page
+   ============================================================ */
+.siteintelix-settings-wrap,
+.siteintelix-security-wrap {
+	background: var(--siteintelix-bg);
+}
+
+/* Status banner */
+.siteintelix-settings-status {
+	align-items: center;
+	background: var(--siteintelix-surface);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius);
+	box-shadow: var(--siteintelix-shadow-sm);
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--siteintelix-md);
+	justify-content: space-between;
+	margin-bottom: var(--siteintelix-lg);
+	padding: var(--siteintelix-md) var(--siteintelix-lg);
+}
+
+.siteintelix-settings-status__main {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+}
+
+.siteintelix-settings-status__icon {
+	color: var(--siteintelix-accent);
+	font-size: 20px !important;
+	height: 20px !important;
+	width: 20px !important;
+}
+
+.siteintelix-settings-status__meta code {
+	background: var(--siteintelix-surface-2);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius-sm);
+	color: var(--siteintelix-text-muted);
+	font-family: var(--siteintelix-font-mono);
+	font-size: 12px;
+	padding: 4px 10px;
+}
+
+/* Section title */
+.siteintelix-settings-section-title {
+	align-items: center;
+	color: var(--siteintelix-text) !important;
+	display: flex;
+	font-size: 15px !important;
+	font-weight: 800 !important;
+	gap: 8px;
+	margin: 0 0 var(--siteintelix-md) !important;
+	padding: 0 !important;
+}
+
+.siteintelix-settings-section-title .dashicons {
+	color: var(--siteintelix-accent);
+	font-size: 18px !important;
+	height: 18px !important;
+	width: 18px !important;
+}
+
+/* Method cards grid */
+.siteintelix-method-grid {
+	display: grid;
+	gap: var(--siteintelix-lg);
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	margin-bottom: var(--siteintelix-lg);
+}
+
+.siteintelix-method-card {
+	background: var(--siteintelix-surface);
+	border: 2px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius);
+	box-shadow: var(--siteintelix-shadow-sm);
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: var(--siteintelix-md);
+	padding: var(--siteintelix-lg);
+	position: relative;
+	transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.siteintelix-method-card:hover {
+	border-color: var(--siteintelix-accent);
+	box-shadow: var(--siteintelix-shadow);
+	transform: translateY(-2px);
+}
+
+.siteintelix-method-card.is-selected {
+	border-color: var(--siteintelix-accent);
+	box-shadow: 0 0 0 3px rgba(14,165,233,.15), var(--siteintelix-shadow);
+}
+
+.siteintelix-method-card__radio {
+	left: -9999px;
+	position: absolute;
+}
+
+.siteintelix-method-card__header {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+}
+
+.siteintelix-method-card__icon {
+	color: var(--siteintelix-accent);
+	font-size: 22px !important;
+	height: 22px !important;
+	width: 22px !important;
+}
+
+.siteintelix-method-card__title {
+	color: var(--siteintelix-text);
+	flex: 1;
+	font-size: 15px;
+	font-weight: 800;
+}
+
+.siteintelix-method-card__desc {
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
+	line-height: 1.55;
+	margin: 0;
+}
+
+.siteintelix-method-card__features {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.siteintelix-method-card__features li {
+	align-items: center;
+	color: var(--siteintelix-text-muted);
+	display: flex;
+	font-size: 13px;
+	gap: 6px;
+}
+
+.siteintelix-method-card__features .dashicons-yes {
+	color: var(--siteintelix-good);
+	font-size: 16px !important;
+	height: 16px !important;
+	width: 16px !important;
+}
+
+.siteintelix-method-card__features .dashicons-warning {
+	color: var(--siteintelix-warn);
+	font-size: 16px !important;
+	height: 16px !important;
+	width: 16px !important;
+}
+
+.siteintelix-method-card__warning {
+	align-items: flex-start;
+	background: var(--siteintelix-crit-bg);
+	border: 1px solid var(--siteintelix-crit-border);
+	border-radius: var(--siteintelix-radius-sm);
+	color: var(--siteintelix-crit-text);
+	display: flex;
+	font-size: 12px;
+	font-weight: 600;
+	gap: 6px;
+	padding: 10px 12px;
+}
+
+.siteintelix-method-card__warning .dashicons {
+	flex-shrink: 0;
+	font-size: 16px !important;
+	height: 16px !important;
+	width: 16px !important;
+}
+
+/* Toggle within a card */
+.siteintelix-method-card__toggle {
+	align-items: center;
+	background: var(--siteintelix-surface-2);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius-sm);
+	display: flex;
+	gap: 10px;
+	justify-content: space-between;
+	margin-top: auto;
+	padding: 10px 14px;
+}
+
+.siteintelix-method-card__toggle-label {
+	color: var(--siteintelix-text);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+/* ============================================================
+   17. Toggle switch component (shared)
+   ============================================================ */
+.siteintelix-toggle {
+	cursor: pointer;
+	display: inline-block;
+	flex-shrink: 0;
+	height: 24px;
+	position: relative;
+	width: 44px;
+}
+
+.siteintelix-toggle input {
+	height: 0;
+	opacity: 0;
+	width: 0;
+}
+
+.siteintelix-toggle__slider {
+	background: #d1d5db;
+	border-radius: 999px;
+	bottom: 0;
+	cursor: pointer;
+	left: 0;
+	position: absolute;
+	right: 0;
+	top: 0;
+	transition: background .2s ease;
+}
+
+.siteintelix-toggle__slider::before {
+	background: #fff;
+	border-radius: 50%;
+	bottom: 3px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.2);
+	content: "";
+	height: 18px;
+	left: 3px;
+	position: absolute;
+	transition: transform .2s ease;
+	width: 18px;
+}
+
+.siteintelix-toggle input:checked + .siteintelix-toggle__slider {
+	background: var(--siteintelix-accent);
+}
+
+.siteintelix-toggle input:checked + .siteintelix-toggle__slider::before {
+	transform: translateX(20px);
+}
+
+.siteintelix-toggle input:focus-visible + .siteintelix-toggle__slider {
+	outline: 2px solid var(--siteintelix-accent);
+	outline-offset: 2px;
+}
+
+.siteintelix-toggle input:disabled + .siteintelix-toggle__slider {
+	cursor: not-allowed;
+	opacity: .5;
+}
+
+/* ============================================================
+   18. Security Panel
+   ============================================================ */
+.siteintelix-security-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: var(--siteintelix-lg);
+}
+
+.siteintelix-security-card {
+	align-items: center;
+	background: var(--siteintelix-surface);
+	border: 1px solid var(--siteintelix-border);
+	border-left: 4px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius);
+	box-shadow: var(--siteintelix-shadow-sm);
+	display: flex;
+	gap: var(--siteintelix-lg);
+	justify-content: space-between;
+	padding: var(--siteintelix-md) var(--siteintelix-lg);
+	transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.siteintelix-security-card.is-active {
+	border-left-color: var(--siteintelix-good);
+}
+
+.siteintelix-security-card:hover {
+	box-shadow: var(--siteintelix-shadow);
+}
+
+.siteintelix-security-card__info {
+	flex: 1;
+	min-width: 0;
+}
+
+.siteintelix-security-card__title {
+	color: var(--siteintelix-text) !important;
+	font-size: 14px !important;
+	font-weight: 700 !important;
+	margin: 0 0 4px !important;
+	padding: 0 !important;
+}
+
+.siteintelix-security-card__desc {
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0;
+}
+
+.siteintelix-security-card__control {
+	align-items: center;
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+	gap: 4px;
+}
+
+.siteintelix-security-card__status-label {
+	color: var(--siteintelix-text-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .3px;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+.siteintelix-security-card.is-active .siteintelix-security-card__status-label {
+	color: var(--siteintelix-good-text);
+}
+
+/* ============================================================
+   19. Save button (settings / security)
+   ============================================================ */
+.siteintelix-settings-submit {
+	margin-top: var(--siteintelix-lg);
+}
+
+.siteintelix-btn--save {
+	background: var(--siteintelix-accent);
+	border: none;
+	border-radius: 10px;
+	color: #fff;
+	cursor: pointer;
+	font-family: var(--siteintelix-font);
+	font-size: 14px;
+	font-weight: 700;
+	padding: 12px 24px;
+	transition: background .18s ease, transform .18s ease;
+}
+
+.siteintelix-btn--save:hover {
+	background: var(--siteintelix-accent-dark);
+	transform: translateY(-1px);
+}
+
+.siteintelix-btn--save .dashicons {
+	font-size: 16px !important;
+	height: 16px !important;
+	margin: 0;
+	width: 16px !important;
+}
+
+/* Responsive */
+@media ( max-width: 700px ) {
+	.siteintelix-security-card {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: var(--siteintelix-md);
+	}
+
+	.siteintelix-security-card__control {
+		flex-direction: row;
+		width: 100%;
+	}
+
+	.siteintelix-security-card__status-label {
+		flex: 1;
+	}
+}
+

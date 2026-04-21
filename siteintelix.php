@@ -3,7 +3,7 @@
  * Plugin Name:       SiteIntelix
  * Plugin URI:        https://parag.bd/siteintelix
  * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           1.1.5
+ * Version:           1.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '1.1.5' );
+define( 'SITEINTELIX_VERSION', '1.2.0' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -64,9 +64,13 @@ function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-rest-api.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-log.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-debug.php';
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-wp-config.php';
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-security.php';
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-source.php';
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 add_action( 'plugins_loaded', array( 'SITEINTELIX_MU_Debug', 'bootstrap' ), 20 );
+add_action( 'plugins_loaded', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
 
 // ---------------------------------------------------------------------------
 // Admin menu
@@ -96,6 +100,24 @@ function siteintelix_register_admin_menu() {
 		'siteintelix-debug-log',
 		'siteintelix_render_debug_log_page'
 	);
+
+	add_submenu_page(
+		'siteintelix',
+		__( 'Settings', 'siteintelix' ),
+		__( 'Settings', 'siteintelix' ),
+		'manage_options',
+		'siteintelix-settings',
+		'siteintelix_render_settings_page'
+	);
+
+	add_submenu_page(
+		'siteintelix',
+		__( 'Security Panel', 'siteintelix' ),
+		__( 'Security Panel', 'siteintelix' ),
+		'manage_options',
+		'siteintelix-security',
+		'siteintelix_render_security_page'
+	);
 }
 add_action( 'admin_menu', 'siteintelix_register_admin_menu' );
 
@@ -124,6 +146,26 @@ function siteintelix_render_debug_log_page() {
 		wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'siteintelix' ) );
 	}
 	require_once SITEINTELIX_PLUGIN_DIR . 'admin/views/debug-log-page.php';
+}
+
+/**
+ * Render the Settings page.
+ */
+function siteintelix_render_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'siteintelix' ) );
+	}
+	require_once SITEINTELIX_PLUGIN_DIR . 'admin/views/settings-page.php';
+}
+
+/**
+ * Render the Security Panel page.
+ */
+function siteintelix_render_security_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'siteintelix' ) );
+	}
+	require_once SITEINTELIX_PLUGIN_DIR . 'admin/views/security-page.php';
 }
 
 // ---------------------------------------------------------------------------
@@ -202,6 +244,111 @@ function siteintelix_toggle_mu_debug_capture() {
 	exit;
 }
 add_action( 'admin_post_siteintelix_toggle_mu_debug', 'siteintelix_toggle_mu_debug_capture' );
+
+// ---------------------------------------------------------------------------
+// Debug Settings form handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Save debug settings from the Settings page.
+ *
+ * @return void
+ */
+function siteintelix_save_debug_settings() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have permission to change debug settings.', 'siteintelix' ) );
+	}
+
+	check_admin_referer( 'siteintelix_save_debug_settings' );
+
+	$method = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
+		$method = 'mu';
+	}
+	update_option( 'siteintelix_debug_method', $method );
+
+	$error_msg = '';
+
+	if ( 'mu' === $method ) {
+		// Handle MU-plugin toggle.
+		$mu_enabled = isset( $_POST['siteintelix_mu_enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['siteintelix_mu_enabled'] ) ) ? 1 : 0;
+		update_option( SITEINTELIX_MU_DEBUG_OPTION, $mu_enabled );
+
+		$ensure_result = SITEINTELIX_MU_Debug::ensure_mu_plugin_file();
+		if ( is_wp_error( $ensure_result ) ) {
+			$error_msg = $ensure_result->get_error_message();
+		}
+
+		// Disable wp-config method if switching away.
+		if ( SITEINTELIX_WP_Config::has_siteintelix_block() ) {
+			$disable_result = SITEINTELIX_WP_Config::disable();
+			if ( is_wp_error( $disable_result ) ) {
+				$error_msg = $disable_result->get_error_message();
+			}
+		}
+	} else {
+		// Handle wp-config method.
+		$wpc_enabled = isset( $_POST['siteintelix_wpconfig_enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['siteintelix_wpconfig_enabled'] ) ) ? 1 : 0;
+
+		if ( $wpc_enabled ) {
+			$result = SITEINTELIX_WP_Config::enable();
+			if ( is_wp_error( $result ) ) {
+				$error_msg = $result->get_error_message();
+			}
+		} else {
+			$result = SITEINTELIX_WP_Config::disable();
+			if ( is_wp_error( $result ) ) {
+				$error_msg = $result->get_error_message();
+			}
+		}
+
+		// Disable MU capture when switching to wp-config.
+		update_option( SITEINTELIX_MU_DEBUG_OPTION, 0 );
+	}
+
+	$redirect_args = array( 'page' => 'siteintelix-settings' );
+
+	if ( '' !== $error_msg ) {
+		$redirect_args['siteintelix_settings_error'] = rawurlencode( $error_msg );
+	} else {
+		$redirect_args['siteintelix_settings_saved'] = '1';
+	}
+
+	wp_safe_redirect( add_query_arg( $redirect_args, admin_url( 'admin.php' ) ) );
+	exit;
+}
+add_action( 'admin_post_siteintelix_save_debug_settings', 'siteintelix_save_debug_settings' );
+
+// ---------------------------------------------------------------------------
+// Security settings form handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Save security panel settings.
+ *
+ * @return void
+ */
+function siteintelix_save_security() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'You do not have permission to change security settings.', 'siteintelix' ) );
+	}
+
+	check_admin_referer( 'siteintelix_save_security' );
+
+	SITEINTELIX_Security::save( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'page'                      => 'siteintelix-security',
+				'siteintelix_security_saved' => '1',
+			),
+			admin_url( 'admin.php' )
+		)
+	);
+	exit;
+}
+add_action( 'admin_post_siteintelix_save_security', 'siteintelix_save_security' );
 
 /**
  * Clear SiteIntelix debug log file contents.

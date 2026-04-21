@@ -293,6 +293,86 @@
 	}
 
 	// -----------------------------------------------------------------------
+	// Settings page — method card selection
+	// -----------------------------------------------------------------------
+	function initSettingsPage() {
+		var page = document.getElementById( 'siteintelix-settings-page' );
+		if ( ! page ) { return; }
+
+		var cards  = page.querySelectorAll( '.siteintelix-method-card' );
+		var radios = page.querySelectorAll( '.siteintelix-method-card__radio' );
+
+		// Highlight the currently selected card.
+		function updateCardHighlight() {
+			cards.forEach( function ( card ) {
+				var radio = card.querySelector( '.siteintelix-method-card__radio' );
+				if ( radio && radio.checked ) {
+					card.classList.add( 'is-selected' );
+				} else {
+					card.classList.remove( 'is-selected' );
+				}
+			} );
+		}
+
+		radios.forEach( function ( radio ) {
+			radio.addEventListener( 'change', function () {
+				// Warn when selecting wp-config method.
+				if ( radio.value === 'wp_config' ) {
+					var confirmed = window.confirm(
+						'This will allow SiteIntelix to modify wp-config.php to enable WP_DEBUG constants.\n' +
+						'A backup (wp-config.php.bak) will be created before any change.\n\n' +
+						'Continue?'
+					);
+					if ( ! confirmed ) {
+						// Revert selection.
+						radios.forEach( function ( r ) {
+							if ( r.value === 'mu' ) { r.checked = true; }
+						} );
+						updateCardHighlight();
+						return;
+					}
+				}
+				updateCardHighlight();
+			} );
+		} );
+
+		// Also trigger on clicking anywhere within the card label.
+		cards.forEach( function ( card ) {
+			card.addEventListener( 'click', function () {
+				updateCardHighlight();
+			} );
+		} );
+
+		updateCardHighlight();
+	}
+
+	// -----------------------------------------------------------------------
+	// Security page — live toggle state updates
+	// -----------------------------------------------------------------------
+	function initSecurityToggles() {
+		var page = document.getElementById( 'siteintelix-security-page' );
+		if ( ! page ) { return; }
+
+		var toggleInputs = page.querySelectorAll( '.siteintelix-security-card .siteintelix-toggle input' );
+
+		toggleInputs.forEach( function ( input ) {
+			input.addEventListener( 'change', function () {
+				var card        = input.closest( '.siteintelix-security-card' );
+				var statusLabel = card && card.querySelector( '.siteintelix-security-card__status-label' );
+				if ( ! card ) { return; }
+
+				if ( input.checked ) {
+					card.classList.add( 'is-active' );
+					if ( statusLabel ) { statusLabel.textContent = 'Active'; }
+				} else {
+					card.classList.remove( 'is-active' );
+					if ( statusLabel ) { statusLabel.textContent = 'Inactive'; }
+				}
+			} );
+		} );
+	}
+
+	// -----------------------------------------------------------------------
 	// Init
 	// -----------------------------------------------------------------------
 	document.addEventListener( 'DOMContentLoaded', function () {
@@ -301,6 +381,9 @@
 		initExportButton();
 		initA11y();
 		initDebugLogFilters();
+		initSettingsPage();
+		initSecurityToggles();
 	} );
 
 }() );
+
