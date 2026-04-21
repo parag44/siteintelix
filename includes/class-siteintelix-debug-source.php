@@ -94,19 +94,28 @@ class SITEINTELIX_Debug_Source {
 	}
 
 	/**
-	 * Check whether wp-config.php defines WP_DEBUG independently of SiteIntelix.
+	 * Check whether wp-config.php defines WP_DEBUG independently of the active method.
 	 *
-	 * @return bool  True if WP_DEBUG is defined AND our block is NOT present.
+	 * A conflict exists if:
+	 * 1. The selected method is 'mu' BUT WP_DEBUG is true in wp-config.php.
+	 * 2. WP_DEBUG is true in the file but not via our surgical regex (rare).
+	 *
+	 * @return bool
 	 */
 	public static function has_external_wp_debug() {
-		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-			return false;
+		$method = self::get_method();
+
+		// Check if WP_DEBUG is physically set to true in the file contents.
+		$wpc_true = false;
+		if ( class_exists( 'SITEINTELIX_WP_Config' ) ) {
+			$wpc_true = SITEINTELIX_WP_Config::is_debug_enabled_in_file();
 		}
 
-		if ( class_exists( 'SITEINTELIX_WP_Config' ) && SITEINTELIX_WP_Config::has_siteintelix_block() ) {
-			return false;
+		// If method is MU but wp-config.php has it enabled, it's a conflict.
+		if ( 'mu' === $method && $wpc_true ) {
+			return true;
 		}
 
-		return true;
+		return false;
 	}
 }

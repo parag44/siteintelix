@@ -272,10 +272,17 @@ function siteintelix_save_debug_settings() {
 
 	check_admin_referer( 'siteintelix_save_debug_settings' );
 
-	$method = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+	$old_method = SITEINTELIX_Debug_Source::get_method();
+	$method     = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+
 	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
 		$method = 'mu';
 	}
+
+	if ( $method !== $old_method ) {
+		update_option( 'siteintelix_previous_debug_method', $old_method );
+	}
+
 	update_option( 'siteintelix_debug_method', $method );
 
 	$error_msg = '';
@@ -289,8 +296,8 @@ function siteintelix_save_debug_settings() {
 			$error_msg = $ensure_result->get_error_message();
 		}
 
-		// Remove wp-config block if switching from that method.
-		if ( SITEINTELIX_WP_Config::has_siteintelix_block() ) {
+		// Disable wp-config debug if switching from that method.
+		if ( SITEINTELIX_WP_Config::is_debug_enabled_in_file() ) {
 			$disable_result = SITEINTELIX_WP_Config::disable();
 			if ( is_wp_error( $disable_result ) ) {
 				$error_msg = $disable_result->get_error_message();
@@ -298,24 +305,21 @@ function siteintelix_save_debug_settings() {
 		}
 	} else {
 		// wp-config mode: enable debug block in wp-config.php (always on when selected).
-		$result = SITEINTELIX_WP_Config::enable();
-		if ( is_wp_error( $result ) ) {
-			$error_msg = $result->get_error_message();
+		update_option( SITEINTELIX_MU_DEBUG_OPTION, 0 ); // Disable MU capture logic.
+		$enable_result = SITEINTELIX_WP_Config::enable();
+		if ( is_wp_error( $enable_result ) ) {
+			$error_msg = $enable_result->get_error_message();
 		}
-
-		// Disable MU capture when switching to wp-config.
-		update_option( SITEINTELIX_MU_DEBUG_OPTION, 0 );
 	}
 
-	$redirect_args = array( 'page' => 'siteintelix-settings' );
-
-	if ( '' !== $error_msg ) {
-		$redirect_args['siteintelix_settings_error'] = rawurlencode( $error_msg );
+	$redirect_url = add_query_arg( 'page', 'siteintelix-settings', admin_url( 'admin.php' ) );
+	if ( $error_msg ) {
+		$redirect_url = add_query_arg( 'siteintelix_settings_error', urlencode( $error_msg ), $redirect_url );
 	} else {
-		$redirect_args['siteintelix_settings_saved'] = '1';
+		$redirect_url = add_query_arg( 'siteintelix_settings_saved', '1', $redirect_url );
 	}
 
-	wp_safe_redirect( add_query_arg( $redirect_args, admin_url( 'admin.php' ) ) );
+	wp_safe_redirect( $redirect_url );
 	exit;
 }
 add_action( 'admin_post_siteintelix_save_debug_settings', 'siteintelix_save_debug_settings' );

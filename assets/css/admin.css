@@ -13,42 +13,49 @@
    ============================================================ */
 :root {
     /* Backgrounds */
-    --siteintelix-bg:         #eef2f7;
+    --siteintelix-bg:         #f0f4f9;
     --siteintelix-surface:    #ffffff;
-    --siteintelix-surface-2:  #f5f7fb;
+    --siteintelix-surface-2:  #f8fafc;
 
 	/* Borders */
-	--siteintelix-border:       #e2e5ef;
-	--siteintelix-border-strong:#c8cedd;
+	--siteintelix-border:       #e2e8f0;
+	--siteintelix-border-strong:#cbd5e1;
 
     /* Typography */
-    --siteintelix-text:       #0f172a;
-    --siteintelix-text-muted: #5b6476;
-    --siteintelix-font:       "Manrope", "Segoe UI", system-ui, sans-serif;
-    --siteintelix-font-mono:  "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --siteintelix-text:       #1e293b;
+    --siteintelix-text-muted: #64748b;
+    --siteintelix-font:       "Inter", "Manrope", "Segoe UI", system-ui, sans-serif;
+    --siteintelix-font-mono:  "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 
-    /* Brand */
-    --siteintelix-accent:       #0ea5e9;
-    --siteintelix-accent-dark:  #0284c7;
-    --siteintelix-accent-light: #e0f2fe;
+    /* Brand - Premium Blue */
+    --siteintelix-accent:       #2563eb;
+    --siteintelix-accent-dark:  #1d4ed8;
+    --siteintelix-accent-light: #eff6ff;
+	--siteintelix-accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
 
 	/* Status — good */
 	--siteintelix-good:        #10b981;
-	--siteintelix-good-bg:     #ecfdf5;
-	--siteintelix-good-border: #a7f3d0;
-	--siteintelix-good-text:   #065f46;
+	--siteintelix-good-bg:     #f0fdf4;
+	--siteintelix-good-border: #bbf7d0;
+	--siteintelix-good-text:   #166534;
 
-	/* Status — warning */
+	/* Status — warning (Orange) */
 	--siteintelix-warn:        #f59e0b;
 	--siteintelix-warn-bg:     #fffbeb;
-	--siteintelix-warn-border: #fcd34d;
-	--siteintelix-warn-text:   #78350f;
+	--siteintelix-warn-border: #fef3c7;
+	--siteintelix-warn-text:   #92400e;
+
+	/* Status — info (Blue) */
+	--siteintelix-info:        #0ea5e9;
+	--siteintelix-info-bg:     #f0f9ff;
+	--siteintelix-info-border: #e0f2fe;
+	--siteintelix-info-text:   #075985;
 
 	/* Status — critical */
 	--siteintelix-crit:        #ef4444;
 	--siteintelix-crit-bg:     #fef2f2;
-	--siteintelix-crit-border: #fca5a5;
-	--siteintelix-crit-text:   #7f1d1d;
+	--siteintelix-crit-border: #fecaca;
+	--siteintelix-crit-text:   #991b1b;
 
 	/* Spacing */
 	--siteintelix-xs:  4px;
@@ -56,17 +63,529 @@
 	--siteintelix-md:  16px;
 	--siteintelix-lg:  24px;
 	--siteintelix-xl:  32px;
-	--siteintelix-2xl: 48px;
 
 	/* Shape */
-	--siteintelix-radius:    12px;
-	--siteintelix-radius-sm: 6px;
+	--siteintelix-radius:    14px;
+	--siteintelix-radius-sm: 8px;
 	--siteintelix-radius-pill: 999px;
 
 	/* Shadows */
-    --siteintelix-shadow-sm: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
-    --siteintelix-shadow:    0 8px 20px -8px rgba(15,23,42,.15);
-    --siteintelix-shadow-lg: 0 18px 40px -16px rgba(15,23,42,.18);
+    --siteintelix-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --siteintelix-shadow:    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --siteintelix-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================
+   2. Base / Reset
+   ============================================================ */
+.siteintelix-wrap *,
+.siteintelix-wrap *::before,
+.siteintelix-wrap *::after {
+	box-sizing: border-box;
+}
+
+.siteintelix-wrap {
+	background:  var(--siteintelix-bg);
+	color:       var(--siteintelix-text);
+	font-family: var(--siteintelix-font);
+	margin-left: -20px !important; /* Counter WP margin */
+	min-height:  100vh;
+	padding:     0 !important;
+}
+
+.siteintelix-premium-container {
+	max-width: 1200px;
+	padding:   var(--siteintelix-xl);
+}
+
+/* ============================================================
+   3. Premium Header
+   ============================================================ */
+.siteintelix-premium-header {
+	background:
+		radial-gradient(circle at 88% 22%, rgba(255,255,255,.3) 0%, rgba(255,255,255,0) 38%),
+		radial-gradient(circle at 14% 78%, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 34%),
+		linear-gradient(125deg, #1b8dd8 0%, #27a7e5 52%, #39c0ee 100%);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow:    var(--siteintelix-shadow);
+	padding:       30px var(--siteintelix-xl);
+}
+
+.siteintelix-premium-header__content {
+	align-items:     center;
+	display:         flex;
+	gap:             20px;
+	justify-content: space-between;
+	max-width:       1200px;
+}
+
+.siteintelix-premium-header__title {
+	color:       #ffffff !important;
+	font-size:   22px !important;
+	font-weight: 800 !important;
+	margin:      0 0 4px !important;
+	padding:     0 !important;
+}
+
+.siteintelix-premium-header__desc {
+	color:     rgba(255, 255, 255, 0.85);
+	font-size: 14px;
+	margin:    0;
+}
+
+.siteintelix-premium-header__icon {
+	color:  rgba(255,255,255,.92);
+	font-size: 32px !important;
+	height:    32px !important;
+	width:     32px !important;
+}
+
+.siteintelix-premium-header__title-group {
+	align-items: center;
+	display:     flex;
+	gap:         14px;
+}
+
+.siteintelix-premium-header__meta {
+	align-items: center;
+	display:     flex;
+	gap:         var(--siteintelix-md);
+}
+
+.siteintelix-premium-header__version {
+	background:    rgba(255, 255, 255, 0.15);
+	border:        1px solid rgba(255, 255, 255, 0.2);
+	border-radius: var(--siteintelix-radius-pill);
+	color:         #ffffff;
+	font-size:     12px;
+	font-weight:   600;
+	padding:       4px 12px;
+}
+
+/* ============================================================
+   4. Premium Alerts (Notices)
+   ============================================================ */
+.siteintelix-premium-alert {
+	align-items:   start;
+	background:    #fff;
+	border:        1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius);
+	box-shadow:    var(--siteintelix-shadow);
+	display:       flex;
+	margin-bottom: var(--siteintelix-lg);
+	overflow:      hidden;
+	padding:       20px;
+	position:      relative;
+}
+
+.siteintelix-premium-alert__icon {
+	align-items:     center;
+	border-radius:   50%;
+	display:         flex;
+	flex-shrink:     0;
+	height:          36px;
+	justify-content: center;
+	margin-right:    16px;
+	width:           36px;
+}
+
+.siteintelix-premium-alert__icon .dashicons {
+	font-size: 20px !important;
+	height:    20px !important;
+	width:     20px !important;
+}
+
+.siteintelix-premium-alert__content {
+	flex: 1;
+}
+
+.siteintelix-premium-alert__content strong {
+	display:     block;
+	font-size:   16px;
+	font-weight: 700;
+	margin-bottom: 4px;
+}
+
+.siteintelix-premium-alert__content p {
+	color: var(--siteintelix-text-muted);
+	font-size: 14px;
+	margin: 0;
+}
+
+.siteintelix-premium-alert__actions {
+	align-items: center;
+	display:     flex;
+	gap:         12px;
+	margin-left: 24px;
+}
+
+.siteintelix-premium-alert__close {
+	background: none;
+	border:     none;
+	color:      var(--siteintelix-text-muted);
+	cursor:     pointer;
+	font-size:  22px;
+	line-height: 1;
+	padding:    5px;
+	position:   absolute;
+	right:      12px;
+	top:        12px;
+}
+
+/* Alert Variants */
+.siteintelix-premium-alert--success { border-left: 6px solid var(--siteintelix-good); }
+.siteintelix-premium-alert--success .siteintelix-premium-alert__icon { background: var(--siteintelix-good-bg); color: var(--siteintelix-good); }
+
+.siteintelix-premium-alert--warning { border-left: 6px solid var(--siteintelix-warn); background: var(--siteintelix-warn-bg); }
+.siteintelix-premium-alert--warning .siteintelix-premium-alert__icon { background: #fff; color: var(--siteintelix-warn); }
+
+.siteintelix-premium-alert--info { border-left: 6px solid var(--siteintelix-info); }
+.siteintelix-premium-alert--info .siteintelix-premium-alert__icon { background: var(--siteintelix-info-bg); color: var(--siteintelix-info); }
+
+.siteintelix-premium-alert--error { border-left: 6px solid var(--siteintelix-crit); }
+.siteintelix-premium-alert--error .siteintelix-premium-alert__icon { background: var(--siteintelix-crit-bg); color: var(--siteintelix-crit); }
+
+/* ============================================================
+   5. Status Bar
+   ============================================================ */
+.siteintelix-premium-status-bar {
+	align-items:     center;
+	background:      #ffffff;
+	border:          1px solid var(--siteintelix-border);
+	border-radius:   var(--siteintelix-radius);
+	box-shadow:      var(--siteintelix-shadow-sm);
+	display:         flex;
+	justify-content: space-between;
+	margin-bottom:   40px;
+	padding:         16px 20px;
+}
+
+.siteintelix-premium-status-bar__info {
+	align-items: center;
+	display:     flex;
+	gap:         12px;
+}
+
+.siteintelix-premium-status-bar__icon {
+	color:     var(--siteintelix-info);
+	font-size: 24px !important;
+	height:    24px !important;
+	width:     24px !important;
+}
+
+.siteintelix-premium-status-bar__label {
+	font-size:   15px;
+	font-weight: 700;
+}
+
+.siteintelix-premium-status-bar__badge {
+	background:    var(--siteintelix-good-bg);
+	border:        1px solid var(--siteintelix-good-border);
+	border-radius: var(--siteintelix-radius-pill);
+	color:         var(--siteintelix-good-text);
+	font-size:     11px;
+	font-weight:   700;
+	padding:       2px 10px;
+}
+
+.siteintelix-premium-status-bar__text {
+	color: var(--siteintelix-text-muted);
+	font-size: 14px;
+	margin: 0;
+}
+
+.siteintelix-premium-status-bar__path {
+	align-items:   center;
+	background:    var(--siteintelix-bg);
+	border-radius: var(--siteintelix-radius-sm);
+	display:       flex;
+	gap:           8px;
+	padding:       8px 14px;
+}
+
+.siteintelix-premium-status-bar__path .dashicons {
+	color:     var(--siteintelix-accent);
+	font-size: 16px !important;
+}
+
+.siteintelix-premium-status-bar__path code {
+	background: none !important;
+	color:      var(--siteintelix-text-muted);
+	font-family: var(--siteintelix-font-mono);
+	font-size:  13px;
+	overflow:   hidden;
+	padding:    0;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ============================================================
+   6. Selection Header
+   ============================================================ */
+.siteintelix-premium-selection-header {
+	margin-bottom: 24px;
+}
+
+.siteintelix-premium-section-title {
+	align-items: center;
+	color:       var(--siteintelix-text) !important;
+	display:     flex;
+	font-size:   20px !important;
+	font-weight: 700 !important;
+	gap:         10px;
+	margin:      0 0 4px !important;
+}
+
+.siteintelix-premium-section-title .dashicons {
+	color:     var(--siteintelix-accent);
+	font-size: 22px !important;
+}
+
+.siteintelix-premium-section-desc {
+	color:     var(--siteintelix-text-muted);
+	font-size: 14px;
+	margin:    0;
+}
+
+/* ============================================================
+   7. Selection Grid & Cards
+   ============================================================ */
+.siteintelix-premium-grid {
+	display:               grid;
+	gap:                   var(--siteintelix-xl);
+	grid-template-columns: repeat(2, 1fr);
+	margin-bottom:         40px;
+}
+
+.siteintelix-premium-card {
+	background:    #fff;
+	border:        2px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius);
+	cursor:        pointer;
+	display:       flex;
+	gap:           16px;
+	padding:       28px;
+	position:      relative;
+	transition:    all .2s ease;
+}
+
+.siteintelix-premium-card:hover {
+	border-color: var(--siteintelix-accent);
+	box-shadow:   var(--siteintelix-shadow-lg);
+}
+
+.siteintelix-premium-card.is-selected {
+	border-color: var(--siteintelix-accent);
+	box-shadow:   var(--siteintelix-shadow);
+}
+
+.siteintelix-premium-card__selection {
+	flex-shrink: 0;
+	padding-top: 4px;
+}
+
+.siteintelix-premium-card__selection input[type="radio"] {
+	display: none;
+}
+
+.siteintelix-premium-card__radio-custom {
+	border:        2px solid var(--siteintelix-border);
+	border-radius: 50%;
+	display:       inline-block;
+	height:        22px;
+	position:      relative;
+	width:         22px;
+}
+
+.siteintelix-premium-card.is-selected .siteintelix-premium-card__radio-custom {
+	border-color: var(--siteintelix-accent);
+}
+
+.siteintelix-premium-card.is-selected .siteintelix-premium-card__radio-custom::after {
+	background:    var(--siteintelix-accent);
+	border-radius: 50%;
+	content:       "";
+	height:        10px;
+	left:          50%;
+	position:      absolute;
+	top:           50%;
+	transform:     translate(-50%, -50%);
+	width:         100%; /* Fix: use actual size */
+	width:         10px;
+}
+
+.siteintelix-premium-card__body {
+	flex: 1;
+}
+
+.siteintelix-premium-card__header {
+	align-items:   start;
+	display:       flex;
+	gap:           16px;
+	margin-bottom: 20px;
+}
+
+.siteintelix-premium-card__icon {
+	align-items:     center;
+	border-radius:   12px;
+	display:         flex;
+	flex-shrink:     0;
+	height:          48px;
+	justify-content: center;
+	width:           48px;
+}
+
+.siteintelix-premium-card__icon .dashicons {
+	font-size: 24px !important;
+	height:    24px !important;
+	width:     24px !important;
+}
+
+.siteintelix-premium-card__icon--blue   { background: #eff6ff; color: #3b82f6; }
+.siteintelix-premium-card__icon--orange { background: #fff7ed; color: #f97316; }
+
+.siteintelix-premium-card__title-group {
+	flex: 1;
+}
+
+.siteintelix-premium-card__title {
+	font-size:   18px !important;
+	font-weight: 700 !important;
+	margin:      0 0 6px !important;
+}
+
+.siteintelix-premium-badge {
+	border-radius: 6px;
+	font-size:     10px;
+	font-weight:   700;
+	padding:       2px 8px;
+	text-transform: uppercase;
+}
+
+.siteintelix-premium-badge--recommended { background: #dcfce7; color: #15803d; }
+.siteintelix-premium-badge--advanced    { background: #ffedd5; color: #9a3412; }
+
+.siteintelix-premium-card__desc {
+	color:       var(--siteintelix-text-muted);
+	font-size:   14px;
+	line-height: 1.5;
+	margin:      0 0 20px;
+}
+
+.siteintelix-premium-feature-list {
+	display:        flex;
+	flex-direction: column;
+	gap:            10px;
+	list-style:     none;
+	margin:         0 0 24px;
+	padding:        0;
+}
+
+.siteintelix-premium-feature-list li {
+	align-items: center;
+	color:       var(--siteintelix-text);
+	display:     flex;
+	font-size:   14px;
+	gap:         10px;
+}
+
+.siteintelix-premium-feature-list .dashicons {
+	color:     var(--siteintelix-good);
+	font-size: 18px !important;
+}
+
+.siteintelix-premium-card__path-box {
+	align-items:   center;
+	background:    var(--siteintelix-surface-2);
+	border:        1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius-sm);
+	display:       flex;
+	gap:           8px;
+	padding:       10px 14px;
+}
+
+.siteintelix-premium-card__path-box .dashicons {
+	color:     var(--siteintelix-text-muted);
+	font-size: 14px !important;
+}
+
+.siteintelix-premium-card__path-box code {
+	background: none;
+	color:      var(--siteintelix-text-muted);
+	font-family: var(--siteintelix-font-mono);
+	font-size:  12px;
+	padding:    0;
+}
+
+/* ============================================================
+   8. Footer Actions
+   ============================================================ */
+.siteintelix-premium-footer {
+	align-items: center;
+	display:     flex;
+	gap:         24px;
+}
+
+.siteintelix-premium-revert-link {
+	align-items: center;
+	color:       var(--siteintelix-accent);
+	display:     inline-flex;
+	font-size:   14px;
+	font-weight: 600;
+	gap:         6px;
+	text-decoration: none;
+}
+
+.siteintelix-premium-revert-link:hover {
+	text-decoration: underline;
+}
+
+/* ============================================================
+   9. Premium Buttons
+   ============================================================ */
+.siteintelix-premium-btn {
+	align-items:     center;
+	border:          1px solid transparent;
+	border-radius:   10px;
+	cursor:          pointer;
+	display:         inline-flex;
+	font-family:     var(--siteintelix-font);
+	font-size:       14px;
+	font-weight:     700;
+	gap:             8px;
+	justify-content: center;
+	padding:         12px 24px;
+	text-decoration: none;
+	transition:      all .15s ease;
+}
+
+.siteintelix-premium-btn--primary { background: var(--siteintelix-accent); color: #fff; box-shadow: var(--siteintelix-shadow); }
+.siteintelix-premium-btn--primary:hover { background: var(--siteintelix-accent-dark); transform: translateY(-1px); }
+
+.siteintelix-premium-btn--white { background: #fff; color: var(--siteintelix-accent); }
+.siteintelix-premium-btn--white:hover { background: var(--siteintelix-accent-light); }
+
+.siteintelix-premium-btn--orange { background: #f97316; color: #fff; }
+.siteintelix-premium-btn--orange:hover { background: #ea580c; }
+
+.siteintelix-premium-btn--outline-dark { border-color: var(--siteintelix-border-strong); color: var(--siteintelix-text); background: #fff; }
+.siteintelix-premium-btn--outline-dark:hover { background: var(--siteintelix-surface-2); }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+	.siteintelix-premium-grid {
+		grid-template-columns: 1fr;
+	}
+	.siteintelix-premium-header__content {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 20px;
+	}
+	.siteintelix-premium-status-bar {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 16px;
+	}
 }
 
 /* ============================================================
