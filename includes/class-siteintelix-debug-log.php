@@ -1,6 +1,10 @@
 <?php
 /**
- * SITEINTELIX_Debug_Log - reads and classifies entries from wp-content/debug.log.
+ * SITEINTELIX_Debug_Log - reads and classifies log entries.
+ *
+ * Reads from wp-content/siteintelix-debug.log (MU-plugin mode)
+ * or wp-content/debug.log (wp-config.php mode) based on the
+ * selected debug method option.
  *
  * @package SiteIntelix
  * @since   1.1.0
@@ -22,12 +26,14 @@ class SITEINTELIX_Debug_Log {
 	 * @return array<string, mixed>
 	 */
 	public static function get_data( $limit = 300 ) {
-		$path = self::get_path();
+		$method = get_option( 'siteintelix_debug_method', 'mu' );
+		$path   = self::get_path_for_mode( $method );
 		$data = array(
+			'method'   => $method,
 			'path'     => $path,
 			'exists'   => file_exists( $path ),
 			'readable' => is_readable( $path ),
-			'enabled'  => defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG,
+			'enabled'  => (bool) get_option( SITEINTELIX_MU_DEBUG_OPTION, false ),
 			'size'     => 0,
 			'entries'  => array(),
 			'counts'   => array(),
@@ -68,12 +74,29 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
-	 * Get the default WordPress debug.log path.
+	 * Get the log file path for a given debug method.
 	 *
+	 * @param string $method 'mu' or 'wp_config'.
+	 * @return string  Absolute path to the log file.
+	 */
+	public static function get_path_for_mode( $method = 'mu' ) {
+		if ( 'wp_config' === $method ) {
+			return trailingslashit( WP_CONTENT_DIR ) . 'debug.log';
+		}
+		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
+	}
+
+	/**
+	 * Return a short human-readable description of the active mode's log source.
+	 *
+	 * @param string $method 'mu' or 'wp_config'.
 	 * @return string
 	 */
-	private static function get_path() {
-		return trailingslashit( WP_CONTENT_DIR ) . 'debug.log';
+	public static function get_mode_label( $method = 'mu' ) {
+		if ( 'wp_config' === $method ) {
+			return __( 'wp-config.php mode — logging to wp-content/debug.log', 'siteintelix' );
+		}
+		return __( 'MU Plugin mode — logging to wp-content/siteintelix-debug.log', 'siteintelix' );
 	}
 
 	/**
@@ -127,6 +150,18 @@ class SITEINTELIX_Debug_Log {
 		$line      = (string) $line;
 		$timestamp = '';
 		$message   = $line;
+
+		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*([^:]+):(\\d+)$/', $line, $match ) ) {
+			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
+			$level     = isset( $match[2] ) ? strtoupper( (string) $match[2] ) : 'OTHER';
+			$message   = isset( $match[3] ) ? (string) $match[3] : $line;
+
+			return array(
+				'timestamp' => $timestamp,
+				'level'     => $level,
+				'message'   => $message,
+			);
+		}
 
 		if ( preg_match( '/^\\[(.*?)\\]\\s*(.*)$/', $line, $match ) ) {
 			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';

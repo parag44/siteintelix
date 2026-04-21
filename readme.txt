@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.1.2
+Stable tag:        1.2.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -132,6 +132,27 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
+= 1.2.0 — 2026-04-21 =
+* Added a dedicated **Settings** screen for debug method management (MU Plugin or `wp-config.php`).
+* Added a modular **Security Panel** with hardening toggles:
+  * Disable XML-RPC.
+  * Hide WordPress version generator output.
+  * Disable wp-admin file editing (`DISALLOW_FILE_EDIT`).
+* Added a safe MU-plugin debug capture manager that auto-creates and refreshes `wp-content/mu-plugins/siteintelix-debug-capture.php`.
+* Added secure admin-post actions for debug controls, including nonce + capability checks for save, clear, and download operations.
+* Added controlled `wp-config.php` debug toggling with automatic backup support (`wp-config.php.bak`).
+* Improved debug source detection and management state handling for more reliable runtime notices.
+* Hardened REST endpoint responses with no-cache headers for sensitive diagnostics output.
+* Updated plugin metadata and release versioning for WordPress.org deployment (`1.2.0`).
+
+= 1.1.4 — 2026-04-20 =
+* Refined top header hierarchy and visual polish for a cleaner, more professional first impression.
+* Improved action button emphasis and spacing in the header (`Export JSON` primary, `Copy Report` secondary).
+* Softened the header gradient and upgraded radius/shadow styles to better match modern WordPress admin UI expectations.
+* Enhanced responsive behavior for the header layout on smaller viewports.
+* Replaced a non-prefixed hook usage with a plugin-prefixed filter (`siteintelix_local_ssl_verify`) for stronger coding standards compatibility.
+* Updated release metadata for WordPress.org submission.
+
 = 1.1.2 — 2026-04-16 =
 * Added a dedicated **Debug Log Viewer** submenu under SiteIntelix Panel.
 * Added severity-aware parsing for debug log entries (`FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `OTHER`).
@@ -163,6 +184,12 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+Major diagnostics and hardening update with new Settings and Security panels, improved debug capture management, and WordPress.org compliance-focused quality improvements.
+
+= 1.1.4 =
+Header UX and standards polish update. Recommended for all users.
 
 = 1.1.2 =
 Debug Log Viewer release with improved notice handling, runtime logging guidance, and enhanced admin UX.

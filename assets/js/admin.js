@@ -243,6 +243,147 @@
 	}
 
 	// -----------------------------------------------------------------------
+	// Debug log page filters
+	// -----------------------------------------------------------------------
+	function initDebugLogFilters() {
+		var root = document.getElementById( 'siteintelix-debug-log-page' );
+		if ( ! root ) { return; }
+
+		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter' );
+		var searchInput = root.querySelector( '#siteintelix-log-search' );
+		var rows = root.querySelectorAll( '.siteintelix-log-line' );
+		if ( ! filterButtons.length || ! rows.length ) { return; }
+
+		var activeLevel = 'all';
+
+		function rowMatchesLevel( row, level ) {
+			var rowLevel = ( row.getAttribute( 'data-level' ) || '' ).toLowerCase();
+			if ( level === 'all' ) { return true; }
+			if ( level === 'fatal' ) { return rowLevel === 'fatal' || rowLevel === 'error'; }
+			return rowLevel === level;
+		}
+
+		function rowMatchesSearch( row, term ) {
+			if ( ! term ) { return true; }
+			var msg = ( row.getAttribute( 'data-message' ) || '' ).toLowerCase();
+			var text = ( row.textContent || '' ).toLowerCase();
+			return msg.indexOf( term ) !== -1 || text.indexOf( term ) !== -1;
+		}
+
+		function applyFilters() {
+			var term = searchInput ? String( searchInput.value || '' ).trim().toLowerCase() : '';
+			rows.forEach( function ( row ) {
+				var ok = rowMatchesLevel( row, activeLevel ) && rowMatchesSearch( row, term );
+				row.style.display = ok ? '' : 'none';
+			} );
+		}
+
+		filterButtons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				activeLevel = ( btn.getAttribute( 'data-level' ) || 'all' ).toLowerCase();
+				filterButtons.forEach( function (b) { b.classList.remove( 'is-active' ); } );
+				btn.classList.add( 'is-active' );
+				applyFilters();
+			} );
+		} );
+
+		if ( searchInput ) {
+			searchInput.addEventListener( 'input', applyFilters );
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Settings page — method card selection
+	// -----------------------------------------------------------------------
+	function initSettingsPage() {
+		var page = document.getElementById( 'siteintelix-settings-page' );
+		if ( ! page ) { return; }
+
+		var cards  = page.querySelectorAll( '.siteintelix-method-card' );
+		var radios = page.querySelectorAll( '.siteintelix-method-card__radio' );
+
+		// Highlight the currently selected card.
+		function updateCardHighlight() {
+			cards.forEach( function ( card ) {
+				var radio = card.querySelector( '.siteintelix-method-card__radio' );
+				if ( radio && radio.checked ) {
+					card.classList.add( 'is-selected' );
+				} else {
+					card.classList.remove( 'is-selected' );
+				}
+			} );
+		}
+
+		radios.forEach( function ( radio ) {
+			radio.addEventListener( 'change', function () {
+				// Warn when selecting wp-config method.
+				if ( radio.value === 'wp_config' ) {
+					var confirmed = window.confirm(
+						'This will allow SiteIntelix to modify wp-config.php to enable WP_DEBUG constants.\n' +
+						'A backup (wp-config.php.bak) will be created before any change.\n\n' +
+						'Continue?'
+					);
+					if ( ! confirmed ) {
+						// Revert selection.
+						radios.forEach( function ( r ) {
+							if ( r.value === 'mu' ) { r.checked = true; }
+						} );
+						updateCardHighlight();
+						return;
+					}
+				}
+				updateCardHighlight();
+			} );
+		} );
+
+		// Also trigger on clicking anywhere within the card label.
+		cards.forEach( function ( card ) {
+			card.addEventListener( 'click', function () {
+				updateCardHighlight();
+			} );
+		} );
+
+		updateCardHighlight();
+	}
+
+	function initDismissibleAlerts() {
+		document.querySelectorAll( '[data-siteintelix-dismiss]' ).forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				var alert = btn.closest( '.siteintelix-alert' );
+				if ( alert ) {
+					alert.remove();
+				}
+			} );
+		} );
+	}
+
+	// -----------------------------------------------------------------------
+	// Security page — live toggle state updates
+	// -----------------------------------------------------------------------
+	function initSecurityToggles() {
+		var page = document.getElementById( 'siteintelix-security-page' );
+		if ( ! page ) { return; }
+
+		var toggleInputs = page.querySelectorAll( '.siteintelix-security-card .siteintelix-toggle input' );
+
+		toggleInputs.forEach( function ( input ) {
+			input.addEventListener( 'change', function () {
+				var card        = input.closest( '.siteintelix-security-card' );
+				var statusLabel = card && card.querySelector( '.siteintelix-security-card__status-label' );
+				if ( ! card ) { return; }
+
+				if ( input.checked ) {
+					card.classList.add( 'is-active' );
+					if ( statusLabel ) { statusLabel.textContent = 'Active'; }
+				} else {
+					card.classList.remove( 'is-active' );
+					if ( statusLabel ) { statusLabel.textContent = 'Inactive'; }
+				}
+			} );
+		} );
+	}
+
+	// -----------------------------------------------------------------------
 	// Init
 	// -----------------------------------------------------------------------
 	document.addEventListener( 'DOMContentLoaded', function () {
@@ -250,6 +391,10 @@
 		initCopyButton();
 		initExportButton();
 		initA11y();
+		initDebugLogFilters();
+		initSettingsPage();
+		initDismissibleAlerts();
+		initSecurityToggles();
 	} );
 
 }() );

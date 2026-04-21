@@ -210,7 +210,8 @@ class SITEINTELIX_System_Info {
 			rest_url( '/' ),
 			array(
 				'timeout'   => 5,
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+				// Keep this filter plugin-prefixed for coding-standards compatibility.
+				'sslverify' => (bool) apply_filters( 'siteintelix_local_ssl_verify', false ),
 			)
 		);
 
@@ -247,6 +248,9 @@ class SITEINTELIX_System_Info {
 	 * @return string
 	 */
 	private static function get_disk_free() {
+		if ( ! function_exists( 'disk_free_space' ) ) {
+			return __( 'Unknown', 'siteintelix' );
+		}
 		$bytes = @disk_free_space( ABSPATH ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		return $bytes ? size_format( $bytes ) : __( 'Unknown', 'siteintelix' );
 	}
