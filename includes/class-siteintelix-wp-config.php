@@ -181,6 +181,10 @@ class SITEINTELIX_WP_Config {
 			return $backup;
 		}
 
+		// Ensure all constants exist in the file.
+		// If WP_DEBUG exists but others are missing, surgically insert them after WP_DEBUG.
+		$contents = self::ensure_constants_exist( $contents );
+
 		$modified = false;
 
 		foreach ( self::$toggle_map as $constant => $enabled_value ) {
@@ -209,6 +213,44 @@ class SITEINTELIX_WP_Config {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Ensures that WP_DEBUG_LOG and WP_DEBUG_DISPLAY exist if WP_DEBUG is present.
+	 * Inserts them right after the WP_DEBUG line if missing.
+	 *
+	 * @param string $contents Raw wp-config.php contents.
+	 * @return string Modified contents.
+	 */
+	private static function ensure_constants_exist( $contents ) {
+		// If WP_DEBUG is missing entirely, we don't want to mess with it (stay surgical).
+		if ( ! preg_match( '/define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,/i', $contents, $matches ) ) {
+			return $contents;
+		}
+
+		foreach ( array( 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY' ) as $const ) {
+			if ( ! preg_match( '/define\s*\(\s*[\'"]' . $const . '[\'"]\s*,/i', $contents ) ) {
+				// Constant is missing. Find WP_DEBUG line and insert after it.
+				// Regex explanation:
+				// [ \t]* matches indentation.
+				// define( 'WP_DEBUG', ... ); matches the line.
+				// (.*?) captures everything until the optional newline.
+				$pattern = '/^([ \t]*define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,.*?\);)(.*?)$/im';
+				$replacement = '$1' . "\n" . '$1' . '$2'; // Placeholder logic to find the line.
+
+				// Better replacement: capture indentation of WP_DEBUG line to match it.
+				$contents = preg_replace_callback( $pattern, function( $m ) use ( $const ) {
+					$indent = '';
+					if ( preg_match( '/^([ \t]*)/', $m[1], $mi ) ) {
+						$indent = $mi[1];
+					}
+					// Return original line + the new constant line with same indentation.
+					return $m[1] . "\n" . $indent . "define( '" . $const . "', false );" . $m[2];
+				}, $contents );
+			}
+		}
+
+		return $contents;
 	}
 
 	/**
