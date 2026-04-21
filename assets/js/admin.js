@@ -243,6 +243,56 @@
 	}
 
 	// -----------------------------------------------------------------------
+	// Debug log page filters
+	// -----------------------------------------------------------------------
+	function initDebugLogFilters() {
+		var root = document.getElementById( 'siteintelix-debug-log-page' );
+		if ( ! root ) { return; }
+
+		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter' );
+		var searchInput = root.querySelector( '#siteintelix-log-search' );
+		var rows = root.querySelectorAll( '.siteintelix-log-line' );
+		if ( ! filterButtons.length || ! rows.length ) { return; }
+
+		var activeLevel = 'all';
+
+		function rowMatchesLevel( row, level ) {
+			var rowLevel = ( row.getAttribute( 'data-level' ) || '' ).toLowerCase();
+			if ( level === 'all' ) { return true; }
+			if ( level === 'fatal' ) { return rowLevel === 'fatal' || rowLevel === 'error'; }
+			return rowLevel === level;
+		}
+
+		function rowMatchesSearch( row, term ) {
+			if ( ! term ) { return true; }
+			var msg = ( row.getAttribute( 'data-message' ) || '' ).toLowerCase();
+			var text = ( row.textContent || '' ).toLowerCase();
+			return msg.indexOf( term ) !== -1 || text.indexOf( term ) !== -1;
+		}
+
+		function applyFilters() {
+			var term = searchInput ? String( searchInput.value || '' ).trim().toLowerCase() : '';
+			rows.forEach( function ( row ) {
+				var ok = rowMatchesLevel( row, activeLevel ) && rowMatchesSearch( row, term );
+				row.style.display = ok ? '' : 'none';
+			} );
+		}
+
+		filterButtons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				activeLevel = ( btn.getAttribute( 'data-level' ) || 'all' ).toLowerCase();
+				filterButtons.forEach( function (b) { b.classList.remove( 'is-active' ); } );
+				btn.classList.add( 'is-active' );
+				applyFilters();
+			} );
+		} );
+
+		if ( searchInput ) {
+			searchInput.addEventListener( 'input', applyFilters );
+		}
+	}
+
+	// -----------------------------------------------------------------------
 	// Init
 	// -----------------------------------------------------------------------
 	document.addEventListener( 'DOMContentLoaded', function () {
@@ -250,6 +300,7 @@
 		initCopyButton();
 		initExportButton();
 		initA11y();
+		initDebugLogFilters();
 	} );
 
 }() );

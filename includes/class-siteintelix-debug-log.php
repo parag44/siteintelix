@@ -1,6 +1,6 @@
 <?php
 /**
- * SITEINTELIX_Debug_Log - reads and classifies entries from wp-content/debug.log.
+ * SITEINTELIX_Debug_Log - reads and classifies entries from wp-content/siteintelix-debug.log.
  *
  * @package SiteIntelix
  * @since   1.1.0
@@ -27,7 +27,7 @@ class SITEINTELIX_Debug_Log {
 			'path'     => $path,
 			'exists'   => file_exists( $path ),
 			'readable' => is_readable( $path ),
-			'enabled'  => defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG,
+			'enabled'  => (bool) get_option( SITEINTELIX_MU_DEBUG_OPTION, false ),
 			'size'     => 0,
 			'entries'  => array(),
 			'counts'   => array(),
@@ -68,12 +68,12 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
-	 * Get the default WordPress debug.log path.
+	 * Get the custom SiteIntelix debug log path.
 	 *
 	 * @return string
 	 */
 	private static function get_path() {
-		return trailingslashit( WP_CONTENT_DIR ) . 'debug.log';
+		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
 	}
 
 	/**
@@ -127,6 +127,18 @@ class SITEINTELIX_Debug_Log {
 		$line      = (string) $line;
 		$timestamp = '';
 		$message   = $line;
+
+		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*([^:]+):(\\d+)$/', $line, $match ) ) {
+			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
+			$level     = isset( $match[2] ) ? strtoupper( (string) $match[2] ) : 'OTHER';
+			$message   = isset( $match[3] ) ? (string) $match[3] : $line;
+
+			return array(
+				'timestamp' => $timestamp,
+				'level'     => $level,
+				'message'   => $message,
+			);
+		}
 
 		if ( preg_match( '/^\\[(.*?)\\]\\s*(.*)$/', $line, $match ) ) {
 			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
