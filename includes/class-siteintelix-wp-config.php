@@ -1,14 +1,14 @@
 <?php
 /**
- * SITEINTELIX_WP_Config — safe wp-config.php editor for debug constants.
+ * SITEINTELIX_WP_Config — minimal, surgical wp-config.php debug toggler.
  *
  * Strategy:
- *  - Uses direct PHP file_get_contents/file_put_contents (WP_Filesystem
- *    can fail in admin-post context when no FTP credentials are configured).
- *  - Detects and REPLACES an existing native WP_DEBUG if/define block so
- *    that our values are not shadowed.
- *  - Inserts SiteIntelix-managed block before the sentinel line.
- *  - Always backs up before writing.
+ *   ENABLE  → find existing define( 'WP_DEBUG', ... ) and define( 'WP_DEBUG_LOG', ... )
+ *             lines and change their value to true.
+ *   DISABLE → change those same values back to false.
+ *
+ * No blocks are inserted or removed. No markers. The original code structure
+ * is preserved. A .bak backup is created before every write.
  *
  * @package SiteIntelix
  * @since   1.2.0
@@ -23,14 +23,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SITEINTELIX_WP_Config {
 
-	/** Block start marker inserted into wp-config.php. */
-	const MARKER_START = '// BEGIN SiteIntelix Debug';
-
-	/** Block end marker inserted into wp-config.php. */
-	const MARKER_END = '// END SiteIntelix Debug';
-
-	/** Sentinel line WordPress uses to mark end of user edits. */
-	const SENTINEL = "/* That's all, stop editing!";
+	/**
+	 * Constants we toggle. Order matters — WP_DEBUG must come first.
+	 *
+	 * @var array<string, bool>  name => value_when_enabled
+	 */
+	private static $toggle_map = array(
+		'WP_DEBUG'         => true,
+		'WP_DEBUG_LOG'     => true,
+		'WP_DEBUG_DISPLAY' => false, // keep display off even when enabled.
+	);
 
 	// -----------------------------------------------------------------------
 	// Public API
@@ -47,6 +49,7 @@ class SITEINTELIX_WP_Config {
 			return $primary;
 		}
 
+		// WordPress sometimes lives one level up.
 		$parent = dirname( ABSPATH ) . '/wp-config.php';
 		if ( file_exists( $parent ) && ! file_exists( dirname( ABSPATH ) . '/wp-settings.php' ) ) {
 			return $parent;
@@ -65,11 +68,12 @@ class SITEINTELIX_WP_Config {
 		if ( false === $path ) {
 			return false;
 		}
-		return is_writable( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
+		return is_writable( $path );
 	}
 
 	/**
-	 * Create a .bak backup of wp-config.php using direct PHP file copy.
+	 * Backup wp-config.php to wp-config.php.bak.
 	 *
 	 * @return true|WP_Error
 	 */
@@ -79,13 +83,12 @@ class SITEINTELIX_WP_Config {
 			return new WP_Error( 'siteintelix_wpc_not_found', __( 'wp-config.php could not be located.', 'siteintelix' ) );
 		}
 
-		$backup   = $path . '.bak';
 		$contents = self::read_file( $path );
 		if ( is_wp_error( $contents ) ) {
 			return $contents;
 		}
 
-		if ( false === self::write_file( $backup, $contents ) ) {
+		if ( false === self::write_file( $path . '.bak', $contents ) ) {
 			return new WP_Error( 'siteintelix_wpc_backup', __( 'Could not create wp-config.php backup.', 'siteintelix' ) );
 		}
 
@@ -93,16 +96,71 @@ class SITEINTELIX_WP_Config {
 	}
 
 	/**
-	 * Enable WP debug constants in wp-config.php.
+	 * Enable WP_DEBUG by changing existing define() values to true/false.
 	 *
-	 * Handles two cases:
-	 *  a) An existing native WP_DEBUG block (if/define) is present → disable
-	 *     (comment it out or remove) and insert our managed block.
-	 *  b) No existing block → insert our block before the sentinel.
+	 * Only modifies lines that already exist. Does NOT insert new defines.
 	 *
 	 * @return true|WP_Error
 	 */
 	public static function enable() {
+		return self::apply( true );
+	}
+
+	/**
+	 * Disable WP_DEBUG by changing existing define() values back to false.
+	 *
+	 * @return true|WP_Error
+	 */
+	public static function disable() {
+		return self::apply( false );
+	}
+
+	/**
+	 * Check whether WP_DEBUG is currently set to true in wp-config.php.
+	 *
+	 * @return bool
+	 */
+	public static function is_debug_enabled_in_file() {
+		$path = self::locate();
+		if ( false === $path || ! file_exists( $path ) ) {
+			return false;
+		}
+
+		$contents = self::read_file( $path );
+		if ( is_wp_error( $contents ) ) {
+			return false;
+		}
+
+		// Match:  define( 'WP_DEBUG', true );
+		return (bool) preg_match(
+			'/define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,\s*true\s*\)/i',
+			$contents
+		);
+	}
+
+	/**
+	 * Alias kept for backward-compatibility with SITEINTELIX_Debug_Source.
+	 *
+	 * Previously this checked for a block-marker; now it checks the actual
+	 * WP_DEBUG value in the file.
+	 *
+	 * @return bool
+	 */
+	public static function has_siteintelix_block() {
+		return self::is_debug_enabled_in_file();
+	}
+
+	// -----------------------------------------------------------------------
+	// Private helpers
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Core toggle logic — sets each constant to its enabled or disabled value.
+	 *
+	 * @param bool $enable  TRUE → set debug values; FALSE → reset to off.
+	 * @return true|WP_Error
+	 */
+	private static function apply( $enable ) {
 		$path = self::locate();
 		if ( false === $path ) {
 			return new WP_Error( 'siteintelix_wpc_not_found', __( 'wp-config.php could not be located.', 'siteintelix' ) );
@@ -117,136 +175,47 @@ class SITEINTELIX_WP_Config {
 			return $contents;
 		}
 
-		// Already our block? Just ensure values are correct by re-inserting.
-		if ( self::has_siteintelix_block() ) {
-			return true;
-		}
-
-		// Backup first.
+		// Backup before any change.
 		$backup = self::backup();
 		if ( is_wp_error( $backup ) ) {
 			return $backup;
 		}
 
-		// Remove any existing native WP_DEBUG if/define wrapper block so it
-		// doesn't shadow our defines.
-		$contents = self::remove_native_wp_debug_block( $contents );
+		$modified = false;
 
-		// Build our managed block.
-		$block = "\n" . self::MARKER_START . "\n"
-			. "define( 'WP_DEBUG', true );\n"
-			. "define( 'WP_DEBUG_LOG', true );\n"
-			. "define( 'WP_DEBUG_DISPLAY', false );\n"
-			. "define( 'SCRIPT_DEBUG', true );\n"
-			. self::MARKER_END . "\n";
+		foreach ( self::$toggle_map as $constant => $enabled_value ) {
+			// When enabling use the map value; when disabling use false.
+			$target_value = $enable ? $enabled_value : false;
+			$target_str   = $target_value ? 'true' : 'false';
+			$opposite_str = $target_value ? 'false' : 'true';
 
-		// Insert before the sentinel.
-		$sentinel_pos = strpos( $contents, self::SENTINEL );
-		if ( false !== $sentinel_pos ) {
-			$contents = substr_replace( $contents, $block, $sentinel_pos, 0 );
-		} else {
-			// Fallback: before closing PHP tag.
-			$close_tag = strrpos( $contents, '?>' );
-			if ( false !== $close_tag ) {
-				$contents = substr_replace( $contents, $block, $close_tag, 0 );
-			} else {
-				$contents .= $block;
+			// Pattern: define( 'CONSTANT', <any bool or numeric 0/1> );
+			// Captures everything around the value so we can replace just the value.
+			$pattern = '/(define\s*\(\s*[\'"]' . preg_quote( $constant, '/' ) . '[\'"]\s*,\s*)(' . $opposite_str . '|' . $target_str . ')(\s*\))/i';
+
+			$new_contents = preg_replace( $pattern, '${1}' . $target_str . '${3}', $contents );
+
+			if ( null !== $new_contents && $new_contents !== $contents ) {
+				$contents = $new_contents;
+				$modified = true;
 			}
 		}
 
-		if ( false === self::write_file( $path, $contents ) ) {
-			return new WP_Error( 'siteintelix_wpc_write', __( 'Could not write to wp-config.php.', 'siteintelix' ) );
+		// Only write if something actually changed.
+		if ( $modified ) {
+			if ( false === self::write_file( $path, $contents ) ) {
+				return new WP_Error( 'siteintelix_wpc_write', __( 'Could not write to wp-config.php.', 'siteintelix' ) );
+			}
 		}
 
 		return true;
 	}
 
 	/**
-	 * Remove only the SiteIntelix-managed block from wp-config.php and
-	 * restore a standard WP_DEBUG false block.
+	 * Read a file with direct PHP (reliable in admin-post context).
 	 *
-	 * @return true|WP_Error
-	 */
-	public static function disable() {
-		$path = self::locate();
-		if ( false === $path ) {
-			return new WP_Error( 'siteintelix_wpc_not_found', __( 'wp-config.php could not be located.', 'siteintelix' ) );
-		}
-
-		$contents = self::read_file( $path );
-		if ( is_wp_error( $contents ) ) {
-			return $contents;
-		}
-
-		if ( ! self::has_siteintelix_block( $contents ) ) {
-			return true; // Nothing to remove.
-		}
-
-		if ( ! self::is_writable() ) {
-			return new WP_Error( 'siteintelix_wpc_readonly', __( 'wp-config.php is not writable.', 'siteintelix' ) );
-		}
-
-		$backup = self::backup();
-		if ( is_wp_error( $backup ) ) {
-			return $backup;
-		}
-
-		// Remove our managed block.
-		$contents = self::remove_siteintelix_block( $contents );
-
-		// Insert a simple disabled WP_DEBUG define before the sentinel
-		// only if WP_DEBUG is no longer defined anywhere in the file.
-		if ( ! self::constant_defined_in( $contents, 'WP_DEBUG' ) ) {
-			$restore_block = "\n// WordPress debugging mode.\n"
-				. "if ( ! defined( 'WP_DEBUG' ) ) {\n"
-				. "\tdefine( 'WP_DEBUG', false );\n"
-				. "\tdefine( 'WP_DEBUG_LOG', false );\n"
-				. "\tdefine( 'WP_DEBUG_DISPLAY', false );\n"
-				. "}\n";
-
-			$sentinel_pos = strpos( $contents, self::SENTINEL );
-			if ( false !== $sentinel_pos ) {
-				$contents = substr_replace( $contents, $restore_block, $sentinel_pos, 0 );
-			}
-		}
-
-		if ( false === self::write_file( $path, $contents ) ) {
-			return new WP_Error( 'siteintelix_wpc_write', __( 'Could not write to wp-config.php.', 'siteintelix' ) );
-		}
-
-		return true;
-	}
-
-	/**
-	 * Check whether the SiteIntelix block is present in wp-config.php.
-	 *
-	 * @param string|null $contents Optional file contents to check (avoids re-read).
-	 * @return bool
-	 */
-	public static function has_siteintelix_block( $contents = null ) {
-		if ( null === $contents ) {
-			$path = self::locate();
-			if ( false === $path || ! file_exists( $path ) ) {
-				return false;
-			}
-			$contents = self::read_file( $path );
-			if ( is_wp_error( $contents ) ) {
-				return false;
-			}
-		}
-
-		return false !== strpos( $contents, self::MARKER_START );
-	}
-
-	// -----------------------------------------------------------------------
-	// Private Helpers
-	// -----------------------------------------------------------------------
-
-	/**
-	 * Read a file using direct PHP (reliable in admin-post context).
-	 *
-	 * @param string $path Absolute file path.
-	 * @return string|WP_Error  File contents or error.
+	 * @param string $path Absolute path.
+	 * @return string|WP_Error
 	 */
 	private static function read_file( $path ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
@@ -258,91 +227,14 @@ class SITEINTELIX_WP_Config {
 	}
 
 	/**
-	 * Write a file using direct PHP (reliable in admin-post context).
+	 * Write a file with direct PHP (reliable in admin-post context).
 	 *
-	 * @param string $path     Absolute file path.
+	 * @param string $path     Absolute path.
 	 * @param string $contents Content to write.
 	 * @return bool
 	 */
 	private static function write_file( $path, $contents ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		return false !== file_put_contents( $path, $contents );
-	}
-
-	/**
-	 * Remove our SiteIntelix marker block from raw file contents.
-	 *
-	 * @param string $contents Raw file contents.
-	 * @return string  Contents without the block.
-	 */
-	private static function remove_siteintelix_block( $contents ) {
-		$pattern  = '/\n?' . preg_quote( self::MARKER_START, '/' ) . '.*?' . preg_quote( self::MARKER_END, '/' ) . '\n?/s';
-		return preg_replace( $pattern, '', $contents );
-	}
-
-	/**
-	 * Detect and remove a native WordPress WP_DEBUG if/define block.
-	 *
-	 * Matches patterns like:
-	 *   if ( ! defined( 'WP_DEBUG' ) ) {
-	 *       define( 'WP_DEBUG', false );
-	 *       ...
-	 *   }
-	 * or a bare define( 'WP_DEBUG', ... ); line.
-	 *
-	 * @param string $contents Raw file contents.
-	 * @return string  Contents with native WP_DEBUG block removed.
-	 */
-	private static function remove_native_wp_debug_block( $contents ) {
-		// Match: if ( ! defined( 'WP_DEBUG' ) ) { ... } (multi-line, greedy enough).
-		$if_pattern = '/\n?[^\n]*?if\s*\(\s*!\s*defined\s*\(\s*[\'"]WP_DEBUG[\'"]\s*\)\s*\)[^\{]*\{[^}]*\}\n?/s';
-		$cleaned    = preg_replace( $if_pattern, "\n", $contents );
-		if ( null !== $cleaned ) {
-			$contents = $cleaned;
-		}
-
-		// Match bare: define( 'WP_DEBUG', ... ); lines (any value).
-		$define_pattern = '/\n?[ \t]*define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,[^)]*\)\s*;\n?/';
-		$cleaned        = preg_replace( $define_pattern, "\n", $contents );
-		if ( null !== $cleaned ) {
-			$contents = $cleaned;
-		}
-
-		// Also remove bare WP_DEBUG_LOG / WP_DEBUG_DISPLAY / SCRIPT_DEBUG defines
-		// that may have been left behind by the old if-block removal.
-		foreach ( array( 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY', 'SCRIPT_DEBUG' ) as $const ) {
-			$pattern = '/\n?[ \t]*define\s*\(\s*[\'"]' . $const . '[\'"]\s*,[^)]*\)\s*;\n?/';
-			$cleaned = preg_replace( $pattern, "\n", $contents );
-			if ( null !== $cleaned ) {
-				$contents = $cleaned;
-			}
-		}
-
-		// Also strip ini_set display_errors lines left by the removed block.
-		$ini_pattern = '/\n?[ \t]*@?ini_set\s*\(\s*[\'"]display_errors[\'"]\s*,[^)]*\)\s*;\n?/';
-		$cleaned     = preg_replace( $ini_pattern, "\n", $contents );
-		if ( null !== $cleaned ) {
-			$contents = $cleaned;
-		}
-
-		// Remove the preceding comment block for the native WP_DEBUG section.
-		$comment_pattern = '/\n?\/\*\*\s*\n\s*\*\s*For developers: WordPress debugging mode\..*?\*\/\n?/s';
-		$cleaned         = preg_replace( $comment_pattern, "\n", $contents );
-		if ( null !== $cleaned ) {
-			$contents = $cleaned;
-		}
-
-		return $contents;
-	}
-
-	/**
-	 * Check whether a define() call for a constant exists in raw file contents.
-	 *
-	 * @param string $contents File contents.
-	 * @param string $name     Constant name.
-	 * @return bool
-	 */
-	private static function constant_defined_in( $contents, $name ) {
-		return (bool) preg_match( '/define\s*\(\s*[\'"]' . preg_quote( $name, '/' ) . '[\'"]\s*,/', $contents );
 	}
 }

@@ -30,12 +30,15 @@ class SITEINTELIX_Debug_Source {
 	 * @return string  One of the SOURCE_* constants.
 	 */
 	public static function detect() {
-		// 1. Check if our managed wp-config block is present.
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && class_exists( 'SITEINTELIX_WP_Config' ) && SITEINTELIX_WP_Config::has_siteintelix_block() ) {
+		// Check if wp-config.php method is active: WP_DEBUG is true in the file.
+		if ( 'wp_config' === self::get_method()
+			&& class_exists( 'SITEINTELIX_WP_Config' )
+			&& SITEINTELIX_WP_Config::is_debug_enabled_in_file()
+		) {
 			return self::SOURCE_WP_CONFIG;
 		}
 
-		// 2. Check if MU-plugin capture option is enabled.
+		// Check if MU-plugin capture option is enabled.
 		$mu_enabled = get_option( 'siteintelix_enable_debug_capture', false );
 		if ( ! empty( $mu_enabled ) ) {
 			return self::SOURCE_MU_PLUGIN;
