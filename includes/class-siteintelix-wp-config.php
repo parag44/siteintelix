@@ -194,17 +194,20 @@ class SITEINTELIX_WP_Config {
 		// Remove our managed block.
 		$contents = self::remove_siteintelix_block( $contents );
 
-		// Re-insert the standard disabled WP_DEBUG block before the sentinel.
-		$restore_block = "\n// WordPress debugging mode (disabled).\n"
-			. "if ( ! defined( 'WP_DEBUG' ) ) {\n"
-			. "\tdefine( 'WP_DEBUG', false );\n"
-			. "\tdefine( 'WP_DEBUG_LOG', false );\n"
-			. "\tdefine( 'WP_DEBUG_DISPLAY', false );\n"
-			. "}\n";
+		// Insert a simple disabled WP_DEBUG define before the sentinel
+		// only if WP_DEBUG is no longer defined anywhere in the file.
+		if ( ! self::constant_defined_in( $contents, 'WP_DEBUG' ) ) {
+			$restore_block = "\n// WordPress debugging mode.\n"
+				. "if ( ! defined( 'WP_DEBUG' ) ) {\n"
+				. "\tdefine( 'WP_DEBUG', false );\n"
+				. "\tdefine( 'WP_DEBUG_LOG', false );\n"
+				. "\tdefine( 'WP_DEBUG_DISPLAY', false );\n"
+				. "}\n";
 
-		$sentinel_pos = strpos( $contents, self::SENTINEL );
-		if ( false !== $sentinel_pos ) {
-			$contents = substr_replace( $contents, $restore_block, $sentinel_pos, 0 );
+			$sentinel_pos = strpos( $contents, self::SENTINEL );
+			if ( false !== $sentinel_pos ) {
+				$contents = substr_replace( $contents, $restore_block, $sentinel_pos, 0 );
+			}
 		}
 
 		if ( false === self::write_file( $path, $contents ) ) {
@@ -330,5 +333,16 @@ class SITEINTELIX_WP_Config {
 		}
 
 		return $contents;
+	}
+
+	/**
+	 * Check whether a define() call for a constant exists in raw file contents.
+	 *
+	 * @param string $contents File contents.
+	 * @param string $name     Constant name.
+	 * @return bool
+	 */
+	private static function constant_defined_in( $contents, $name ) {
+		return (bool) preg_match( '/define\s*\(\s*[\'"]' . preg_quote( $name, '/' ) . '[\'"]\s*,/', $contents );
 	}
 }
