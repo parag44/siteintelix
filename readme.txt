@@ -9,13 +9,19 @@ Stable tag:        2.1.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-A modern admin dashboard for WordPress, server, environment, debug, and security diagnostics with export-ready reporting.
+A modern diagnostic dashboard for WordPress, server, environment, debug logging, and security hardening with export-ready reporting.
 
 == Description ==
 
-**SiteIntelix** gives administrators a single dashboard to monitor WordPress, server, and environment health without SSH access.
+**SiteIntelix** gives administrators a single dashboard to inspect WordPress, server, and environment health without SSH access.
 
-Information is organised into three sections with colour-coded health indicators (green / amber / red) so issues are immediately visible.
+The plugin now includes four admin experiences that work together:
+* **Overview** - health summary, detailed diagnostics cards, and export tools
+* **Debug Log Viewer** - log browsing with severity filters, search, and download tools
+* **Debug Settings** - switch between MU-plugin logging and `wp-config.php` logging
+* **Security Panel** - enable lightweight hardening features from one place
+
+Information is organised into clear sections with colour-coded health indicators so issues are immediately visible.
 
 = WordPress Information =
 * WordPress version (with update check)
@@ -55,6 +61,19 @@ The plugin evaluates eight metrics and assigns a status:
 = Export Tools =
 * **Copy Report** — copies all info as formatted plain text to the clipboard
 * **Export JSON** — downloads a timestamped `.json` file
+
+= Debug Tools =
+* Dedicated Debug Log Viewer with severity badges, search, refresh, clear, and download actions
+* Supports both MU-plugin mode (`wp-content/siteintelix-debug.log`) and `wp-config.php` mode (`wp-content/debug.log`)
+* Debug method switcher with clear labels for each logging approach
+
+= Security Panel =
+* Disable XML-RPC
+* Hide WordPress version output
+* Disable file editing
+* Restrict REST API for guests
+* Remove legacy head links
+* Basic login attempt protection
 
 = Shortcode =
 Use `[siteintelix_panel]` on any page or post to display a compact info table. Visible only to logged-in administrators; all other visitors see nothing.
@@ -127,11 +146,10 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Screenshots ==
 
-1. **Dashboard overview** — header with overall health status and action buttons.
-2. **Health check strip** — colour-coded pills for each metric.
-3. **WordPress card** — WP version, URLs, theme, and active plugin list.
-4. **Server card** — PHP, MySQL, memory limit and server details with status badges.
-5. **Environment card** — REST API, debug mode, cron, HTTPS, and health warnings.
+1. **Overview dashboard** — full SiteIntelix diagnostics overview with health badges, export actions, and detailed WordPress and server cards.
+2. **Debug Log Viewer** — searchable debug console with severity filters, mode summary, refresh/clear actions, and log download support.
+3. **Debug Settings** — choose between MU Plugin and `wp-config.php` logging modes with clear setup guidance.
+4. **Security Panel** — one-click WordPress hardening features such as XML-RPC disablement, REST restrictions, and login protection.
 
 == Changelog ==
 
