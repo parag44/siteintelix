@@ -97,10 +97,23 @@
 	// -----------------------------------------------------------------------
 	// Build plain-text report
 	// -----------------------------------------------------------------------
+	function formatToggle( value, enabledLabel, disabledLabel ) {
+		return value ? ( enabledLabel || 'Enabled' ) : ( disabledLabel || 'Disabled' );
+	}
+
+	function formatValue( value, fallback ) {
+		if ( value === null || value === undefined || value === '' ) {
+			return fallback || 'N/A';
+		}
+
+		return String( value );
+	}
+
 	function buildReport( data ) {
 		var sep   = '='.repeat( 60 );
 		var sub   = '-'.repeat( 40 );
 		var lines = [];
+		var extensions;
 
 		lines.push( sep );
 		lines.push( '  SITEINTELIX \u2014 SYSTEM REPORT' );
@@ -110,9 +123,13 @@
 		if ( data.wordpress ) {
 			var wp = data.wordpress;
 			lines.push( '[ WORDPRESS ]\n' + sub );
+			lines.push( 'Site Title      : ' + formatValue( wp.site_title ) );
 			lines.push( 'WP Version      : ' + wp.wp_version );
 			lines.push( 'Site URL        : ' + wp.site_url );
 			lines.push( 'Home URL        : ' + wp.home_url );
+			lines.push( 'Permalinks      : ' + formatValue( wp.permalink, 'Default' ) );
+			lines.push( 'Timezone        : ' + formatValue( wp.timezone ) );
+			lines.push( 'Admin Email     : ' + formatValue( wp.admin_email ) );
 			lines.push( 'Active Theme    : ' + wp.active_theme );
 			lines.push( 'Language        : ' + wp.language );
 			lines.push( 'Charset         : ' + wp.charset );
@@ -124,6 +141,7 @@
 
 		if ( data.server ) {
 			var srv = data.server;
+			extensions = [];
 			lines.push( '[ SERVER ]\n' + sub );
 			lines.push( 'PHP Version     : ' + srv.php_version );
 			lines.push( 'PHP SAPI        : ' + srv.php_sapi );
@@ -135,20 +153,40 @@
 			lines.push( 'Post Max Size   : ' + srv.post_max_size );
 			lines.push( 'OS              : ' + srv.os );
 			lines.push( 'Architecture    : ' + srv.architecture );
+			lines.push( 'OPcache         : ' + formatToggle( srv.opcache ) );
+			lines.push( 'Uploads Dir     : ' + formatValue( srv.uploads_dir && srv.uploads_dir.basedir ) );
+			lines.push( 'Disk Free       : ' + formatValue( srv.disk_free ) );
+			lines.push( 'Database Host   : ' + formatValue( srv.db_host ) );
+			lines.push( 'Database Name   : ' + formatValue( srv.db_name ) );
+
+			if ( srv.php_extensions ) {
+				Object.keys( srv.php_extensions ).forEach( function ( key ) {
+					if ( srv.php_extensions[ key ] ) {
+						extensions.push( key );
+					}
+				} );
+			}
+
+			lines.push( 'PHP Extensions  : ' + formatValue( extensions.join( ', ' ) ) );
 			lines.push( '' );
 		}
 
 		if ( data.environment ) {
 			var env = data.environment;
 			lines.push( '[ ENVIRONMENT ]\n' + sub );
-			lines.push( 'REST API        : ' + ( env.rest_api     ? 'Accessible' : 'Blocked'  ) );
-			lines.push( 'Debug Mode      : ' + ( env.debug_mode   ? 'Enabled'    : 'Disabled' ) );
-			lines.push( 'Debug Log       : ' + ( env.debug_log    ? 'Enabled'    : 'Disabled' ) );
-			lines.push( 'WP-Cron         : ' + ( env.cron         ? 'Enabled'    : 'Disabled' ) );
-			lines.push( 'HTTPS           : ' + ( env.https        ? 'Enabled'    : 'Disabled' ) );
+			lines.push( 'REST API        : ' + formatToggle( env.rest_api, 'Accessible', 'Blocked' ) );
+			lines.push( 'Debug Mode      : ' + formatToggle( env.debug_mode ) );
+			lines.push( 'Debug Log       : ' + formatToggle( env.debug_log ) );
+			lines.push( 'WP-Cron         : ' + formatToggle( env.cron ) );
+			lines.push( 'HTTPS           : ' + formatToggle( env.https ) );
 			lines.push( 'Environment     : ' + env.environment );
-			lines.push( 'Object Cache    : ' + ( env.cache        ? 'Enabled'    : 'Disabled' ) );
-			lines.push( 'Script Debug    : ' + ( env.script_debug ? 'Enabled'    : 'Disabled' ) );
+			lines.push( 'Object Cache    : ' + formatToggle( env.cache ) );
+			lines.push( 'Script Debug    : ' + formatToggle( env.script_debug ) );
+			lines.push( 'File Editor     : ' + formatToggle( ! env.file_edit ) );
+			lines.push( 'File Mods       : ' + formatToggle( ! env.file_mods ) );
+			lines.push( 'Core Updates    : ' + formatValue( env.auto_update ) );
+			lines.push( 'Alternate Cron  : ' + formatToggle( env.alt_cron ) );
+			lines.push( 'Cron Lock       : ' + formatValue( env.cron_lock ? env.cron_lock + 's' : '', 'Default' ) );
 			lines.push( '' );
 		}
 
@@ -249,7 +287,7 @@
 		var root = document.getElementById( 'siteintelix-debug-log-page' );
 		if ( ! root ) { return; }
 
-		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter' );
+		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter, .sitx-filter' );
 		var searchInput = root.querySelector( '#siteintelix-log-search' );
 		var rows = root.querySelectorAll( '.siteintelix-log-line' );
 		if ( ! filterButtons.length || ! rows.length ) { return; }
@@ -386,4 +424,3 @@
 	} );
 
 }() );
-

@@ -774,6 +774,85 @@
 .sitx-toggle input:checked + .sitx-toggle__slider::before { transform: translateX(20px); }
 
 /* ============================================================
+   10b. Debug Viewer Layout
+   ============================================================ */
+.siteintelix-debug-top-grid {
+	display: grid;
+	grid-template-columns: 1fr 300px;
+	gap: 24px;
+	margin-bottom: 32px;
+}
+
+.siteintelix-debug-mode-card {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 24px;
+}
+
+.siteintelix-debug-mode-card__content {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-width: 0;
+}
+
+.siteintelix-debug-mode-card .sitx-select-card__icon {
+	margin-bottom: 0;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+}
+
+.siteintelix-debug-mode-card__text {
+	min-width: 0;
+}
+
+.siteintelix-debug-mode-card__title {
+	margin: 0 !important;
+	font-size: 15px !important;
+	font-weight: 800 !important;
+	color: var(--siteintelix-text) !important;
+	line-height: 1.2 !important;
+}
+
+.siteintelix-debug-mode-card__desc {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: var(--siteintelix-text-muted);
+}
+
+.siteintelix-debug-mode-card__switch {
+	font-size: 12px;
+	padding: 6px 14px;
+	flex-shrink: 0;
+}
+
+.siteintelix-debug-entries-card {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 16px 24px;
+	text-align: center;
+}
+
+.siteintelix-debug-entries-card__label {
+	font-size: 11px;
+	font-weight: 800;
+	color: var(--siteintelix-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 4px;
+}
+
+.siteintelix-debug-entries-card__value {
+	font-size: 24px;
+	font-weight: 800;
+	color: var(--siteintelix-accent);
+}
+
+/* ============================================================
    11. Log Console
    ============================================================ */
 .siteintelix-log-console-wrap {
@@ -796,18 +875,19 @@
 	border-left: 3px solid transparent;
 	padding:     6px 10px;
 	white-space: pre-wrap;
-    display:     flex;
-    flex-wrap:   wrap;
-    gap:         8px;
-    align-items: baseline;
+	display:     grid;
+	grid-template-columns: 210px 64px minmax(0, 1fr);
+	column-gap:  10px;
+	row-gap:     2px;
+	align-items: start;
     border-radius: 4px;
     margin-bottom: 2px;
 }
 .siteintelix-log-line:hover { background: rgba(255,255,255,0.03); }
 
-.siteintelix-log-line__ts { color: #64748b; font-size: 11px; }
-.siteintelix-log-line__level { font-weight: 700; width: 60px; }
-.siteintelix-log-line__msg { flex: 1; min-width: 200px; word-break: break-word; }
+.siteintelix-log-line__ts { color: #64748b; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.siteintelix-log-line__level { font-weight: 700; white-space: nowrap; }
+.siteintelix-log-line__msg { min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
 
 .siteintelix-log-line--fatal,
 .siteintelix-log-line--error { border-left-color: #ef4444; }
@@ -818,6 +898,26 @@
 .siteintelix-log-line--warn .siteintelix-log-line__level { color: #fbbf24; }
 
 .siteintelix-log-line--info .siteintelix-log-line__level { color: #38bdf8; }
+
+/* Debug log row polish: remove colored side rail + prevent level overlap */
+.siteintelix-log-line {
+	border-left: 0 !important;
+	column-gap: 16px;
+	display: grid;
+	grid-template-columns: 250px 120px minmax(0, 1fr);
+}
+
+.siteintelix-log-line__level {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.siteintelix-log-line__msg {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
 
 /* ============================================================
    12. Footer & Utilities
@@ -851,6 +951,20 @@
 	.siteintelix-grid,
 	.sitx-selection-grid,
     .siteintelix-health-strip {
+		grid-template-columns: 1fr;
+	}
+
+	.siteintelix-debug-top-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.siteintelix-debug-mode-card {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.siteintelix-log-line {
 		grid-template-columns: 1fr;
 	}
     

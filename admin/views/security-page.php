@@ -73,7 +73,7 @@ $siteintelix_sec_form_url = admin_url( 'admin-post.php' );
 						</div>
 						
 						<div class="sitx-security-item__control">
-							<span class="sitx-security-item__status sitx-security-item__status--<?php echo $is_on ? 'on' : 'off'; ?>">
+							<span class="sitx-badge <?php echo $is_on ? 'sitx-badge--good' : 'sitx-badge--default'; ?>">
 								<?php echo $is_on ? esc_html__( 'Active', 'siteintelix' ) : esc_html__( 'Inactive', 'siteintelix' ); ?>
 							</span>
 							
@@ -96,4 +96,3 @@ $siteintelix_sec_form_url = admin_url( 'admin-post.php' );
 
 	</div><!-- /.siteintelix-container -->
 </div><!-- /.wrap -->
-

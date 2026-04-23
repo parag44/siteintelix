@@ -3,7 +3,7 @@
  * Plugin Name:       SiteIntelix
  * Plugin URI:        https://parag.bd/siteintelix
  * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           1.2.0
+ * Version:           2.1.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '1.2.0' );
+define( 'SITEINTELIX_VERSION', '2.1.0' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -69,8 +69,20 @@ function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-source.php';
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
-add_action( 'plugins_loaded', array( 'SITEINTELIX_MU_Debug', 'bootstrap' ), 20 );
-add_action( 'plugins_loaded', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
+
+/**
+ * Load plugin translations from /languages.
+ *
+ * @return void
+ */
+function siteintelix_load_textdomain() {
+	load_plugin_textdomain( 'siteintelix', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+add_action( 'init', 'siteintelix_load_textdomain' );
+
+// Boot runtime features after init to avoid early i18n loading notices.
+add_action( 'init', array( 'SITEINTELIX_MU_Debug', 'bootstrap' ), 20 );
+add_action( 'init', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
 
 // ---------------------------------------------------------------------------
 // Admin menu
@@ -131,6 +143,47 @@ function siteintelix_register_admin_menu() {
 	);
 }
 add_action( 'admin_menu', 'siteintelix_register_admin_menu' );
+
+// ---------------------------------------------------------------------------
+// SiteIntelix admin screen helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine whether the current admin request is for a SiteIntelix screen.
+ *
+ * @return bool
+ */
+function siteintelix_is_admin_screen() {
+	if ( ! is_admin() ) {
+		return false;
+	}
+
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+	return 0 === strpos( $page, 'siteintelix' );
+}
+
+/**
+ * Hide core and third-party admin notices on SiteIntelix screens only.
+ *
+ * SiteIntelix renders its own notice area inside each page template, so
+ * removing the shared WordPress notice hooks keeps the UI focused without
+ * affecting the rest of wp-admin.
+ *
+ * @return void
+ */
+function siteintelix_suppress_admin_notices() {
+	if ( ! siteintelix_is_admin_screen() ) {
+		return;
+	}
+
+	remove_all_actions( 'admin_notices' );
+	remove_all_actions( 'all_admin_notices' );
+	remove_all_actions( 'network_admin_notices' );
+	remove_all_actions( 'user_admin_notices' );
+	remove_action( 'admin_notices', 'update_nag', 3 );
+}
+add_action( 'in_admin_header', 'siteintelix_suppress_admin_notices', 0 );
 
 // ---------------------------------------------------------------------------
 // Admin page renderer
@@ -272,15 +325,10 @@ function siteintelix_save_debug_settings() {
 
 	check_admin_referer( 'siteintelix_save_debug_settings' );
 
-	$old_method = SITEINTELIX_Debug_Source::get_method();
 	$method     = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
 
 	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
 		$method = 'mu';
-	}
-
-	if ( $method !== $old_method ) {
-		update_option( 'siteintelix_previous_debug_method', $old_method );
 	}
 
 	update_option( 'siteintelix_debug_method', $method );

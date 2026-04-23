@@ -14,13 +14,11 @@ $siteintelix_debug_source  = SITEINTELIX_Debug_Source::detect();
 $siteintelix_debug_label   = SITEINTELIX_Debug_Source::get_label();
 $siteintelix_debug_status  = SITEINTELIX_Debug_Source::get_status(); // badge class: good, warning, critical
 $siteintelix_debug_method  = SITEINTELIX_Debug_Source::get_method();
-$siteintelix_prev_method   = get_option( 'siteintelix_previous_debug_method' );
 $siteintelix_wpc_writable  = SITEINTELIX_WP_Config::is_writable();
 $siteintelix_external_dbg  = SITEINTELIX_Debug_Source::has_external_wp_debug();
 
 $siteintelix_form_url      = admin_url( 'admin-post.php' );
 $siteintelix_fix_url       = add_query_arg( array( 'action' => 'siteintelix_fix_debug_conflict', '_wpnonce' => wp_create_nonce( 'siteintelix_fix_debug_conflict' ) ), $siteintelix_form_url );
-$siteintelix_revert_url    = add_query_arg( array( 'action' => 'siteintelix_revert_debug_method', '_wpnonce' => wp_create_nonce( 'siteintelix_revert_debug_method' ) ), $siteintelix_form_url );
 $siteintelix_log_view_url  = admin_url( 'admin.php?page=siteintelix-debug-log' );
 
 // Log file paths for display.
@@ -176,13 +174,6 @@ $siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $site
 					<span class="dashicons dashicons-saved"></span>
 					<?php esc_html_e( 'Save & Apply Method', 'siteintelix' ); ?>
 				</button>
-				
-				<?php if ( $siteintelix_prev_method ) : ?>
-					<a href="<?php echo esc_url( $siteintelix_revert_url ); ?>" class="sitx-btn sitx-btn--outline" style="font-weight:600;">
-						<span class="dashicons dashicons-undo"></span>
-						<?php esc_html_e( 'Revert to Previous', 'siteintelix' ); ?>
-					</a>
-				<?php endif; ?>
 			</div>
 		</form>
 
@@ -205,4 +196,3 @@ jQuery(document).ready(function($) {
 	});
 });
 </script>
-

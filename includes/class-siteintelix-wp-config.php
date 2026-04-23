@@ -150,6 +150,56 @@ class SITEINTELIX_WP_Config {
 		return self::is_debug_enabled_in_file();
 	}
 
+	/**
+	 * Add a constant define() to wp-config.php only if not already present.
+	 *
+	 * The new define is inserted before the standard "stop editing" comment.
+	 *
+	 * @param string $constant Constant name.
+	 * @param bool   $value    Boolean constant value.
+	 * @return true|WP_Error
+	 */
+	public static function define_if_missing( $constant, $value ) {
+		$path = self::locate();
+		if ( false === $path ) {
+			return new WP_Error( 'siteintelix_wpc_not_found', __( 'wp-config.php could not be located.', 'siteintelix' ) );
+		}
+
+		if ( ! self::is_writable() ) {
+			return new WP_Error( 'siteintelix_wpc_readonly', __( 'wp-config.php is not writable. Check file permissions.', 'siteintelix' ) );
+		}
+
+		$contents = self::read_file( $path );
+		if ( is_wp_error( $contents ) ) {
+			return $contents;
+		}
+
+		$pattern = '/define\s*\(\s*[\'"]' . preg_quote( $constant, '/' ) . '[\'"]\s*,/i';
+		if ( preg_match( $pattern, $contents ) ) {
+			return true;
+		}
+
+		$value_str = $value ? 'true' : 'false';
+		$line      = "define( '" . $constant . "', " . $value_str . " );\n";
+
+		$new_contents = preg_replace(
+			'/\/\*\s*That\'s all,\s*stop editing!\s*Happy publishing\.\s*\*\//i',
+			$line . "\n" . '$0',
+			$contents,
+			1
+		);
+
+		if ( ! is_string( $new_contents ) || $new_contents === $contents ) {
+			return new WP_Error( 'siteintelix_wpc_insert', __( 'Could not safely insert constant into wp-config.php.', 'siteintelix' ) );
+		}
+
+		if ( false === self::write_file( $path, $new_contents ) ) {
+			return new WP_Error( 'siteintelix_wpc_write', __( 'Could not write to wp-config.php.', 'siteintelix' ) );
+		}
+
+		return true;
+	}
+
 	// -----------------------------------------------------------------------
 	// Private helpers
 	// -----------------------------------------------------------------------

@@ -18,6 +18,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class SITEINTELIX_Security
  */
 class SITEINTELIX_Security {
+	/**
+	 * Max failed login attempts before temporary lockout.
+	 *
+	 * @var int
+	 */
+	const LOGIN_MAX_ATTEMPTS = 5;
+
+	/**
+	 * Lockout window in seconds for failed login protection.
+	 *
+	 * @var int
+	 */
+	const LOGIN_LOCK_SECONDS = 15 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Return the feature definition list.
@@ -50,8 +63,29 @@ class SITEINTELIX_Security {
 			array(
 				'id'          => 'disable_file_edit',
 				'title'       => __( 'Disable File Editing', 'siteintelix' ),
-				'description' => __( 'Disables the Theme and Plugin editor inside the WordPress admin (DISALLOW_FILE_EDIT).', 'siteintelix' ),
+				'description' => __( 'Adds DISALLOW_FILE_EDIT in wp-config.php (only if not already defined) to disable Theme/Plugin editors.', 'siteintelix' ),
 				'option_key'  => 'siteintelix_security_disable_file_edit',
+				'default'     => false,
+			),
+			array(
+				'id'          => 'rest_auth',
+				'title'       => __( 'Disable REST API for Guests', 'siteintelix' ),
+				'description' => __( 'Blocks REST API requests for non-logged-in users while keeping it available for authenticated users.', 'siteintelix' ),
+				'option_key'  => 'siteintelix_security_rest_auth',
+				'default'     => false,
+			),
+			array(
+				'id'          => 'remove_head_links',
+				'title'       => __( 'Remove Legacy Head Links', 'siteintelix' ),
+				'description' => __( 'Removes rsd_link and wlwmanifest_link from wp_head output.', 'siteintelix' ),
+				'option_key'  => 'siteintelix_security_remove_head_links',
+				'default'     => false,
+			),
+			array(
+				'id'          => 'login_limit',
+				'title'       => __( 'Basic Login Attempt Protection', 'siteintelix' ),
+				'description' => __( 'Temporarily blocks repeated failed login attempts per IP using WordPress transients.', 'siteintelix' ),
+				'option_key'  => 'siteintelix_security_login_limit',
 				'default'     => false,
 			),
 		);
@@ -84,9 +118,25 @@ class SITEINTELIX_Security {
 					break;
 
 				case 'disable_file_edit':
+					// Runtime fallback for this request only. Persistent value is managed in wp-config.php.
 					if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
 						define( 'DISALLOW_FILE_EDIT', true );
 					}
+					break;
+
+				case 'rest_auth':
+					add_filter( 'rest_authentication_errors', array( __CLASS__, 'restrict_rest_for_guests' ) );
+					break;
+
+				case 'remove_head_links':
+					remove_action( 'wp_head', 'rsd_link' );
+					remove_action( 'wp_head', 'wlwmanifest_link' );
+					break;
+
+				case 'login_limit':
+					add_filter( 'authenticate', array( __CLASS__, 'block_bruteforce_login' ), 30, 3 );
+					add_action( 'wp_login_failed', array( __CLASS__, 'track_failed_login' ) );
+					add_action( 'wp_login', array( __CLASS__, 'clear_failed_login' ), 10, 2 );
 					break;
 			}
 		}
@@ -117,6 +167,10 @@ class SITEINTELIX_Security {
 			$enabled = isset( $posted[ $feature['id'] ] ) && '1' === sanitize_text_field( wp_unslash( $posted[ $feature['id'] ] ) );
 			update_option( $key, $enabled ? 1 : 0 );
 		}
+
+		if ( self::is_enabled( 'disable_file_edit' ) ) {
+			self::ensure_disallow_file_edit_in_wp_config();
+		}
 	}
 
 	/**
@@ -135,5 +189,116 @@ class SITEINTELIX_Security {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Block REST API for non-logged users when enabled.
+	 *
+	 * @param mixed $result Existing auth result.
+	 * @return mixed
+	 */
+	public static function restrict_rest_for_guests( $result ) {
+		if ( ! empty( $result ) ) {
+			return $result;
+		}
+
+		if ( is_user_logged_in() ) {
+			return $result;
+		}
+
+		return new WP_Error(
+			'siteintelix_rest_forbidden',
+			__( 'REST API is restricted to authenticated users.', 'siteintelix' ),
+			array( 'status' => 401 )
+		);
+	}
+
+	/**
+	 * Track failed login attempts by visitor IP.
+	 *
+	 * @return void
+	 */
+	public static function track_failed_login( $username = '' ) {
+		unset( $username );
+		$ip = self::get_request_ip();
+		if ( '' === $ip ) {
+			return;
+		}
+
+		$key      = self::get_login_key( $ip );
+		$attempts = (int) get_transient( $key );
+		$attempts++;
+
+		set_transient( $key, $attempts, self::LOGIN_LOCK_SECONDS );
+	}
+
+	/**
+	 * Remove failed login counter after successful auth.
+	 *
+	 * @return void
+	 */
+	public static function clear_failed_login( $user_login = '', $user = null ) {
+		unset( $user_login, $user );
+		$ip = self::get_request_ip();
+		if ( '' === $ip ) {
+			return;
+		}
+
+		delete_transient( self::get_login_key( $ip ) );
+	}
+
+	/**
+	 * Block login attempt if IP exceeded allowed failures.
+	 *
+	 * @param WP_User|WP_Error|null $user     User or error.
+	 * @param string                $username Username.
+	 * @param string                $password Password.
+	 * @return WP_User|WP_Error|null
+	 */
+	public static function block_bruteforce_login( $user, $username, $password ) {
+		unset( $username, $password );
+		$ip = self::get_request_ip();
+		if ( '' === $ip ) {
+			return $user;
+		}
+
+		$attempts = (int) get_transient( self::get_login_key( $ip ) );
+		if ( $attempts < self::LOGIN_MAX_ATTEMPTS ) {
+			return $user;
+		}
+
+		return new WP_Error(
+			'siteintelix_login_locked',
+			__( 'Too many failed login attempts. Please try again later.', 'siteintelix' )
+		);
+	}
+
+	/**
+	 * Build transient key for login protection.
+	 *
+	 * @param string $ip Visitor IP.
+	 * @return string
+	 */
+	private static function get_login_key( $ip ) {
+		return 'siteintelix_login_attempts_' . md5( $ip );
+	}
+
+	/**
+	 * Resolve request IP (simple and lightweight).
+	 *
+	 * @return string
+	 */
+	private static function get_request_ip() {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		return is_string( $ip ) ? $ip : '';
+	}
+
+	/**
+	 * Ensure DISALLOW_FILE_EDIT exists in wp-config.php only when not already defined.
+	 *
+	 * @return void
+	 */
+	private static function ensure_disallow_file_edit_in_wp_config() {
+		SITEINTELIX_WP_Config::define_if_missing( 'DISALLOW_FILE_EDIT', true );
 	}
 }

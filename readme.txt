@@ -5,15 +5,15 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        1.1.4
+Stable tag:        2.1.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-A clean, modern admin dashboard showing comprehensive WordPress, server, and environment info with colour-coded health checks and export tools.
+A modern admin dashboard for WordPress, server, environment, debug, and security diagnostics with export-ready reporting.
 
 == Description ==
 
-**SiteIntelix** gives administrators a single, beautiful dashboard to monitor their entire hosting environment — no SSH access or technical knowledge required.
+**SiteIntelix** gives administrators a single dashboard to monitor WordPress, server, and environment health without SSH access.
 
 Information is organised into three sections with colour-coded health indicators (green / amber / red) so issues are immediately visible.
 
@@ -22,6 +22,7 @@ Information is organised into three sections with colour-coded health indicators
 * Site URL and Home URL
 * Active theme name and version
 * Complete list of active plugins with versions
+* Permalink structure, timezone, and admin email
 * Language, charset, and multisite status
 
 = Server Information =
@@ -32,7 +33,8 @@ Information is organised into three sections with colour-coded health indicators
 * Memory limit with warning threshold
 * Maximum upload size
 * Maximum execution time and post max size
-* Operating system and architecture
+* Operating system, architecture, and disk free space
+* OPcache status, database host/name, uploads directory, and key PHP extensions
 
 = Environment Information =
 * REST API reachability status
@@ -41,13 +43,14 @@ Information is organised into three sections with colour-coded health indicators
 * HTTPS / SSL status
 * WordPress environment type
 * Object cache and Script Debug flags
+* Debug log state, file editing/modification flags, alternate cron, and cron lock timeout
 
 = Health Checks =
 The plugin evaluates eight metrics and assigns a status:
 
-* 🟢 **Good** — everything is healthy
-* 🟡 **Warning** — PHP < 8.0, memory < 256 MB, WP-Cron disabled, update available
-* 🔴 **Critical** — PHP < 7.4, REST API blocked, WP_DEBUG on in production
+* **Good** - everything is healthy
+* **Warning** - attention recommended (for example: low memory, disabled HTTPS)
+* **Critical** - urgent issues detected (for example: REST API blocked, WP_DEBUG on in production)
 
 = Export Tools =
 * **Copy Report** — copies all info as formatted plain text to the clipboard
@@ -132,6 +135,17 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
+= 2.1.0 — 2026-04-23 =
+* Major admin UI refresh across Overview, Debug Log Viewer, Settings, and Security Panel.
+* Expanded diagnostics detail cards for WordPress, Server, and Environment sections.
+* Updated Copy Report output to include the full expanded diagnostics dataset.
+* Export JSON now reflects the full data payload shown in the dashboard.
+* Scoped third-party admin notice suppression to SiteIntelix screens for a cleaner in-plugin UI.
+* Removed the "Revert to Previous" debug-method mechanism from Settings.
+* Added explicit text-domain loading and moved runtime boot hooks to `init` for improved i18n standards compatibility.
+* Uninstall cleanup now removes legacy debug-method option keys.
+* WordPress.org metadata and release notes refreshed for the 2.1.0 release.
+
 = 1.1.4 — 2026-04-20 =
 * Refined top header hierarchy and visual polish for a cleaner, more professional first impression.
 * Improved action button emphasis and spacing in the header (`Export JSON` primary, `Copy Report` secondary).
@@ -171,6 +185,9 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 2.1.0 =
+Major UI and diagnostics expansion release with improved reporting and cleaner admin UX. Recommended for all users.
 
 = 1.1.4 =
 Header UX and standards polish update. Recommended for all users.

@@ -82,32 +82,32 @@ $siteintelix_download_url = wp_nonce_url(
 	<div class="siteintelix-container">
 
 		<!-- ===== 2. Quick Stats & Mode Info ===== -->
-		<div style="display:grid; grid-template-columns: 1fr 300px; gap: 24px; margin-bottom: 32px;">
+		<div class="siteintelix-debug-top-grid">
 			
 			<!-- Mode Banner -->
-			<div class="sitx-card sitx-card--interactive" style="display:flex; align-items:center; justify-content:space-between; padding: 20px 24px;">
-				<div style="display:flex; align-items:center; gap:16px;">
-					<div class="sitx-select-card__icon <?php echo 'wp_config' === $siteintelix_active_method ? 'sitx-select-card__icon--orange' : 'sitx-select-card__icon--blue'; ?>" style="margin-bottom:0; width:44px; height:44px;">
+			<div class="sitx-card sitx-card--interactive siteintelix-debug-mode-card">
+				<div class="siteintelix-debug-mode-card__content">
+					<div class="sitx-select-card__icon <?php echo 'wp_config' === $siteintelix_active_method ? 'sitx-select-card__icon--orange' : 'sitx-select-card__icon--blue'; ?>">
 						<span class="dashicons <?php echo 'wp_config' === $siteintelix_active_method ? 'dashicons-editor-code' : 'dashicons-shield'; ?>"></span>
 					</div>
-					<div>
-						<h3 style="margin:0; font-size:15px; font-weight:800; color:var(--siteintelix-text);">
+					<div class="siteintelix-debug-mode-card__text">
+						<h3 class="siteintelix-debug-mode-card__title">
 							<?php echo 'wp_config' === $siteintelix_active_method ? 'wp-config.php' : 'MU Plugin'; ?> <?php esc_html_e( 'Mode Active', 'siteintelix' ); ?>
 						</h3>
-						<p style="margin:4px 0 0; font-size:13px; color:var(--siteintelix-text-muted);"><?php echo esc_html( $siteintelix_mode_label ); ?></p>
+						<p class="siteintelix-debug-mode-card__desc"><?php echo esc_html( $siteintelix_mode_label ); ?></p>
 					</div>
 				</div>
-				<a href="<?php echo esc_url( $siteintelix_settings_url ); ?>" class="sitx-btn sitx-btn--outline" style="font-size:12px; padding: 6px 14px;">
+				<a href="<?php echo esc_url( $siteintelix_settings_url ); ?>" class="sitx-btn sitx-btn--outline siteintelix-debug-mode-card__switch">
 					<span class="dashicons dashicons-admin-generic"></span> <?php esc_html_e( 'Switch', 'siteintelix' ); ?>
 				</a>
 			</div>
 
 			<!-- Quick Count -->
-			<div class="sitx-card" style="display:flex; flex-direction:column; justify-content:center; padding: 16px 24px; text-align:center;">
-				<span style="font-size:11px; font-weight:800; color:var(--siteintelix-text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+			<div class="sitx-card siteintelix-debug-entries-card">
+				<span class="siteintelix-debug-entries-card__label">
 					<?php esc_html_e( 'Recent Entries', 'siteintelix' ); ?>
 				</span>
-				<span style="font-size:24px; font-weight:800; color:var(--siteintelix-accent);">
+				<span class="siteintelix-debug-entries-card__value">
 					<?php echo (int) $siteintelix_total_entries; ?>
 				</span>
 			</div>
@@ -133,10 +133,10 @@ $siteintelix_download_url = wp_nonce_url(
 		<div class="sitx-card" style="padding: 12px; margin-bottom: 12px;">
 			<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
 				<div style="display:flex; gap:8px;">
-					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter is-active" data-level="all"><?php esc_html_e( 'All Levels', 'siteintelix' ); ?></button>
-					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter" data-level="fatal"><?php esc_html_e( 'Fatal', 'siteintelix' ); ?></button>
-					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter" data-level="warn"><?php esc_html_e( 'Warning', 'siteintelix' ); ?></button>
-					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter" data-level="info"><?php esc_html_e( 'Info', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter is-active" data-level="all"><?php esc_html_e( 'All Levels', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="fatal"><?php esc_html_e( 'Fatal', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="warn"><?php esc_html_e( 'Warning', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="info"><?php esc_html_e( 'Info', 'siteintelix' ); ?></button>
 				</div>
 				<div style="flex:1; max-width:400px; position:relative;">
 					<input type="search" id="siteintelix-log-search" placeholder="<?php esc_attr_e( 'Search logs...', 'siteintelix' ); ?>" 
