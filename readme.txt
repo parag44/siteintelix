@@ -146,10 +146,10 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Screenshots ==
 
-1. **Overview dashboard** — full SiteIntelix diagnostics overview with health badges, export actions, and detailed WordPress and server cards.
-2. **Debug Log Viewer** — searchable debug console with severity filters, mode summary, refresh/clear actions, and log download support.
-3. **Debug Settings** — choose between MU Plugin and `wp-config.php` logging modes with clear setup guidance.
-4. **Security Panel** — one-click WordPress hardening features such as XML-RPC disablement, REST restrictions, and login protection.
+1. **Overview dashboard** — system overview with health badges and export actions.
+2. **Debug Log Viewer** — searchable debug console with filters and downloads.
+3. **Debug Settings** — switch between MU Plugin and `wp-config.php` logging.
+4. **Security Panel** — manage built-in WordPress hardening features.
 
 == Changelog ==
 

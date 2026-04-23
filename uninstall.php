@@ -31,8 +31,8 @@ $siteintelix_options = array(
 	'siteintelix_security_login_limit',
 );
 
-foreach ( $siteintelix_options as $option ) {
-	delete_option( $option );
+foreach ( $siteintelix_options as $siteintelix_option ) {
+	delete_option( $siteintelix_option );
 }
 
 // ---------------------------------------------------------------------------

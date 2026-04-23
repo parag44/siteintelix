@@ -114,20 +114,23 @@ $siteintelix_download_url = wp_nonce_url(
 		</div>
 
 		<!-- ===== 3. Summary Badges ===== -->
-		<div style="display:flex; gap:12px; margin-bottom: 24px; flex-wrap:wrap;">
-			<div class="sitx-badge sitx-badge--critical" style="padding: 8px 16px;">
-				<span class="dashicons dashicons-warning"></span>
-				<?php printf( esc_html__( '%d Fatal Errors', 'siteintelix' ), (int) ( $siteintelix_fatal_count + $siteintelix_error_count ) ); ?>
+			<div style="display:flex; gap:12px; margin-bottom: 24px; flex-wrap:wrap;">
+				<div class="sitx-badge sitx-badge--critical" style="padding: 8px 16px;">
+					<span class="dashicons dashicons-warning"></span>
+					<?php /* translators: %d: number of fatal and error log entries. */ ?>
+					<?php printf( esc_html__( '%d Fatal Errors', 'siteintelix' ), (int) ( $siteintelix_fatal_count + $siteintelix_error_count ) ); ?>
+				</div>
+				<div class="sitx-badge sitx-badge--warning" style="padding: 8px 16px;">
+					<span class="dashicons dashicons-warning"></span>
+					<?php /* translators: %d: number of warning log entries. */ ?>
+					<?php printf( esc_html__( '%d Warnings', 'siteintelix' ), (int) $siteintelix_warn_count ); ?>
+				</div>
+				<div class="sitx-badge sitx-badge--info" style="padding: 8px 16px;">
+					<span class="dashicons dashicons-info"></span>
+					<?php /* translators: %d: number of informational log entries. */ ?>
+					<?php printf( esc_html__( '%d Info', 'siteintelix' ), (int) $siteintelix_info_count ); ?>
+				</div>
 			</div>
-			<div class="sitx-badge sitx-badge--warning" style="padding: 8px 16px;">
-				<span class="dashicons dashicons-warning"></span>
-				<?php printf( esc_html__( '%d Warnings', 'siteintelix' ), (int) $siteintelix_warn_count ); ?>
-			</div>
-			<div class="sitx-badge sitx-badge--info" style="padding: 8px 16px;">
-				<span class="dashicons dashicons-info"></span>
-				<?php printf( esc_html__( '%d Info', 'siteintelix' ), (int) $siteintelix_info_count ); ?>
-			</div>
-		</div>
 
 		<!-- ===== 4. Toolbar: Filters + Search ===== -->
 		<div class="sitx-card" style="padding: 12px; margin-bottom: 12px;">

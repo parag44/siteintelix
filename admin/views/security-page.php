@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $siteintelix_sec_features = SITEINTELIX_Security::get_features();
 $siteintelix_sec_form_url = admin_url( 'admin-post.php' );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
+$siteintelix_security_saved = isset( $_GET['siteintelix_security_saved'] );
 ?>
 <div class="wrap siteintelix-wrap" id="siteintelix-security-page">
 
@@ -41,7 +43,7 @@ $siteintelix_sec_form_url = admin_url( 'admin-post.php' );
 
 		<!-- ===== 2. Notices ===== -->
 		<div id="siteintelix-notices-slot">
-			<?php if ( isset( $_GET['siteintelix_security_saved'] ) ) : ?>
+			<?php if ( $siteintelix_security_saved ) : ?>
 				<div class="sitx-alert sitx-alert--success">
 					<div class="sitx-alert__icon"><span class="dashicons dashicons-yes-alt"></span></div>
 					<div class="sitx-alert__content">
@@ -63,22 +65,22 @@ $siteintelix_sec_form_url = admin_url( 'admin-post.php' );
 			<input type="hidden" name="action" value="siteintelix_save_security">
 
 			<div class="sitx-security-list">
-				<?php foreach ( $siteintelix_sec_features as $feature ) :
-					$is_on = (bool) get_option( $feature['option_key'], $feature['default'] );
+				<?php foreach ( $siteintelix_sec_features as $siteintelix_feature ) :
+					$siteintelix_is_on = (bool) get_option( $siteintelix_feature['option_key'], $siteintelix_feature['default'] );
 				?>
 					<div class="sitx-security-item">
 						<div class="sitx-security-item__info">
-							<h3 class="sitx-security-item__title"><?php echo esc_html( $feature['title'] ); ?></h3>
-							<p class="sitx-security-item__desc"><?php echo esc_html( $feature['description'] ); ?></p>
+							<h3 class="sitx-security-item__title"><?php echo esc_html( $siteintelix_feature['title'] ); ?></h3>
+							<p class="sitx-security-item__desc"><?php echo esc_html( $siteintelix_feature['description'] ); ?></p>
 						</div>
 						
 						<div class="sitx-security-item__control">
-							<span class="sitx-badge <?php echo $is_on ? 'sitx-badge--good' : 'sitx-badge--default'; ?>">
-								<?php echo $is_on ? esc_html__( 'Active', 'siteintelix' ) : esc_html__( 'Inactive', 'siteintelix' ); ?>
+							<span class="sitx-badge <?php echo $siteintelix_is_on ? 'sitx-badge--good' : 'sitx-badge--default'; ?>">
+								<?php echo $siteintelix_is_on ? esc_html__( 'Active', 'siteintelix' ) : esc_html__( 'Inactive', 'siteintelix' ); ?>
 							</span>
 							
 							<label class="sitx-toggle">
-								<input type="checkbox" name="<?php echo esc_attr( $feature['id'] ); ?>" value="1" <?php checked( $is_on ); ?>>
+								<input type="checkbox" name="<?php echo esc_attr( $siteintelix_feature['id'] ); ?>" value="1" <?php checked( $siteintelix_is_on ); ?>>
 								<span class="sitx-toggle__slider"></span>
 							</label>
 						</div>

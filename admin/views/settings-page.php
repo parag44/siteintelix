@@ -20,6 +20,8 @@ $siteintelix_external_dbg  = SITEINTELIX_Debug_Source::has_external_wp_debug();
 $siteintelix_form_url      = admin_url( 'admin-post.php' );
 $siteintelix_fix_url       = add_query_arg( array( 'action' => 'siteintelix_fix_debug_conflict', '_wpnonce' => wp_create_nonce( 'siteintelix_fix_debug_conflict' ) ), $siteintelix_form_url );
 $siteintelix_log_view_url  = admin_url( 'admin.php?page=siteintelix-debug-log' );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
+$siteintelix_settings_saved = isset( $_GET['siteintelix_settings_saved'] );
 
 // Log file paths for display.
 $siteintelix_log_mu  = 'wp-content/siteintelix-debug.log';
@@ -55,7 +57,7 @@ $siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $site
 
 		<!-- ===== 2. Notices & Alerts ===== -->
 		<div id="siteintelix-notices-slot">
-			<?php if ( isset( $_GET['siteintelix_settings_saved'] ) ) : ?>
+			<?php if ( $siteintelix_settings_saved ) : ?>
 				<div class="sitx-alert sitx-alert--success">
 					<div class="sitx-alert__icon"><span class="dashicons dashicons-yes-alt"></span></div>
 					<div class="sitx-alert__content">
@@ -85,10 +87,11 @@ $siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $site
 		<div class="sitx-card sitx-card--interactive" style="margin-bottom: 32px; padding: 16px 24px;">
 			<div style="display:flex; align-items:center; justify-content:space-between;">
 				<div style="display:flex; align-items:center; gap:16px;">
-					<span class="sitx-badge sitx-badge--good"><?php esc_html_e( 'System Active', 'siteintelix' ); ?></span>
-					<span style="color:var(--siteintelix-text); font-weight:700; font-size:15px;">
-						<?php printf( esc_html__( 'Connected via %s', 'siteintelix' ), 'wp_config' === $siteintelix_debug_source ? 'wp-config.php' : 'MU Plugin' ); ?>
-					</span>
+						<span class="sitx-badge sitx-badge--good"><?php esc_html_e( 'System Active', 'siteintelix' ); ?></span>
+						<span style="color:var(--siteintelix-text); font-weight:700; font-size:15px;">
+							<?php /* translators: %s: active debug method label. */ ?>
+							<?php printf( esc_html__( 'Connected via %s', 'siteintelix' ), 'wp_config' === $siteintelix_debug_source ? 'wp-config.php' : 'MU Plugin' ); ?>
+						</span>
 				</div>
 				<div class="sitx-path-box">
 					<span class="dashicons dashicons-editor-code"></span>

@@ -74,12 +74,12 @@ function siteintelix_row( $label, $value ) {
 				<span class="sitx-badge sitx-badge--<?php echo esc_attr( $siteintelix_overall ); ?>">
 					<span class="dashicons dashicons-shield" aria-hidden="true"></span>
 					<?php
-					$overall_labels = array(
+					$siteintelix_overall_labels = array(
 						'good'     => __( 'System Healthy', 'siteintelix' ),
 						'warning'  => __( 'Needs Attention', 'siteintelix' ),
 						'critical' => __( 'Critical Issues Found', 'siteintelix' ),
 					);
-					echo esc_html( isset( $overall_labels[ $siteintelix_overall ] ) ? $overall_labels[ $siteintelix_overall ] : $siteintelix_overall );
+					echo esc_html( isset( $siteintelix_overall_labels[ $siteintelix_overall ] ) ? $siteintelix_overall_labels[ $siteintelix_overall ] : $siteintelix_overall );
 					?>
 				</span>
 				<span class="siteintelix-version-pill">v<?php echo esc_html( SITEINTELIX_VERSION ); ?></span>
@@ -105,10 +105,10 @@ function siteintelix_row( $label, $value ) {
 
 		<!-- ===== Health Metrics Strip ===== -->
 		<div class="siteintelix-health-strip" role="list" aria-label="<?php esc_attr_e( 'Health check summary', 'siteintelix' ); ?>">
-			<?php foreach ( $siteintelix_checks as $check ) : ?>
-				<div class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $check['status'] ); ?>" title="<?php echo esc_attr( $check['message'] ); ?>" role="listitem" tabindex="0">
-					<span class="siteintelix-health-pill__name"><?php echo esc_html( $check['label'] ); ?></span>
-					<span class="siteintelix-health-pill__value"><?php echo esc_html( $check['value'] ); ?></span>
+			<?php foreach ( $siteintelix_checks as $siteintelix_check ) : ?>
+				<div class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $siteintelix_check['status'] ); ?>" title="<?php echo esc_attr( $siteintelix_check['message'] ); ?>" role="listitem" tabindex="0">
+					<span class="siteintelix-health-pill__name"><?php echo esc_html( $siteintelix_check['label'] ); ?></span>
+					<span class="siteintelix-health-pill__value"><?php echo esc_html( $siteintelix_check['value'] ); ?></span>
 				</div>
 			<?php endforeach; ?>
 		</div>
@@ -148,15 +148,16 @@ function siteintelix_row( $label, $value ) {
 					</table>
 
 					<div class="siteintelix-subpanel">
-						<h3 class="siteintelix-subpanel__title">
-							<span class="dashicons dashicons-admin-plugins" aria-hidden="true"></span>
-							<?php printf( esc_html__( 'Active Plugins (%d)', 'siteintelix' ), count( $siteintelix_info['wordpress']['active_plugins'] ) ); ?>
-						</h3>
-						<ul class="siteintelix-plugin-list">
-							<?php foreach ( $siteintelix_info['wordpress']['active_plugins'] as $plugin_name ) : ?>
-								<li class="siteintelix-plugin-list__item"><?php echo esc_html( $plugin_name ); ?></li>
-							<?php endforeach; ?>
-						</ul>
+							<h3 class="siteintelix-subpanel__title">
+								<span class="dashicons dashicons-admin-plugins" aria-hidden="true"></span>
+								<?php /* translators: %d: number of active plugins. */ ?>
+								<?php printf( esc_html__( 'Active Plugins (%d)', 'siteintelix' ), count( $siteintelix_info['wordpress']['active_plugins'] ) ); ?>
+							</h3>
+							<ul class="siteintelix-plugin-list">
+								<?php foreach ( $siteintelix_info['wordpress']['active_plugins'] as $siteintelix_plugin_name ) : ?>
+									<li class="siteintelix-plugin-list__item"><?php echo esc_html( $siteintelix_plugin_name ); ?></li>
+								<?php endforeach; ?>
+							</ul>
 					</div>
 				</div>
 			</section>
@@ -254,9 +255,9 @@ function siteintelix_row( $label, $value ) {
 								<?php esc_html_e( 'Health Warnings', 'siteintelix' ); ?>
 							</h3>
 							<ul class="sitx-warnings__list">
-								<?php foreach ( $siteintelix_warnings as $chk ) : ?>
-									<li class="sitx-warnings__item sitx-warnings__item--<?php echo esc_attr( $chk['status'] ); ?>">
-										<strong><?php echo esc_html( $chk['label'] ); ?>:</strong> <?php echo esc_html( $chk['message'] ); ?>
+								<?php foreach ( $siteintelix_warnings as $siteintelix_warning ) : ?>
+									<li class="sitx-warnings__item sitx-warnings__item--<?php echo esc_attr( $siteintelix_warning['status'] ); ?>">
+										<strong><?php echo esc_html( $siteintelix_warning['label'] ); ?>:</strong> <?php echo esc_html( $siteintelix_warning['message'] ); ?>
 									</li>
 								<?php endforeach; ?>
 							</ul>

@@ -70,16 +70,6 @@ function siteintelix_load_includes() {
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
 
-/**
- * Load plugin translations from /languages.
- *
- * @return void
- */
-function siteintelix_load_textdomain() {
-	load_plugin_textdomain( 'siteintelix', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-add_action( 'init', 'siteintelix_load_textdomain' );
-
 // Boot runtime features after init to avoid early i18n loading notices.
 add_action( 'init', array( 'SITEINTELIX_MU_Debug', 'bootstrap' ), 20 );
 add_action( 'init', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
@@ -158,6 +148,7 @@ function siteintelix_is_admin_screen() {
 		return false;
 	}
 
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only admin screen detection.
 	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
 	return 0 === strpos( $page, 'siteintelix' );
