@@ -23,12 +23,11 @@ $siteintelix_log_view_url  = admin_url( 'admin.php?page=siteintelix-debug-log' )
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
 $siteintelix_settings_saved = isset( $_GET['siteintelix_settings_saved'] );
 
-// Log file paths for display.
-$siteintelix_log_mu  = 'wp-content/siteintelix-debug.log';
-$siteintelix_log_wpc = 'wp-content/debug.log';
+// Log file path for display.
+$siteintelix_log_path = 'wp-content/siteintelix-debug.log';
 
 // Active source path.
-$siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $siteintelix_log_wpc : $siteintelix_log_mu;
+$siteintelix_active_path = $siteintelix_log_path;
 ?>
 
 <div class="wrap siteintelix-wrap" id="siteintelix-settings-page">
@@ -136,7 +135,7 @@ $siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $site
 
 						<div class="sitx-path-box">
 							<span class="dashicons dashicons-editor-code"></span>
-							<code><?php echo esc_html( $siteintelix_log_mu ); ?></code>
+							<code><?php echo esc_html( $siteintelix_log_path ); ?></code>
 						</div>
 					</div>
 				</label>
@@ -159,13 +158,13 @@ $siteintelix_active_path = ( 'wp_config' === $siteintelix_debug_source ) ? $site
 						
 						<ul class="sitx-feature-list">
 							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Native WP_DEBUG integration', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Standard debug.log output', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Custom SiteIntelix log output', 'siteintelix' ); ?></li>
 							<li><span class="dashicons dashicons-warning" style="color:var(--siteintelix-warn);"></span> <?php esc_html_e( 'File-level modifications', 'siteintelix' ); ?></li>
 						</ul>
 
 						<div class="sitx-path-box">
 							<span class="dashicons dashicons-editor-code"></span>
-							<code><?php echo esc_html( $siteintelix_log_wpc ); ?></code>
+							<code><?php echo esc_html( $siteintelix_log_path ); ?></code>
 						</div>
 					</div>
 				</label>

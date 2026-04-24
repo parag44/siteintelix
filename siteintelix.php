@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       SiteIntelix
- * Plugin URI:        https://parag.bd/siteintelix
+ * Plugin URI:        https://wordpress.org/plugins/siteintelix
  * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           2.1.0
+ * Version:           2.1.1
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
- * Author URI:        https://wordpress.org/plugins/siteintelix
+ * Author URI:        https://parag.bd
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       siteintelix
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '2.1.0' );
+define( 'SITEINTELIX_VERSION', '2.1.1' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -69,6 +69,16 @@ function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-source.php';
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
+
+/**
+ * Load translations from the plugin languages directory.
+ *
+ * @return void
+ */
+function siteintelix_load_textdomain() {
+	load_plugin_textdomain( 'siteintelix', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+add_action( 'init', 'siteintelix_load_textdomain', 5 );
 
 // Boot runtime features after init to avoid early i18n loading notices.
 add_action( 'init', array( 'SITEINTELIX_MU_Debug', 'bootstrap' ), 20 );
@@ -447,10 +457,10 @@ function siteintelix_download_debug_log() {
 
 	check_admin_referer( 'siteintelix_download_debug_log' );
 
-	// Resolve log path and download filename based on active debug method.
+	// Resolve the shared SiteIntelix log path.
 	$active_method    = get_option( 'siteintelix_debug_method', 'mu' );
 	$log_path         = SITEINTELIX_Debug_Log::get_path_for_mode( $active_method );
-	$download_filename = ( 'wp_config' === $active_method ) ? 'debug.log' : 'siteintelix-debug.log';
+	$download_filename = 'siteintelix-debug.log';
 
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';

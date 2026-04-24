@@ -853,70 +853,109 @@
 }
 
 /* ============================================================
-   11. Log Console
+   11. Log Table View
    ============================================================ */
-.siteintelix-log-console-wrap {
+.siteintelix-log-table-wrap {
+	background: #fff;
+	border: 1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius-md);
+	box-shadow: var(--siteintelix-shadow-sm);
+	overflow: hidden;
 	margin-top: 16px;
 }
 
-.siteintelix-log-console {
-	background:  #0f172a;
-	border-radius: var(--siteintelix-radius-md);
-	border:      1px solid #1e293b;
-	color:       #e2e8f0;
-	font-family: var(--siteintelix-font-mono);
-	font-size:   12px;
-	max-height:  500px;
-	overflow-y:  auto;
-	padding:     16px;
+.siteintelix-log-table {
+	border-collapse: collapse;
+	width: 100%;
+	table-layout: fixed;
 }
 
-.siteintelix-log-line {
-	border-left: 3px solid transparent;
-	padding:     6px 10px;
-	white-space: pre-wrap;
-	display:     grid;
-	grid-template-columns: 210px 64px minmax(0, 1fr);
-	column-gap:  10px;
-	row-gap:     2px;
-	align-items: start;
-    border-radius: 4px;
-    margin-bottom: 2px;
-}
-.siteintelix-log-line:hover { background: rgba(255,255,255,0.03); }
-
-.siteintelix-log-line__ts { color: #64748b; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.siteintelix-log-line__level { font-weight: 700; white-space: nowrap; }
-.siteintelix-log-line__msg { min-width: 0; word-break: break-word; overflow-wrap: anywhere; }
-
-.siteintelix-log-line--fatal,
-.siteintelix-log-line--error { border-left-color: #ef4444; }
-.siteintelix-log-line--fatal .siteintelix-log-line__level,
-.siteintelix-log-line--error .siteintelix-log-line__level { color: #f87171; }
-
-.siteintelix-log-line--warn { border-left-color: #f59e0b; }
-.siteintelix-log-line--warn .siteintelix-log-line__level { color: #fbbf24; }
-
-.siteintelix-log-line--info .siteintelix-log-line__level { color: #38bdf8; }
-
-/* Debug log row polish: remove colored side rail + prevent level overlap */
-.siteintelix-log-line {
-	border-left: 0 !important;
-	column-gap: 16px;
-	display: grid;
-	grid-template-columns: 250px 120px minmax(0, 1fr);
+.siteintelix-log-table thead th {
+	background: #f1f5f9;
+	border-bottom: 1px solid var(--siteintelix-border);
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+	padding: 14px 20px;
+	text-align: left;
 }
 
-.siteintelix-log-line__level {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.siteintelix-log-row {
+	transition: background 0.1s ease;
+}
+
+.siteintelix-log-row:hover {
+	background: #f8fafc;
+}
+
+.siteintelix-log-row td {
+	border-bottom: 1px solid #f1f5f9;
+	padding: 16px 20px;
+	vertical-align: top;
+	color: var(--siteintelix-text);
+	font-size: 14px;
+}
+
+.siteintelix-log-row:last-child td {
+	border-bottom: none;
+}
+
+/* Column Widths */
+.col-type { width: 120px; }
+.col-date { width: 150px; }
+.col-desc { width: auto; }
+.col-file { width: 280px; }
+.col-line { width: 80px; text-align: right; }
+
+/* Log Badges */
+.sitx-log-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px 10px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: capitalize;
+	min-width: 80px;
+}
+
+.sitx-log-badge--fatal { background: #fee2e2; color: #b91c1c; }
+.sitx-log-badge--error { background: #fee2e2; color: #b91c1c; }
+.sitx-log-badge--warning { background: #fef3c7; color: #b45309; }
+.sitx-log-badge--notice { background: #dcfce7; color: #15803d; }
+.sitx-log-badge--database { background: #f3e8ff; color: #7e22ce; }
+.sitx-log-badge--deprecated { background: #f1f5f9; color: #475569; }
+.sitx-log-badge--info { background: #e0f2fe; color: #0369a1; }
+.sitx-log-badge--debug { background: #f1f5f9; color: #64748b; }
+
+.siteintelix-log-time {
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
 	white-space: nowrap;
 }
 
-.siteintelix-log-line__msg {
-	min-width: 0;
-	overflow-wrap: anywhere;
+.siteintelix-log-msg {
+	line-height: 1.5;
+	word-break: break-word;
+	font-weight: 500;
+}
+
+.siteintelix-log-path {
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
+	word-break: break-all;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.siteintelix-log-ln {
+	color: var(--siteintelix-text);
+	font-family: var(--siteintelix-font-mono);
+	font-size: 13px;
+	font-weight: 600;
 }
 
 /* ============================================================

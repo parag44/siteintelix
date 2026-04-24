@@ -5,7 +5,7 @@ Tags:              system info, server info, site health, admin dashboard, envir
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        2.1.0
+Stable tag:        2.1.1
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,7 +64,7 @@ The plugin evaluates eight metrics and assigns a status:
 
 = Debug Tools =
 * Dedicated Debug Log Viewer with severity badges, search, refresh, clear, and download actions
-* Supports both MU-plugin mode (`wp-content/siteintelix-debug.log`) and `wp-config.php` mode (`wp-content/debug.log`)
+* Supports both MU-plugin mode and `wp-config.php` mode while writing to `wp-content/siteintelix-debug.log`
 * Debug method switcher with clear labels for each logging approach
 
 = Security Panel =
@@ -153,16 +153,15 @@ Yes. It activates per-site and reports information for that individual site.
 
 == Changelog ==
 
-= 2.1.0 — 2026-04-23 =
-* Major admin UI refresh across Overview, Debug Log Viewer, Settings, and Security Panel.
-* Expanded diagnostics detail cards for WordPress, Server, and Environment sections.
-* Updated Copy Report output to include the full expanded diagnostics dataset.
-* Export JSON now reflects the full data payload shown in the dashboard.
-* Scoped third-party admin notice suppression to SiteIntelix screens for a cleaner in-plugin UI.
-* Removed the "Revert to Previous" debug-method mechanism from Settings.
-* Added explicit text-domain loading and moved runtime boot hooks to `init` for improved i18n standards compatibility.
-* Uninstall cleanup now removes legacy debug-method option keys.
-* WordPress.org metadata and release notes refreshed for the 2.1.0 release.
+= 2.1.1 — 2026-04-24 =
+* Replaced the dark terminal-style Debug Log Viewer with a clean, light-themed table layout.
+* Added structured columns for Type, Datetime, Description, File, and Line for easier scanning.
+* Enhanced the backend log parser to extract file paths and line numbers automatically from entries.
+* Expanded log classification with granular levels including Fatal, Database, Deprecated, Notice, and Warning.
+* Standardized both MU Plugin and `wp-config.php` modes to write to `wp-content/siteintelix-debug.log`.
+* Updated the Datetime column to show human-readable relative timestamps such as "12 hours ago".
+* Refined the visual design with premium badge colours, typography, and spacing for a more polished admin experience.
+* Optimized instant search and level-based filtering to work smoothly with the new table structure.
 
 = 1.1.4 — 2026-04-20 =
 * Refined top header hierarchy and visual polish for a cleaner, more professional first impression.
@@ -203,6 +202,9 @@ Yes. It activates per-site and reports information for that individual site.
 * Zero external dependencies.
 
 == Upgrade Notice ==
+
+= 2.1.1 =
+Structured log table release with smarter parsing, relative timestamps, and faster filtering. Recommended for all users.
 
 = 2.1.0 =
 Major UI and diagnostics expansion release with improved reporting and cleaner admin UX. Recommended for all users.

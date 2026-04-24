@@ -3,8 +3,8 @@
  * SITEINTELIX_WP_Config — minimal, surgical wp-config.php debug toggler.
  *
  * Strategy:
- *   ENABLE  → find existing define( 'WP_DEBUG', ... ) and define( 'WP_DEBUG_LOG', ... )
- *             lines and change their value to true.
+ *   ENABLE  → find existing debug define() lines and set WP_DEBUG true,
+ *             WP_DEBUG_LOG to the SiteIntelix log path, and display off.
  *   DISABLE → change those same values back to false.
  *
  * No blocks are inserted or removed. No markers. The original code structure
@@ -26,11 +26,11 @@ class SITEINTELIX_WP_Config {
 	/**
 	 * Constants we toggle. Order matters — WP_DEBUG must come first.
 	 *
-	 * @var array<string, bool>  name => value_when_enabled
+	 * @var array<string, bool|string>  name => value_when_enabled
 	 */
 	private static $toggle_map = array(
 		'WP_DEBUG'         => true,
-		'WP_DEBUG_LOG'     => true,
+		'WP_DEBUG_LOG'     => '',
 		'WP_DEBUG_DISPLAY' => false, // keep display off even when enabled.
 	);
 
@@ -98,11 +98,12 @@ class SITEINTELIX_WP_Config {
 	/**
 	 * Enable WP_DEBUG by changing existing define() values to true/false.
 	 *
-	 * Only modifies lines that already exist. Does NOT insert new defines.
+	 * Missing debug constants are inserted next to WP_DEBUG when needed.
 	 *
 	 * @return true|WP_Error
 	 */
 	public static function enable() {
+		self::$toggle_map['WP_DEBUG_LOG'] = self::get_debug_log_path();
 		return self::apply( true );
 	}
 
@@ -205,6 +206,29 @@ class SITEINTELIX_WP_Config {
 	// -----------------------------------------------------------------------
 
 	/**
+	 * Get the absolute custom debug log path used by both SiteIntelix modes.
+	 *
+	 * @return string
+	 */
+	private static function get_debug_log_path() {
+		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
+	}
+
+	/**
+	 * Convert a PHP value into a wp-config.php define literal.
+	 *
+	 * @param bool|string $value Constant value.
+	 * @return string
+	 */
+	private static function php_literal( $value ) {
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		return "'" . str_replace( "'", "\\'", (string) $value ) . "'";
+	}
+
+	/**
 	 * Core toggle logic — sets each constant to its enabled or disabled value.
 	 *
 	 * @param bool $enable  TRUE → set debug values; FALSE → reset to off.
@@ -233,21 +257,25 @@ class SITEINTELIX_WP_Config {
 
 		// Ensure all constants exist in the file.
 		// If WP_DEBUG exists but others are missing, surgically insert them after WP_DEBUG.
-		$contents = self::ensure_constants_exist( $contents );
+		$contents = self::ensure_constants_exist( $contents, $enable );
 
 		$modified = false;
 
 		foreach ( self::$toggle_map as $constant => $enabled_value ) {
 			// When enabling use the map value; when disabling use false.
 			$target_value = $enable ? $enabled_value : false;
-			$target_str   = $target_value ? 'true' : 'false';
-			$opposite_str = $target_value ? 'false' : 'true';
+			$target_str   = self::php_literal( $target_value );
 
-			// Pattern: define( 'CONSTANT', <any bool or numeric 0/1> );
 			// Captures everything around the value so we can replace just the value.
-			$pattern = '/(define\s*\(\s*[\'"]' . preg_quote( $constant, '/' ) . '[\'"]\s*,\s*)(' . $opposite_str . '|' . $target_str . ')(\s*\))/i';
+			$pattern = '/(define\s*\(\s*[\'"]' . preg_quote( $constant, '/' ) . '[\'"]\s*,\s*)(.*?)(\s*\)\s*;)/i';
 
-			$new_contents = preg_replace( $pattern, '${1}' . $target_str . '${3}', $contents );
+			$new_contents = preg_replace_callback(
+				$pattern,
+				static function ( $matches ) use ( $target_str ) {
+					return $matches[1] . $target_str . $matches[3];
+				},
+				$contents
+			);
 
 			if ( null !== $new_contents && $new_contents !== $contents ) {
 				$contents = $new_contents;
@@ -270,9 +298,10 @@ class SITEINTELIX_WP_Config {
 	 * Inserts them right after the WP_DEBUG line if missing.
 	 *
 	 * @param string $contents Raw wp-config.php contents.
+	 * @param bool   $enable   Whether debug mode is being enabled.
 	 * @return string Modified contents.
 	 */
-	private static function ensure_constants_exist( $contents ) {
+	private static function ensure_constants_exist( $contents, $enable ) {
 		// If WP_DEBUG is missing entirely, we don't want to mess with it (stay surgical).
 		if ( ! preg_match( '/define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,/i', $contents, $matches ) ) {
 			return $contents;
@@ -281,21 +310,20 @@ class SITEINTELIX_WP_Config {
 		foreach ( array( 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY' ) as $const ) {
 			if ( ! preg_match( '/define\s*\(\s*[\'"]' . $const . '[\'"]\s*,/i', $contents ) ) {
 				// Constant is missing. Find WP_DEBUG line and insert after it.
-				// Regex explanation:
-				// [ \t]* matches indentation.
-				// define( 'WP_DEBUG', ... ); matches the line.
-				// (.*?) captures everything until the optional newline.
 				$pattern = '/^([ \t]*define\s*\(\s*[\'"]WP_DEBUG[\'"]\s*,.*?\);)(.*?)$/im';
-				$replacement = '$1' . "\n" . '$1' . '$2'; // Placeholder logic to find the line.
 
-				// Better replacement: capture indentation of WP_DEBUG line to match it.
-				$contents = preg_replace_callback( $pattern, function( $m ) use ( $const ) {
+				$contents = preg_replace_callback( $pattern, function( $m ) use ( $const, $enable ) {
 					$indent = '';
 					if ( preg_match( '/^([ \t]*)/', $m[1], $mi ) ) {
 						$indent = $mi[1];
 					}
+					$value = false;
+					if ( $enable && 'WP_DEBUG_LOG' === $const ) {
+						$value = self::get_debug_log_path();
+					}
 					// Return original line + the new constant line with same indentation.
-					return $m[1] . "\n" . $indent . "define( '" . $const . "', false );" . $m[2];
+					$comment = ( 'WP_DEBUG_LOG' === $const ) ? $indent . '// Set a custom path for the SiteIntelix debug log file.' . "\n" : '';
+					return $m[1] . "\n" . $comment . $indent . "define( '" . $const . "', " . self::php_literal( $value ) . " );" . $m[2];
 				}, $contents );
 			}
 		}

@@ -2,9 +2,7 @@
 /**
  * Debug Log Viewer page for SiteIntelix.
  *
- * Reads from the log file that matches the active debug method:
- *   - MU Plugin mode  → wp-content/siteintelix-debug.log
- *   - wp-config mode  → wp-content/debug.log
+ * Reads from wp-content/siteintelix-debug.log for both debug methods.
  *
  * @package SiteIntelix
  * @since   1.1.0
@@ -166,19 +164,61 @@ $siteintelix_download_url = wp_nonce_url(
 				</div>
 			</div>
 		<?php else : ?>
-			<div class="siteintelix-log-console-wrap">
-				<div class="siteintelix-log-console" id="siteintelix-log-console" style="border-radius:12px; border: 1px solid #26324a;">
-					<?php foreach ( $siteintelix_log_data['entries'] as $siteintelix_entry ) : ?>
-						<div class="siteintelix-log-line siteintelix-log-line--<?php echo esc_attr( strtolower( $siteintelix_entry['level'] ) ); ?>"
-							data-level="<?php echo esc_attr( strtolower( $siteintelix_entry['level'] ) ); ?>"
-							data-message="<?php echo esc_attr( strtolower( $siteintelix_entry['message'] ) ); ?>"
-						>
-							<span class="siteintelix-log-line__ts">[<?php echo esc_html( $siteintelix_entry['timestamp'] ? $siteintelix_entry['timestamp'] : '-' ); ?>]</span>
-							<span class="siteintelix-log-line__level"><?php echo esc_html( $siteintelix_entry['level'] ); ?></span>
-							<span class="siteintelix-log-line__msg"><?php echo esc_html( $siteintelix_entry['message'] ); ?></span>
-						</div>
-					<?php endforeach; ?>
-				</div>
+			<div class="siteintelix-log-table-wrap">
+				<table class="siteintelix-log-table" id="siteintelix-log-table">
+					<thead>
+						<tr>
+							<th class="col-type"><?php esc_html_e( 'Type', 'siteintelix' ); ?></th>
+							<th class="col-date"><?php esc_html_e( 'Datetime', 'siteintelix' ); ?></th>
+							<th class="col-desc"><?php esc_html_e( 'Description', 'siteintelix' ); ?></th>
+							<th class="col-file"><?php esc_html_e( 'File', 'siteintelix' ); ?></th>
+							<th class="col-line"><?php esc_html_e( 'Line', 'siteintelix' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $siteintelix_log_data['entries'] as $siteintelix_entry ) : ?>
+							<tr class="siteintelix-log-row siteintelix-log-row--<?php echo esc_attr( strtolower( $siteintelix_entry['level'] ) ); ?>"
+								data-level="<?php echo esc_attr( strtolower( $siteintelix_entry['level'] ) ); ?>"
+								data-message="<?php echo esc_attr( strtolower( $siteintelix_entry['message'] ) ); ?>"
+							>
+								<td class="col-type">
+									<span class="sitx-log-badge sitx-log-badge--<?php echo esc_attr( strtolower( $siteintelix_entry['level'] ) ); ?>">
+										<?php echo esc_html( $siteintelix_entry['level'] ); ?>
+									</span>
+								</td>
+								<td class="col-date">
+									<span class="siteintelix-log-time" title="<?php echo esc_attr( $siteintelix_entry['timestamp'] ); ?>">
+										<?php
+										if ( ! empty( $siteintelix_entry['timestamp'] ) ) {
+											$ts = strtotime( $siteintelix_entry['timestamp'] );
+											if ( $ts ) {
+												echo esc_html( human_time_diff( $ts, current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'siteintelix' ) );
+											} else {
+												echo esc_html( $siteintelix_entry['timestamp'] );
+											}
+										} else {
+											echo '-';
+										}
+										?>
+									</span>
+								</td>
+								<td class="col-desc">
+									<div class="siteintelix-log-msg"><?php echo esc_html( $siteintelix_entry['message'] ); ?></div>
+								</td>
+								<td class="col-file">
+									<span class="siteintelix-log-path" title="<?php echo esc_attr( $siteintelix_entry['file'] ); ?>">
+										<?php echo esc_html( $siteintelix_entry['file'] ? $siteintelix_entry['file'] : '-' ); ?>
+									</span>
+								</td>
+								<td class="col-line">
+									<span class="siteintelix-log-ln">
+										<?php echo $siteintelix_entry['line_number'] ? (int) $siteintelix_entry['line_number'] : '-'; ?>
+									</span>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
 			</div>
 			
 			<div style="margin-top:16px; display:flex; align-items:center; justify-content:space-between; color:var(--siteintelix-text-muted); font-size:12px;">

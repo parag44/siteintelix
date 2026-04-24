@@ -148,7 +148,7 @@ if ( ! defined( 'SITEINTELIX_ENABLE_DEBUG_CAPTURE_OPTION' ) ) {
 $siteintelix_early_enabled = get_option( 'siteintelix_enable_debug_capture', false );
 if ( ! empty( $siteintelix_early_enabled ) ) {
 	if ( ! defined( 'WP_DEBUG' ) )         { define( 'WP_DEBUG', true ); }
-	if ( ! defined( 'WP_DEBUG_LOG' ) )     { define( 'WP_DEBUG_LOG', true ); }
+	if ( ! defined( 'WP_DEBUG_LOG' ) )     { define( 'WP_DEBUG_LOG', WP_CONTENT_DIR . '/siteintelix-debug.log' ); }
 	if ( ! defined( 'WP_DEBUG_DISPLAY' ) ) { define( 'WP_DEBUG_DISPLAY', false ); }
 	if ( ! defined( 'SCRIPT_DEBUG' ) )     { define( 'SCRIPT_DEBUG', true ); }
 	if ( ! defined( 'SAVEQUERIES' ) )      { define( 'SAVEQUERIES', true ); }

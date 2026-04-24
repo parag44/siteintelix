@@ -2,9 +2,8 @@
 /**
  * SITEINTELIX_Debug_Log - reads and classifies log entries.
  *
- * Reads from wp-content/siteintelix-debug.log (MU-plugin mode)
- * or wp-content/debug.log (wp-config.php mode) based on the
- * selected debug method option.
+ * Reads from wp-content/siteintelix-debug.log for both MU-plugin and
+ * wp-config.php debug modes.
  *
  * @package SiteIntelix
  * @since   1.1.0
@@ -74,15 +73,12 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
-	 * Get the log file path for a given debug method.
+	 * Get the SiteIntelix log file path.
 	 *
-	 * @param string $method 'mu' or 'wp_config'.
+	 * @param string $method Debug method. Accepted for backwards compatibility.
 	 * @return string  Absolute path to the log file.
 	 */
 	public static function get_path_for_mode( $method = 'mu' ) {
-		if ( 'wp_config' === $method ) {
-			return trailingslashit( WP_CONTENT_DIR ) . 'debug.log';
-		}
 		return trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-debug.log';
 	}
 
@@ -94,9 +90,9 @@ class SITEINTELIX_Debug_Log {
 	 */
 	public static function get_mode_label( $method = 'mu' ) {
 		if ( 'wp_config' === $method ) {
-			return __( 'wp-config.php mode — logging to wp-content/debug.log', 'siteintelix' );
+			return __( 'wp-config.php mode - logging to wp-content/siteintelix-debug.log', 'siteintelix' );
 		}
-		return __( 'MU Plugin mode — logging to wp-content/siteintelix-debug.log', 'siteintelix' );
+		return __( 'MU Plugin mode - logging to wp-content/siteintelix-debug.log', 'siteintelix' );
 	}
 
 	/**
@@ -141,38 +137,99 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
-	 * Parse a raw debug.log line into timestamp/message/level.
+	 * Parse a raw debug log line into timestamp/message/level/file/line.
 	 *
 	 * @param string $line Log line.
-	 * @return array{timestamp: string, level: string, message: string}
+	 * @return array{timestamp: string, level: string, message: string, file: string, line_number: int}
 	 */
 	private static function parse_line( $line ) {
-		$line      = (string) $line;
-		$timestamp = '';
-		$message   = $line;
+		$line        = (string) $line;
+		$timestamp   = '';
+		$message     = $line;
+		$file        = '';
+		$line_number = 0;
 
-		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*([^:]+):(\\d+)$/', $line, $match ) ) {
-			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
-			$level     = isset( $match[2] ) ? strtoupper( (string) $match[2] ) : 'OTHER';
-			$message   = isset( $match[3] ) ? (string) $match[3] : $line;
+		// MU-plugin structured format: [timestamp] [LEVEL] message | file:line
+		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*(.+?):(\\d+)$/', $line, $match ) ) {
+			$timestamp   = isset( $match[1] ) ? (string) $match[1] : '';
+			$level       = isset( $match[2] ) ? strtoupper( (string) $match[2] ) : 'OTHER';
+			$message     = isset( $match[3] ) ? trim( (string) $match[3] ) : $line;
+			$file        = isset( $match[4] ) ? trim( (string) $match[4] ) : '';
+			$line_number = isset( $match[5] ) ? (int) $match[5] : 0;
 
 			return array(
-				'timestamp' => $timestamp,
-				'level'     => $level,
-				'message'   => $message,
+				'timestamp'   => $timestamp,
+				'level'       => self::normalise_level( $level, $message ),
+				'message'     => $message,
+				'file'        => $file,
+				'line_number' => $line_number,
 			);
 		}
 
+		// Standard WordPress debug format: [timestamp] PHP message in /path/to/file.php on line N
 		if ( preg_match( '/^\\[(.*?)\\]\\s*(.*)$/', $line, $match ) ) {
 			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
 			$message   = isset( $match[2] ) ? (string) $match[2] : $line;
 		}
 
+		// Try to extract "in /path/file.php on line N" from message.
+		if ( preg_match( '/\\s+in\\s+(.+?)\\s+on\\s+line\\s+(\\d+)\\s*$/', $message, $fm ) ) {
+			$file        = self::relativise_path( trim( $fm[1] ) );
+			$line_number = (int) $fm[2];
+			$message     = trim( preg_replace( '/\\s+in\\s+.+?\\s+on\\s+line\\s+\\d+\\s*$/', '', $message ) );
+		} elseif ( preg_match( '/\\s+in\\s+(.+?):(\\d+)\\s*$/', $message, $fm ) ) {
+			// Handle "in /path/file.php:84" format.
+			$file        = self::relativise_path( trim( $fm[1] ) );
+			$line_number = (int) $fm[2];
+			$message     = trim( preg_replace( '/\\s+in\\s+.+?:\\d+\\s*$/', '', $message ) );
+		}
+
+		// Strip leading "PHP" prefix for cleaner display.
+		$message = preg_replace( '/^PHP\\s+/i', '', $message );
+
 		return array(
-			'timestamp' => $timestamp,
-			'level'     => self::detect_level( $message ),
-			'message'   => $message,
+			'timestamp'   => $timestamp,
+			'level'       => self::detect_level( $message ),
+			'message'     => $message,
+			'file'        => $file,
+			'line_number' => $line_number,
 		);
+	}
+
+	/**
+	 * Convert a path to be relative to ABSPATH.
+	 *
+	 * @param string $path File path.
+	 * @return string
+	 */
+	private static function relativise_path( $path ) {
+		$path = (string) $path;
+		if ( defined( 'ABSPATH' ) && 0 === strpos( $path, ABSPATH ) ) {
+			$path = ltrim( substr( $path, strlen( ABSPATH ) ), '/\\' );
+		}
+		return str_replace( '\\', '/', $path );
+	}
+
+	/**
+	 * Normalise a known level string and refine it using the message.
+	 *
+	 * @param string $level  Raw level label.
+	 * @param string $message Log message.
+	 * @return string
+	 */
+	private static function normalise_level( $level, $message ) {
+		$level = strtoupper( trim( $level ) );
+		$msg   = strtolower( $message );
+
+		if ( in_array( $level, array( 'FATAL', 'ERROR', 'WARN', 'WARNING', 'NOTICE', 'DEPRECATED', 'USER_DEPRECATED', 'INFO', 'DEBUG', 'PARSE', 'DATABASE' ), true ) ) {
+			// Merge WARNING → WARN for consistency.
+			if ( 'WARNING' === $level )     { return 'WARNING'; }
+			if ( 'USER_DEPRECATED' === $level ) { return 'DEPRECATED'; }
+			return $level;
+		}
+
+		// Fall back to content-based detection.
+		return self::detect_level( $message );
 	}
 
 	/**
@@ -187,19 +244,31 @@ class SITEINTELIX_Debug_Log {
 		if ( false !== strpos( $haystack, 'fatal error' ) || false !== strpos( $haystack, 'uncaught' ) ) {
 			return 'FATAL';
 		}
+		if ( false !== strpos( $haystack, 'table' ) && ( false !== strpos( $haystack, 'doesn\'t exist' ) || false !== strpos( $haystack, 'query' ) ) ) {
+			return 'DATABASE';
+		}
+		if ( false !== strpos( $haystack, 'deprecated' ) ) {
+			return 'DEPRECATED';
+		}
+		if ( false !== strpos( $haystack, 'notice' ) ) {
+			return 'NOTICE';
+		}
+		if ( false !== strpos( $haystack, 'warning' ) || false !== strpos( $haystack, 'warn' ) ) {
+			return 'WARNING';
+		}
 		if ( false !== strpos( $haystack, 'error' ) ) {
 			return 'ERROR';
 		}
-		if ( false !== strpos( $haystack, 'warning' ) || false !== strpos( $haystack, 'warn' ) ) {
-			return 'WARN';
+		if ( false !== strpos( $haystack, 'parse' ) ) {
+			return 'PARSE';
 		}
 		if ( false !== strpos( $haystack, 'debug' ) ) {
 			return 'DEBUG';
 		}
-		if ( false !== strpos( $haystack, 'notice' ) || false !== strpos( $haystack, 'deprecated' ) || false !== strpos( $haystack, 'info' ) ) {
+		if ( false !== strpos( $haystack, 'info' ) ) {
 			return 'INFO';
 		}
 
-		return 'OTHER';
+		return 'INFO';
 	}
 }

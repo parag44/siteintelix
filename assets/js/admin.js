@@ -289,7 +289,7 @@
 
 		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter, .sitx-filter' );
 		var searchInput = root.querySelector( '#siteintelix-log-search' );
-		var rows = root.querySelectorAll( '.siteintelix-log-line' );
+		var rows = root.querySelectorAll( '.siteintelix-log-row' );
 		if ( ! filterButtons.length || ! rows.length ) { return; }
 
 		var activeLevel = 'all';
@@ -298,6 +298,7 @@
 			var rowLevel = ( row.getAttribute( 'data-level' ) || '' ).toLowerCase();
 			if ( level === 'all' ) { return true; }
 			if ( level === 'fatal' ) { return rowLevel === 'fatal' || rowLevel === 'error'; }
+			if ( level === 'warn' ) { return rowLevel === 'warning' || rowLevel === 'warn'; }
 			return rowLevel === level;
 		}
 
