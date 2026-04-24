@@ -12,26 +12,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$siteintelix_log_data      = SITEINTELIX_Debug_Log::get_data( 300 );
+$siteintelix_logs_per_page = (int) get_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, 25 );
+$siteintelix_logs_per_page = min( 500, max( 10, $siteintelix_logs_per_page ) );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination parameter.
+$siteintelix_current_page  = isset( $_GET['siteintelix_log_page'] ) ? max( 1, absint( wp_unslash( $_GET['siteintelix_log_page'] ) ) ) : 1;
+$siteintelix_log_data      = SITEINTELIX_Debug_Log::get_data( 0 );
 $siteintelix_active_method = isset( $siteintelix_log_data['method'] ) ? $siteintelix_log_data['method'] : 'mu';
-$siteintelix_total_entries = count( $siteintelix_log_data['entries'] );
-$siteintelix_fatal_count   = isset( $siteintelix_log_data['counts']['FATAL'] ) ? (int) $siteintelix_log_data['counts']['FATAL'] : 0;
-$siteintelix_error_count   = isset( $siteintelix_log_data['counts']['ERROR'] ) ? (int) $siteintelix_log_data['counts']['ERROR'] : 0;
-$siteintelix_warn_count    = isset( $siteintelix_log_data['counts']['WARN'] )  ? (int) $siteintelix_log_data['counts']['WARN']  : 0;
-$siteintelix_info_count    = isset( $siteintelix_log_data['counts']['INFO'] )  ? (int) $siteintelix_log_data['counts']['INFO']  : 0;
-$siteintelix_debug_count   = isset( $siteintelix_log_data['counts']['DEBUG'] ) ? (int) $siteintelix_log_data['counts']['DEBUG'] : 0;
+$siteintelix_all_entries   = isset( $siteintelix_log_data['entries'] ) ? $siteintelix_log_data['entries'] : array();
+$siteintelix_total_entries = count( $siteintelix_all_entries );
+$siteintelix_total_pages   = max( 1, (int) ceil( $siteintelix_total_entries / $siteintelix_logs_per_page ) );
+$siteintelix_current_page  = min( $siteintelix_current_page, $siteintelix_total_pages );
+$siteintelix_offset        = ( $siteintelix_current_page - 1 ) * $siteintelix_logs_per_page;
+$siteintelix_page_entries  = array_slice( $siteintelix_all_entries, $siteintelix_offset, $siteintelix_logs_per_page );
+$siteintelix_entry_start   = $siteintelix_total_entries ? $siteintelix_offset + 1 : 0;
+$siteintelix_entry_end     = min( $siteintelix_total_entries, $siteintelix_offset + count( $siteintelix_page_entries ) );
+$siteintelix_log_data['entries'] = $siteintelix_page_entries;
 $siteintelix_log_has_file  = ! empty( $siteintelix_log_data['exists'] ) && ! empty( $siteintelix_log_data['readable'] );
 $siteintelix_mode_label    = SITEINTELIX_Debug_Log::get_mode_label( $siteintelix_active_method );
-
-// Build path display (relative to ABSPATH for brevity).
-$siteintelix_path_display = isset( $siteintelix_log_data['path'] ) ? $siteintelix_log_data['path'] : '';
-if ( '' !== $siteintelix_path_display && defined( 'ABSPATH' ) ) {
-	$siteintelix_path_display = str_replace( ABSPATH, '', $siteintelix_path_display );
-}
 
 $siteintelix_clear_url   = admin_url( 'admin-post.php' );
 $siteintelix_refresh_url = admin_url( 'admin.php?page=siteintelix-debug-log' );
 $siteintelix_settings_url = admin_url( 'admin.php?page=siteintelix-settings' );
+$siteintelix_pagination_base = add_query_arg(
+	array(
+		'page'                 => 'siteintelix-debug-log',
+		'siteintelix_log_page' => '%#%',
+	),
+	admin_url( 'admin.php' )
+);
 $siteintelix_download_url = wp_nonce_url(
 	admin_url( 'admin-post.php?action=siteintelix_download_debug_log' ),
 	'siteintelix_download_debug_log'
@@ -111,32 +119,16 @@ $siteintelix_download_url = wp_nonce_url(
 			</div>
 		</div>
 
-		<!-- ===== 3. Summary Badges ===== -->
-			<div style="display:flex; gap:12px; margin-bottom: 24px; flex-wrap:wrap;">
-				<div class="sitx-badge sitx-badge--critical" style="padding: 8px 16px;">
-					<span class="dashicons dashicons-warning"></span>
-					<?php /* translators: %d: number of fatal and error log entries. */ ?>
-					<?php printf( esc_html__( '%d Fatal Errors', 'siteintelix' ), (int) ( $siteintelix_fatal_count + $siteintelix_error_count ) ); ?>
-				</div>
-				<div class="sitx-badge sitx-badge--warning" style="padding: 8px 16px;">
-					<span class="dashicons dashicons-warning"></span>
-					<?php /* translators: %d: number of warning log entries. */ ?>
-					<?php printf( esc_html__( '%d Warnings', 'siteintelix' ), (int) $siteintelix_warn_count ); ?>
-				</div>
-				<div class="sitx-badge sitx-badge--info" style="padding: 8px 16px;">
-					<span class="dashicons dashicons-info"></span>
-					<?php /* translators: %d: number of informational log entries. */ ?>
-					<?php printf( esc_html__( '%d Info', 'siteintelix' ), (int) $siteintelix_info_count ); ?>
-				</div>
-			</div>
-
-		<!-- ===== 4. Toolbar: Filters + Search ===== -->
+		<!-- ===== 3. Toolbar: Filters + Search ===== -->
 		<div class="sitx-card" style="padding: 12px; margin-bottom: 12px;">
 			<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
-				<div style="display:flex; gap:8px;">
+				<div style="display:flex; gap:8px; flex-wrap:wrap;">
 					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter is-active" data-level="all"><?php esc_html_e( 'All Levels', 'siteintelix' ); ?></button>
 					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="fatal"><?php esc_html_e( 'Fatal', 'siteintelix' ); ?></button>
-					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="warn"><?php esc_html_e( 'Warning', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="warning"><?php esc_html_e( 'Warning', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="notice"><?php esc_html_e( 'Notice', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="deprecated"><?php esc_html_e( 'Deprecated', 'siteintelix' ); ?></button>
+					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="database"><?php esc_html_e( 'Database', 'siteintelix' ); ?></button>
 					<button type="button" class="sitx-btn sitx-btn--white sitx-btn--sm sitx-filter siteintelix-debug-filter" data-level="info"><?php esc_html_e( 'Info', 'siteintelix' ); ?></button>
 				</div>
 				<div style="flex:1; max-width:400px; position:relative;">
@@ -147,7 +139,7 @@ $siteintelix_download_url = wp_nonce_url(
 			</div>
 		</div>
 
-		<!-- ===== 5. Log Console ===== -->
+		<!-- ===== 4. Log Console ===== -->
 		<?php if ( empty( $siteintelix_log_data['entries'] ) ) : ?>
 			<div class="sitx-alert sitx-alert--warning">
 				<div class="sitx-alert__icon"><span class="dashicons dashicons-info"></span></div>
@@ -220,16 +212,37 @@ $siteintelix_download_url = wp_nonce_url(
 					</tbody>
 				</table>
 			</div>
-			
-			<div style="margin-top:16px; display:flex; align-items:center; justify-content:space-between; color:var(--siteintelix-text-muted); font-size:12px;">
-				<div style="display:flex; align-items:center; gap:8px;">
-					<span class="dashicons dashicons-editor-code" style="font-size:16px;"></span>
-					<code><?php echo esc_html( $siteintelix_path_display ); ?></code>
-				</div>
-				<?php if ( $siteintelix_log_data['size'] > 0 ) : ?>
-					<span class="sitx-badge sitx-badge--info"><?php echo esc_html( size_format( (int) $siteintelix_log_data['size'] ) ); ?></span>
-				<?php endif; ?>
-			</div>
+			<?php if ( $siteintelix_total_pages > 1 ) : ?>
+				<nav class="siteintelix-log-pagination" aria-label="<?php esc_attr_e( 'Debug log pagination', 'siteintelix' ); ?>">
+					<span class="siteintelix-log-pagination__summary">
+						<?php
+						printf(
+							/* translators: 1: first entry number, 2: last entry number, 3: total entry count */
+							esc_html__( 'Showing %1$d-%2$d of %3$d entries', 'siteintelix' ),
+							(int) $siteintelix_entry_start,
+							(int) $siteintelix_entry_end,
+							(int) $siteintelix_total_entries
+						);
+						?>
+					</span>
+					<div class="siteintelix-log-pagination__links">
+						<?php
+						echo wp_kses_post(
+							paginate_links(
+								array(
+									'base'      => esc_url_raw( $siteintelix_pagination_base ),
+									'format'    => '',
+									'current'   => $siteintelix_current_page,
+									'total'     => $siteintelix_total_pages,
+									'prev_text' => __( 'Previous', 'siteintelix' ),
+									'next_text' => __( 'Next', 'siteintelix' ),
+								)
+							)
+						);
+						?>
+					</div>
+				</nav>
+			<?php endif; ?>
 		<?php endif; ?>
 
 	</div><!-- /.siteintelix-container -->

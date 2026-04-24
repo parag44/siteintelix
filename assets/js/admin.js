@@ -116,7 +116,7 @@
 		var extensions;
 
 		lines.push( sep );
-		lines.push( '  SITEINTELIX \u2014 SYSTEM REPORT' );
+		lines.push( '  SITEINTELIX DEBUG LOG VIEWER \u2014 SYSTEM REPORT' );
 		lines.push( '  Generated: ' + new Date().toLocaleString() );
 		lines.push( sep + '\n' );
 
@@ -174,7 +174,6 @@
 		if ( data.environment ) {
 			var env = data.environment;
 			lines.push( '[ ENVIRONMENT ]\n' + sub );
-			lines.push( 'REST API        : ' + formatToggle( env.rest_api, 'Accessible', 'Blocked' ) );
 			lines.push( 'Debug Mode      : ' + formatToggle( env.debug_mode ) );
 			lines.push( 'Debug Log       : ' + formatToggle( env.debug_log ) );
 			lines.push( 'WP-Cron         : ' + formatToggle( env.cron ) );
@@ -187,6 +186,23 @@
 			lines.push( 'Core Updates    : ' + formatValue( env.auto_update ) );
 			lines.push( 'Alternate Cron  : ' + formatToggle( env.alt_cron ) );
 			lines.push( 'Cron Lock       : ' + formatValue( env.cron_lock ? env.cron_lock + 's' : '', 'Default' ) );
+			lines.push( '' );
+		}
+
+		if ( data.database ) {
+			var db = data.database;
+			lines.push( '[ DATABASE ]\n' + sub );
+			lines.push( 'Database Extension : ' + formatValue( db.extension ) );
+			lines.push( 'Server Version     : ' + formatValue( db.server_version ) );
+			lines.push( 'Client Version     : ' + formatValue( db.client_version ) );
+			lines.push( 'Database Username  : ' + formatValue( db.username ) );
+			lines.push( 'Database Host      : ' + formatValue( db.host ) );
+			lines.push( 'Database Name      : ' + formatValue( db.name ) );
+			lines.push( 'Table Prefix       : ' + formatValue( db.table_prefix ) );
+			lines.push( 'Database Charset   : ' + formatValue( db.charset ) );
+			lines.push( 'Database Collation : ' + formatValue( db.collation ) );
+			lines.push( 'Max Allowed Packet : ' + formatValue( db.max_allowed_packet ) );
+			lines.push( 'Max Connections    : ' + formatValue( db.max_connections ) );
 			lines.push( '' );
 		}
 
@@ -252,7 +268,7 @@
 				return;
 			}
 
-			var payload  = { plugin: 'SiteIntelix', generated: new Date().toISOString(), data: data };
+			var payload  = { plugin: 'SiteIntelix Debug Log Viewer', generated: new Date().toISOString(), data: data };
 			var json     = JSON.stringify( payload, null, 2 );
 			var blob     = new Blob( [ json ], { type: 'application/json' } );
 			var url      = URL.createObjectURL( blob );
@@ -297,8 +313,8 @@
 		function rowMatchesLevel( row, level ) {
 			var rowLevel = ( row.getAttribute( 'data-level' ) || '' ).toLowerCase();
 			if ( level === 'all' ) { return true; }
-			if ( level === 'fatal' ) { return rowLevel === 'fatal' || rowLevel === 'error'; }
-			if ( level === 'warn' ) { return rowLevel === 'warning' || rowLevel === 'warn'; }
+			if ( level === 'fatal' ) { return rowLevel === 'fatal' || rowLevel === 'error' || rowLevel === 'parse'; }
+			if ( level === 'warning' ) { return rowLevel === 'warning' || rowLevel === 'warn'; }
 			return rowLevel === level;
 		}
 
@@ -358,7 +374,7 @@
 				// Warn when selecting wp-config method.
 				if ( radio.value === 'wp_config' ) {
 					var confirmed = window.confirm(
-						'This will allow SiteIntelix to modify wp-config.php to enable WP_DEBUG constants.\n' +
+						'This will allow SiteIntelix Debug Log Viewer to modify wp-config.php to enable WP_DEBUG constants.\n' +
 						'A backup (wp-config.php.bak) will be created before any change.\n\n' +
 						'Continue?'
 					);

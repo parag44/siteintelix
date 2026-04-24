@@ -68,13 +68,6 @@ class SITEINTELIX_Security {
 				'default'     => false,
 			),
 			array(
-				'id'          => 'rest_auth',
-				'title'       => __( 'Disable REST API for Guests', 'siteintelix' ),
-				'description' => __( 'Blocks REST API requests for non-logged-in users while keeping it available for authenticated users.', 'siteintelix' ),
-				'option_key'  => 'siteintelix_security_rest_auth',
-				'default'     => false,
-			),
-			array(
 				'id'          => 'remove_head_links',
 				'title'       => __( 'Remove Legacy Head Links', 'siteintelix' ),
 				'description' => __( 'Removes rsd_link and wlwmanifest_link from wp_head output.', 'siteintelix' ),
@@ -122,10 +115,6 @@ class SITEINTELIX_Security {
 					if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
 						define( 'DISALLOW_FILE_EDIT', true );
 					}
-					break;
-
-				case 'rest_auth':
-					add_filter( 'rest_authentication_errors', array( __CLASS__, 'restrict_rest_for_guests' ) );
 					break;
 
 				case 'remove_head_links':
@@ -189,28 +178,6 @@ class SITEINTELIX_Security {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Block REST API for non-logged users when enabled.
-	 *
-	 * @param mixed $result Existing auth result.
-	 * @return mixed
-	 */
-	public static function restrict_rest_for_guests( $result ) {
-		if ( ! empty( $result ) ) {
-			return $result;
-		}
-
-		if ( is_user_logged_in() ) {
-			return $result;
-		}
-
-		return new WP_Error(
-			'siteintelix_rest_forbidden',
-			__( 'REST API is restricted to authenticated users.', 'siteintelix' ),
-			array( 'status' => 401 )
-		);
 	}
 
 	/**

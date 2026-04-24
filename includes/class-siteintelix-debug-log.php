@@ -52,7 +52,10 @@ class SITEINTELIX_Debug_Log {
 			return $data;
 		}
 
-		$lines = array_slice( $lines, -1 * absint( $limit ) );
+		$limit = absint( $limit );
+		if ( $limit > 0 ) {
+			$lines = array_slice( $lines, -1 * $limit );
+		}
 		$lines = array_reverse( $lines );
 
 		foreach ( $lines as $line ) {
@@ -219,13 +222,29 @@ class SITEINTELIX_Debug_Log {
 	 */
 	private static function normalise_level( $level, $message ) {
 		$level = strtoupper( trim( $level ) );
-		$msg   = strtolower( $message );
 
-		if ( in_array( $level, array( 'FATAL', 'ERROR', 'WARN', 'WARNING', 'NOTICE', 'DEPRECATED', 'USER_DEPRECATED', 'INFO', 'DEBUG', 'PARSE', 'DATABASE' ), true ) ) {
-			// Merge WARNING → WARN for consistency.
-			if ( 'WARNING' === $level )     { return 'WARNING'; }
-			if ( 'USER_DEPRECATED' === $level ) { return 'DEPRECATED'; }
-			return $level;
+		if ( in_array( $level, array( 'FATAL', 'ERROR', 'PARSE', 'USER_ERROR', 'CORE_ERROR', 'COMPILE_ERROR' ), true ) ) {
+			return 'FATAL';
+		}
+
+		if ( in_array( $level, array( 'WARN', 'WARNING', 'USER_WARNING', 'CORE_WARNING', 'COMPILE_WARNING' ), true ) ) {
+			return 'WARNING';
+		}
+
+		if ( in_array( $level, array( 'NOTICE', 'USER_NOTICE' ), true ) ) {
+			return 'NOTICE';
+		}
+
+		if ( in_array( $level, array( 'DEPRECATED', 'USER_DEPRECATED' ), true ) ) {
+			return 'DEPRECATED';
+		}
+
+		if ( 'DATABASE' === $level ) {
+			return 'DATABASE';
+		}
+
+		if ( in_array( $level, array( 'INFO', 'DEBUG' ), true ) ) {
+			return 'INFO';
 		}
 
 		// Fall back to content-based detection.
@@ -241,11 +260,17 @@ class SITEINTELIX_Debug_Log {
 	private static function detect_level( $message ) {
 		$haystack = strtolower( (string) $message );
 
-		if ( false !== strpos( $haystack, 'fatal error' ) || false !== strpos( $haystack, 'uncaught' ) ) {
-			return 'FATAL';
-		}
 		if ( false !== strpos( $haystack, 'table' ) && ( false !== strpos( $haystack, 'doesn\'t exist' ) || false !== strpos( $haystack, 'query' ) ) ) {
 			return 'DATABASE';
+		}
+		if ( false !== strpos( $haystack, 'database error' ) || false !== strpos( $haystack, 'wordpress database error' ) ) {
+			return 'DATABASE';
+		}
+		if ( false !== strpos( $haystack, 'fatal error' ) || false !== strpos( $haystack, 'uncaught' ) || false !== strpos( $haystack, 'parse error' ) ) {
+			return 'FATAL';
+		}
+		if ( false !== strpos( $haystack, 'error' ) ) {
+			return 'FATAL';
 		}
 		if ( false !== strpos( $haystack, 'deprecated' ) ) {
 			return 'DEPRECATED';
@@ -255,15 +280,6 @@ class SITEINTELIX_Debug_Log {
 		}
 		if ( false !== strpos( $haystack, 'warning' ) || false !== strpos( $haystack, 'warn' ) ) {
 			return 'WARNING';
-		}
-		if ( false !== strpos( $haystack, 'error' ) ) {
-			return 'ERROR';
-		}
-		if ( false !== strpos( $haystack, 'parse' ) ) {
-			return 'PARSE';
-		}
-		if ( false !== strpos( $haystack, 'debug' ) ) {
-			return 'DEBUG';
 		}
 		if ( false !== strpos( $haystack, 'info' ) ) {
 			return 'INFO';

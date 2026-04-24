@@ -22,6 +22,8 @@ $siteintelix_fix_url       = add_query_arg( array( 'action' => 'siteintelix_fix_
 $siteintelix_log_view_url  = admin_url( 'admin.php?page=siteintelix-debug-log' );
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
 $siteintelix_settings_saved = isset( $_GET['siteintelix_settings_saved'] );
+$siteintelix_logs_per_page  = (int) get_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, 25 );
+$siteintelix_logs_per_page  = min( 500, max( 10, $siteintelix_logs_per_page ) );
 
 // Log file path for display.
 $siteintelix_log_path = 'wp-content/siteintelix-debug.log';
@@ -71,7 +73,7 @@ $siteintelix_active_path = $siteintelix_log_path;
 					<div class="sitx-alert__icon"><span class="dashicons dashicons-warning"></span></div>
 					<div class="sitx-alert__content">
 						<strong class="sitx-alert__title"><?php esc_html_e( 'Debug Conflict Detected', 'siteintelix' ); ?></strong>
-						<p class="sitx-alert__msg"><?php esc_html_e( 'WP_DEBUG is defined manually in wp-config.php. This overrides SiteIntelix and may cause issues.', 'siteintelix' ); ?></p>
+						<p class="sitx-alert__msg"><?php esc_html_e( 'WP_DEBUG is defined manually in wp-config.php. This overrides SiteIntelix Debug Log Viewer and may cause issues.', 'siteintelix' ); ?></p>
 					</div>
 					<div class="sitx-alert__actions">
 						<a href="<?php echo esc_url( $siteintelix_fix_url ); ?>" class="sitx-btn sitx-btn--orange">
@@ -102,7 +104,7 @@ $siteintelix_active_path = $siteintelix_log_path;
 		<!-- ===== 4. Method Selection ===== -->
 		<section class="sitx-section-header">
 			<h2 class="sitx-section-title"><?php esc_html_e( 'Select Debug Method', 'siteintelix' ); ?></h2>
-			<p class="sitx-section-desc"><?php esc_html_e( 'Choose how you want SiteIntelix to capture and log errors.', 'siteintelix' ); ?></p>
+			<p class="sitx-section-desc"><?php esc_html_e( 'Choose how you want SiteIntelix Debug Log Viewer to capture and log errors.', 'siteintelix' ); ?></p>
 		</section>
 
 		<form method="post" action="<?php echo esc_url( $siteintelix_form_url ); ?>" id="siteintelix-debug-settings-form">
@@ -132,11 +134,6 @@ $siteintelix_active_path = $siteintelix_log_path;
 							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Private log: siteintelix-debug.log', 'siteintelix' ); ?></li>
 							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Production-ready safety', 'siteintelix' ); ?></li>
 						</ul>
-
-						<div class="sitx-path-box">
-							<span class="dashicons dashicons-editor-code"></span>
-							<code><?php echo esc_html( $siteintelix_log_path ); ?></code>
-						</div>
 					</div>
 				</label>
 
@@ -158,19 +155,26 @@ $siteintelix_active_path = $siteintelix_log_path;
 						
 						<ul class="sitx-feature-list">
 							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Native WP_DEBUG integration', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Custom SiteIntelix log output', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Custom SiteIntelix Debug Log Viewer output', 'siteintelix' ); ?></li>
 							<li><span class="dashicons dashicons-warning" style="color:var(--siteintelix-warn);"></span> <?php esc_html_e( 'File-level modifications', 'siteintelix' ); ?></li>
 						</ul>
-
-						<div class="sitx-path-box">
-							<span class="dashicons dashicons-editor-code"></span>
-							<code><?php echo esc_html( $siteintelix_log_path ); ?></code>
-						</div>
 					</div>
 				</label>
 			</div>
 
-			<!-- ===== 5. Footer Actions ===== -->
+			<!-- ===== 5. Log Display Settings ===== -->
+			<section class="sitx-settings-panel">
+				<div>
+					<h2 class="sitx-settings-panel__title"><?php esc_html_e( 'Debug Log Display', 'siteintelix' ); ?></h2>
+					<p class="sitx-settings-panel__desc"><?php esc_html_e( 'Choose how many log entries are shown on each Debug Log Viewer page.', 'siteintelix' ); ?></p>
+				</div>
+				<label class="sitx-number-field">
+					<span><?php esc_html_e( 'Logs per page', 'siteintelix' ); ?></span>
+					<input type="number" name="siteintelix_logs_per_page" min="10" max="500" step="5" value="<?php echo esc_attr( (string) $siteintelix_logs_per_page ); ?>">
+				</label>
+			</section>
+
+			<!-- ===== 6. Footer Actions ===== -->
 			<div style="display:flex; align-items:center; gap:24px; border-top:1px solid var(--siteintelix-border); padding-top:32px;">
 				<button type="submit" class="sitx-btn sitx-btn--primary">
 					<span class="dashicons dashicons-saved"></span>

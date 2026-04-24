@@ -522,45 +522,6 @@
     color: var(--siteintelix-crit-text);
 }
 
-/* API List */
-.sitx-api-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.sitx-api-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--siteintelix-surface-2);
-    border: 1px solid var(--siteintelix-border);
-    border-radius: var(--siteintelix-radius-sm);
-    padding: 8px 12px;
-}
-
-.sitx-api-item__url {
-    background: var(--siteintelix-surface);
-    border: 1px solid var(--siteintelix-border);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-family: var(--siteintelix-font-mono);
-    font-size: 12px;
-    color: var(--siteintelix-text);
-}
-
-.sitx-api-item__desc {
-    font-size: 12px;
-    color: var(--siteintelix-text-muted);
-}
-
-.sitx-card__meta-note {
-    font-size: 12px;
-    color: var(--siteintelix-text-muted);
-    margin: 0;
-}
-
 /* ============================================================
    8. Section Headers
    ============================================================ */
@@ -663,6 +624,52 @@
     color: var(--siteintelix-text-muted);
     line-height: 1.5;
     margin: 0 0 20px 0;
+}
+
+.sitx-settings-panel {
+	align-items: center;
+	background: var(--siteintelix-surface);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: var(--siteintelix-radius-lg);
+	display: flex;
+	gap: 24px;
+	justify-content: space-between;
+	margin: 32px 0;
+	padding: 24px;
+}
+
+.sitx-settings-panel__title {
+	color: var(--siteintelix-text);
+	font-size: 18px;
+	font-weight: 800;
+	margin: 0 0 6px;
+}
+
+.sitx-settings-panel__desc {
+	color: var(--siteintelix-text-muted);
+	font-size: 14px;
+	margin: 0;
+}
+
+.sitx-number-field {
+	color: var(--siteintelix-text);
+	display: grid;
+	font-size: 13px;
+	font-weight: 700;
+	gap: 8px;
+	min-width: 180px;
+}
+
+.sitx-number-field input {
+	background: var(--siteintelix-surface-2);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: 8px;
+	color: var(--siteintelix-text);
+	font-size: 15px;
+	font-weight: 700;
+	min-height: 42px;
+	padding: 6px 12px;
+	width: 100%;
 }
 
 .sitx-feature-list {
@@ -921,13 +928,15 @@
 }
 
 .sitx-log-badge--fatal { background: #fee2e2; color: #b91c1c; }
-.sitx-log-badge--error { background: #fee2e2; color: #b91c1c; }
-.sitx-log-badge--warning { background: #fef3c7; color: #b45309; }
-.sitx-log-badge--notice { background: #dcfce7; color: #15803d; }
-.sitx-log-badge--database { background: #f3e8ff; color: #7e22ce; }
-.sitx-log-badge--deprecated { background: #f1f5f9; color: #475569; }
-.sitx-log-badge--info { background: #e0f2fe; color: #0369a1; }
-.sitx-log-badge--debug { background: #f1f5f9; color: #64748b; }
+.sitx-log-badge--error,
+.sitx-log-badge--parse { background: #fee2e2; color: #b91c1c; }
+.sitx-log-badge--warning,
+.sitx-log-badge--warn { background: #ffedd5; color: #c2410c; }
+.sitx-log-badge--notice { background: #fef9c3; color: #a16207; }
+.sitx-log-badge--deprecated { background: #f3e8ff; color: #7e22ce; }
+.sitx-log-badge--database { background: #f5e8dc; color: #92400e; }
+.sitx-log-badge--info,
+.sitx-log-badge--debug { background: #dbeafe; color: #1d4ed8; }
 
 .siteintelix-log-time {
 	color: var(--siteintelix-text-muted);
@@ -956,6 +965,54 @@
 	font-family: var(--siteintelix-font-mono);
 	font-size: 13px;
 	font-weight: 600;
+}
+
+.siteintelix-log-pagination {
+	align-items: center;
+	display: flex;
+	gap: 16px;
+	justify-content: space-between;
+	margin-top: 20px;
+}
+
+.siteintelix-log-pagination__summary {
+	color: var(--siteintelix-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.siteintelix-log-pagination__links {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.siteintelix-log-pagination .page-numbers {
+	align-items: center;
+	background: var(--siteintelix-surface);
+	border: 1px solid var(--siteintelix-border);
+	border-radius: 8px;
+	color: var(--siteintelix-text);
+	display: inline-flex;
+	font-size: 13px;
+	font-weight: 700;
+	justify-content: center;
+	min-height: 34px;
+	min-width: 34px;
+	padding: 0 10px;
+	text-decoration: none;
+}
+
+.siteintelix-log-pagination .page-numbers.current {
+	background: var(--siteintelix-accent);
+	border-color: var(--siteintelix-accent);
+	color: #fff;
+}
+
+.siteintelix-log-pagination a.page-numbers:hover {
+	border-color: var(--siteintelix-accent);
+	color: var(--siteintelix-accent);
 }
 
 /* ============================================================
@@ -1001,6 +1058,12 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 12px;
+	}
+
+	.sitx-settings-panel,
+	.siteintelix-log-pagination {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 
 	.siteintelix-log-line {

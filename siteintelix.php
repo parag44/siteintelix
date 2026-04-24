@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       SiteIntelix
+ * Plugin Name:       SiteIntelix Debug Log Viewer
  * Plugin URI:        https://wordpress.org/plugins/siteintelix
- * Description:       Displays comprehensive WordPress, server, and environment information in a clean admin dashboard with colour-coded health checks and export tools.
- * Version:           2.1.1
+ * Description:       Displays a structured WordPress debug log viewer with pagination, filtering, diagnostics, and export-ready reporting.
+ * Version:           2.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '2.1.1' );
+define( 'SITEINTELIX_VERSION', '2.2.0' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -42,6 +42,9 @@ define( 'SITEINTELIX_MU_DEBUG_FILENAME', 'siteintelix-debug-capture.php' );
 
 /** SiteIntelix debug log filename under wp-content. */
 define( 'SITEINTELIX_DEBUG_LOG_FILENAME', 'siteintelix-debug.log' );
+
+/** Option key for debug log entries shown per page. */
+define( 'SITEINTELIX_LOGS_PER_PAGE_OPTION', 'siteintelix_logs_per_page' );
 
 /** Minimum recommended PHP version. */
 define( 'SITEINTELIX_MIN_PHP_VERSION', '8.0' );
@@ -61,7 +64,6 @@ define( 'SITEINTELIX_MIN_MEMORY_MB', 128 );
 function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-system-info.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-health-check.php';
-	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-rest-api.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-log.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-debug.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-wp-config.php';
@@ -95,8 +97,8 @@ add_action( 'init', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
  */
 function siteintelix_register_admin_menu() {
 	add_menu_page(
-		__( 'SiteIntelix', 'siteintelix' ), // Browser <title>.
-		__( 'SiteIntelix Panel', 'siteintelix' ), // Menu label.
+		__( 'SiteIntelix Debug Log Viewer', 'siteintelix' ), // Browser <title>.
+		__( 'SiteIntelix Debug Log Viewer', 'siteintelix' ), // Menu label.
 		'manage_options',                                       // Capability.
 		'siteintelix',                                  // Menu slug.
 		'siteintelix_render_admin_page',                                // Callback.
@@ -107,7 +109,7 @@ function siteintelix_register_admin_menu() {
 	// Overwrite the first submenu item to be "Overview" instead of the parent label.
 	add_submenu_page(
 		'siteintelix',
-		__( 'SiteIntelix Overview', 'siteintelix' ),
+		__( 'SiteIntelix Debug Log Viewer Overview', 'siteintelix' ),
 		__( 'Overview', 'siteintelix' ),
 		'manage_options',
 		'siteintelix',
@@ -326,13 +328,15 @@ function siteintelix_save_debug_settings() {
 
 	check_admin_referer( 'siteintelix_save_debug_settings' );
 
-	$method     = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+	$method        = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+	$logs_per_page = isset( $_POST['siteintelix_logs_per_page'] ) ? absint( wp_unslash( $_POST['siteintelix_logs_per_page'] ) ) : 25;
 
 	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
 		$method = 'mu';
 	}
 
 	update_option( 'siteintelix_debug_method', $method );
+	update_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, min( 500, max( 10, $logs_per_page ) ) );
 
 	$error_msg = '';
 
@@ -509,7 +513,7 @@ function siteintelix_shortcode_panel() {
 	ob_start();
 	?>
 	<div class="siteintelix-shortcode-panel">
-		<h3><?php esc_html_e( 'SiteIntelix', 'siteintelix' ); ?></h3>
+		<h3><?php esc_html_e( 'SiteIntelix Debug Log Viewer', 'siteintelix' ); ?></h3>
 		<table>
 			<tbody>
 				<tr>
@@ -546,8 +550,7 @@ add_shortcode( 'siteintelix_panel', 'siteintelix_shortcode_panel' );
 
 /**
  * Plugin activation callback.
- * Stores the activation timestamp and flushes rewrite rules so the REST
- * route is available immediately after activation.
+ * Stores the activation timestamp and prepares the debug capture MU-plugin.
  */
 function siteintelix_activate() {
 	add_option( SITEINTELIX_MU_DEBUG_OPTION, 0 );
@@ -561,15 +564,5 @@ function siteintelix_activate() {
 	if ( class_exists( 'SITEINTELIX_MU_Debug' ) ) {
 		SITEINTELIX_MU_Debug::ensure_mu_plugin_file();
 	}
-
-	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'siteintelix_activate' );
-
-/**
- * Plugin deactivation callback.
- */
-function siteintelix_deactivate() {
-	flush_rewrite_rules();
-}
-register_deactivation_hook( __FILE__, 'siteintelix_deactivate' );

@@ -21,12 +21,12 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 $siteintelix_options = array(
 	'siteintelix_activated_at',
 	'siteintelix_enable_debug_capture',
+	'siteintelix_logs_per_page',
 	'siteintelix_debug_method',
 	'siteintelix_previous_debug_method',
 	'siteintelix_security_xmlrpc',
 	'siteintelix_security_hide_version',
 	'siteintelix_security_disable_file_edit',
-	'siteintelix_security_rest_auth',
 	'siteintelix_security_remove_head_links',
 	'siteintelix_security_login_limit',
 );

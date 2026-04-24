@@ -65,8 +65,8 @@ function siteintelix_row( $label, $value ) {
 			<div class="siteintelix-header__title-group">
 				<span class="siteintelix-header__icon dashicons dashicons-chart-area" aria-hidden="true"></span>
 				<div class="siteintelix-header__text">
-					<h1 class="siteintelix-header__title"><?php esc_html_e( 'SiteIntelix', 'siteintelix' ); ?></h1>
-					<p class="siteintelix-header__desc"><?php esc_html_e( 'Monitor your WordPress, server, and environment health.', 'siteintelix' ); ?></p>
+					<h1 class="siteintelix-header__title"><?php esc_html_e( 'SiteIntelix Debug Log Viewer', 'siteintelix' ); ?></h1>
+					<p class="siteintelix-header__desc"><?php esc_html_e( 'Monitor WordPress debug logs, server diagnostics, and environment health.', 'siteintelix' ); ?></p>
 				</div>
 			</div>
 
@@ -224,7 +224,6 @@ function siteintelix_row( $label, $value ) {
 					<table class="siteintelix-table">
 						<tbody>
 						<?php
-							siteintelix_row( __( 'REST API', 'siteintelix' ), esc_html( $siteintelix_checks['rest_api']['value'] ) );
 							siteintelix_row( __( 'WP_DEBUG', 'siteintelix' ), esc_html( $siteintelix_checks['debug_mode']['value'] ) );
 							siteintelix_row( __( 'Debug Log', 'siteintelix' ), $siteintelix_info['environment']['debug_log'] ? esc_html__( 'Enabled', 'siteintelix' ) : esc_html__( 'Disabled', 'siteintelix' ) );
 							siteintelix_row( __( 'WP-Cron', 'siteintelix' ), esc_html( $siteintelix_checks['cron']['value'] ) );
@@ -266,30 +265,36 @@ function siteintelix_row( $label, $value ) {
 				</div>
 			</section>
 
-			<!-- ── API Card ── -->
-			<section class="sitx-card" id="siteintelix-card-api">
+			<!-- ── Database Card ── -->
+			<section class="sitx-card" id="siteintelix-card-database">
 				<header class="sitx-card__header">
 					<h2 class="sitx-card__title">
-						<span class="dashicons dashicons-rest-api" aria-hidden="true"></span>
-						<?php esc_html_e( 'REST API Endpoints', 'siteintelix' ); ?>
+						<span class="dashicons dashicons-database" aria-hidden="true"></span>
+						<?php esc_html_e( 'Database', 'siteintelix' ); ?>
 					</h2>
-					<span class="sitx-badge sitx-badge--info"><?php esc_html_e( 'Secure', 'siteintelix' ); ?></span>
+					<span class="sitx-badge sitx-badge--<?php echo esc_attr( $siteintelix_checks['mysql_version']['status'] ); ?>">
+						<?php echo esc_html( $siteintelix_checks['mysql_version']['status'] ); ?>
+					</span>
 				</header>
 
 				<div class="sitx-card__body">
-					<div class="sitx-api-list">
-						<div class="sitx-api-item">
-							<code class="sitx-api-item__url"><?php echo esc_html( rest_url( 'siteintelix/v1/info' ) ); ?></code>
-							<span class="sitx-api-item__desc"><?php esc_html_e( 'System diagnostics data', 'siteintelix' ); ?></span>
-						</div>
-						<div class="sitx-api-item">
-							<code class="sitx-api-item__url"><?php echo esc_html( rest_url( 'siteintelix/v1/health' ) ); ?></code>
-							<span class="sitx-api-item__desc"><?php esc_html_e( 'Individual health checks', 'siteintelix' ); ?></span>
-						</div>
-					</div>
-					<p class="sitx-card__meta-note">
-						<?php esc_html_e( 'Requires authentication as an Administrator.', 'siteintelix' ); ?>
-					</p>
+					<table class="siteintelix-table">
+						<tbody>
+						<?php
+							siteintelix_row( __( 'Database Extension', 'siteintelix' ), esc_html( $siteintelix_info['database']['extension'] ) );
+							siteintelix_row( __( 'Server version', 'siteintelix' ), esc_html( $siteintelix_info['database']['server_version'] ) );
+							siteintelix_row( __( 'Client version', 'siteintelix' ), esc_html( $siteintelix_info['database']['client_version'] ) );
+							siteintelix_row( __( 'Database username', 'siteintelix' ), esc_html( $siteintelix_info['database']['username'] ) );
+							siteintelix_row( __( 'Database host', 'siteintelix' ), esc_html( $siteintelix_info['database']['host'] ) );
+							siteintelix_row( __( 'Database name', 'siteintelix' ), esc_html( $siteintelix_info['database']['name'] ) );
+							siteintelix_row( __( 'Table prefix', 'siteintelix' ), esc_html( $siteintelix_info['database']['table_prefix'] ) );
+							siteintelix_row( __( 'Database charset', 'siteintelix' ), esc_html( $siteintelix_info['database']['charset'] ) );
+							siteintelix_row( __( 'Database collation', 'siteintelix' ), esc_html( $siteintelix_info['database']['collation'] ) );
+							siteintelix_row( __( 'Max allowed packet size', 'siteintelix' ), esc_html( $siteintelix_info['database']['max_allowed_packet'] ) );
+							siteintelix_row( __( 'Max connections number', 'siteintelix' ), esc_html( $siteintelix_info['database']['max_connections'] ) );
+						?>
+						</tbody>
+					</table>
 				</div>
 			</section>
 
@@ -302,7 +307,7 @@ function siteintelix_row( $label, $value ) {
 				printf(
 					/* translators: 1: plugin name, 2: generation timestamp */
 					wp_kses( __( '%1$s &mdash; Report generated on %2$s', 'siteintelix' ), array( 'strong' => array() ) ),
-					'<strong>SiteIntelix</strong>',
+					'<strong>SiteIntelix Debug Log Viewer</strong>',
 					esc_html( current_time( 'Y-m-d H:i:s' ) )
 				);
 				?>
