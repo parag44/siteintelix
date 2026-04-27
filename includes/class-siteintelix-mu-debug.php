@@ -293,7 +293,7 @@ function siteintelix_debug_bootstrap() {
 	}
 
 	@ini_set( 'display_errors', 'Off' );
-	@ini_set( 'log_errors', '1' );
+	@ini_set( 'log_errors', '0' );
 	@ini_set( 'error_log', SITEINTELIX_DEBUG_LOG_PATH );
 	error_reporting( E_ALL );
 

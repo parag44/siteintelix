@@ -47,19 +47,20 @@ class SITEINTELIX_Debug_Log {
 			$data['size'] = (int) $size;
 		}
 
-		$lines = self::read_tail_lines( $path, 2 * 1024 * 1024 );
-		if ( empty( $lines ) ) {
+		$lines   = self::read_tail_lines( $path, 2 * 1024 * 1024 );
+		$entries = self::group_multiline_entries( $lines );
+		if ( empty( $entries ) ) {
 			return $data;
 		}
 
 		$limit = absint( $limit );
 		if ( $limit > 0 ) {
-			$lines = array_slice( $lines, -1 * $limit );
+			$entries = array_slice( $entries, -1 * $limit );
 		}
-		$lines = array_reverse( $lines );
+		$entries = array_reverse( $entries );
 
-		foreach ( $lines as $line ) {
-			$entry = self::parse_line( $line );
+		foreach ( $entries as $raw_entry ) {
+			$entry = self::parse_line( $raw_entry );
 			if ( '' === $entry['message'] ) {
 				continue;
 			}
@@ -140,6 +141,48 @@ class SITEINTELIX_Debug_Log {
 	}
 
 	/**
+	 * Group physical log lines into complete logical entries.
+	 *
+	 * WordPress/PHP often writes stack traces, long SQL statements, and follow-up
+	 * context across multiple physical lines. Only timestamped lines should start
+	 * a new row in the viewer; non-timestamped lines belong to the previous row.
+	 *
+	 * @param array<int, string> $lines Log file lines in chronological order.
+	 * @return array<int, string>
+	 */
+	private static function group_multiline_entries( array $lines ) {
+		$entries = array();
+		$current = '';
+
+		foreach ( $lines as $line ) {
+			$line = trim( (string) $line );
+			if ( '' === $line ) {
+				continue;
+			}
+
+			if ( preg_match( '/^\[[^\]]+\]/', $line ) ) {
+				if ( '' !== $current ) {
+					$entries[] = $current;
+				}
+				$current = $line;
+				continue;
+			}
+
+			if ( '' === $current ) {
+				$current = $line;
+			} else {
+				$current .= "\n" . $line;
+			}
+		}
+
+		if ( '' !== $current ) {
+			$entries[] = $current;
+		}
+
+		return $entries;
+	}
+
+	/**
 	 * Parse a raw debug log line into timestamp/message/level/file/line.
 	 *
 	 * @param string $line Log line.
@@ -153,7 +196,7 @@ class SITEINTELIX_Debug_Log {
 		$line_number = 0;
 
 		// MU-plugin structured format: [timestamp] [LEVEL] message | file:line
-		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*(.+?):(\\d+)$/', $line, $match ) ) {
+		if ( preg_match( '/^\\[(.*?)\\]\\s*\\[(.*?)\\]\\s*(.*?)\\s*\\|\\s*(.+?):(\\d+)$/s', $line, $match ) ) {
 			$timestamp   = isset( $match[1] ) ? (string) $match[1] : '';
 			$level       = isset( $match[2] ) ? strtoupper( (string) $match[2] ) : 'OTHER';
 			$message     = isset( $match[3] ) ? trim( (string) $match[3] ) : $line;
@@ -170,21 +213,21 @@ class SITEINTELIX_Debug_Log {
 		}
 
 		// Standard WordPress debug format: [timestamp] PHP message in /path/to/file.php on line N
-		if ( preg_match( '/^\\[(.*?)\\]\\s*(.*)$/', $line, $match ) ) {
+		if ( preg_match( '/^\\[(.*?)\\]\\s*(.*)$/s', $line, $match ) ) {
 			$timestamp = isset( $match[1] ) ? (string) $match[1] : '';
 			$message   = isset( $match[2] ) ? (string) $match[2] : $line;
 		}
 
 		// Try to extract "in /path/file.php on line N" from message.
-		if ( preg_match( '/\\s+in\\s+(.+?)\\s+on\\s+line\\s+(\\d+)\\s*$/', $message, $fm ) ) {
+		if ( preg_match( '/\\s+in\\s+([^\\r\\n]+?)\\s+on\\s+line\\s+(\\d+)/', $message, $fm ) ) {
 			$file        = self::relativise_path( trim( $fm[1] ) );
 			$line_number = (int) $fm[2];
-			$message     = trim( preg_replace( '/\\s+in\\s+.+?\\s+on\\s+line\\s+\\d+\\s*$/', '', $message ) );
-		} elseif ( preg_match( '/\\s+in\\s+(.+?):(\\d+)\\s*$/', $message, $fm ) ) {
+			$message     = trim( preg_replace( '/\\s+in\\s+[^\\r\\n]+?\\s+on\\s+line\\s+\\d+/', '', $message, 1 ) );
+		} elseif ( preg_match( '/\\s+in\\s+([^\\r\\n]+?):(\\d+)/', $message, $fm ) ) {
 			// Handle "in /path/file.php:84" format.
 			$file        = self::relativise_path( trim( $fm[1] ) );
 			$line_number = (int) $fm[2];
-			$message     = trim( preg_replace( '/\\s+in\\s+.+?:\\d+\\s*$/', '', $message ) );
+			$message     = trim( preg_replace( '/\\s+in\\s+[^\\r\\n]+?:\\d+/', '', $message, 1 ) );
 		}
 
 		// Strip leading "PHP" prefix for cleaner display.

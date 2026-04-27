@@ -155,6 +155,8 @@ Yes. It activates per-site and reports information for that individual site.
 * Added Debug Log Viewer pagination with a configurable logs-per-page setting in Debug Settings.
 * Added a complete log level filter set: Fatal, Warning, Notice, Deprecated, Database, and Info.
 * Normalized parsed log levels so PHP errors map into the supported filter groups consistently.
+* Grouped multiline PHP errors, stack traces, and SQL context into a single log table row.
+* Prevented MU Plugin mode from writing duplicate native PHP log rows alongside SiteIntelix structured rows.
 * Removed the extra log path and file-size strip below the debug log table.
 * Replaced the overview REST API endpoints card with detailed Database information.
 * Removed the custom SiteIntelix REST API endpoints and related REST hardening toggle.
@@ -212,7 +214,7 @@ Yes. It activates per-site and reports information for that individual site.
 == Upgrade Notice ==
 
 = 2.2.0 =
-Plugin rename and Debug Log Viewer refinement release with pagination, full level filters, database overview data, and removed custom REST endpoints. Recommended for all users.
+Plugin rename and Debug Log Viewer refinement release with pagination, full level filters, multiline log grouping, duplicate MU log prevention, database overview data, and removed custom REST endpoints. Recommended for all users.
 
 = 2.1.1 =
 Structured log table release with smarter parsing, relative timestamps, and faster filtering. Recommended for all users.
