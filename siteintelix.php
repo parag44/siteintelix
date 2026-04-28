@@ -98,7 +98,7 @@ add_action( 'init', array( 'SITEINTELIX_Security', 'bootstrap' ), 20 );
 function siteintelix_register_admin_menu() {
 	add_menu_page(
 		__( 'SiteIntelix Debug Log Viewer', 'siteintelix' ), // Browser <title>.
-		__( 'SiteIntelix Debug Log Viewer', 'siteintelix' ), // Menu label.
+		__( 'SiteIntelix', 'siteintelix' ),                  // Menu label.
 		'manage_options',                                       // Capability.
 		'siteintelix',                                  // Menu slug.
 		'siteintelix_render_admin_page',                                // Callback.
@@ -145,6 +145,30 @@ function siteintelix_register_admin_menu() {
 	);
 }
 add_action( 'admin_menu', 'siteintelix_register_admin_menu' );
+
+/**
+ * Add a quick Debug Log Viewer shortcut to the WordPress admin bar.
+ *
+ * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
+ * @return void
+ */
+function siteintelix_register_admin_bar_link( $wp_admin_bar ) {
+	if ( ! is_admin_bar_showing() || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	$wp_admin_bar->add_node(
+		array(
+			'id'    => 'siteintelix-debug-log',
+			'title' => __( 'SiteIntelix Log', 'siteintelix' ),
+			'href'  => admin_url( 'admin.php?page=siteintelix-debug-log' ),
+			'meta'  => array(
+				'title' => __( 'View SiteIntelix Debug Log', 'siteintelix' ),
+			),
+		)
+	);
+}
+add_action( 'admin_bar_menu', 'siteintelix_register_admin_bar_link', 80 );
 
 // ---------------------------------------------------------------------------
 // SiteIntelix admin screen helpers

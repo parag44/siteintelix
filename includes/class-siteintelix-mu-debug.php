@@ -247,6 +247,143 @@ function siteintelix_log( $message, $level = 'INFO' ) {
 	siteintelix_write_log_entry( $level, $message, 'manual', 0 );
 }
 
+function siteintelix_debug_core_reference( $function_name ) {
+	$file = ABSPATH . 'wp-includes/functions.php';
+	$line = 0;
+
+	if ( class_exists( 'ReflectionFunction' ) && function_exists( $function_name ) ) {
+		try {
+			$reflection = new ReflectionFunction( $function_name );
+			$file       = $reflection->getFileName();
+			$line       = $reflection->getStartLine();
+		} catch ( Exception $e ) {
+			$file = ABSPATH . 'wp-includes/functions.php';
+			$line = 0;
+		}
+	}
+
+	return array( $file, $line );
+}
+
+function siteintelix_debug_doing_it_wrong_handler( $function_name, $message, $version ) {
+	if ( ! siteintelix_debug_capture_enabled() ) {
+		return;
+	}
+
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		return;
+	}
+
+	$version_text = $version ? sprintf( ' (This message was added in version %s.)', $version ) : '';
+	$notice       = sprintf(
+		'Function %1$s was called <strong>incorrectly</strong>. %2$s Please see <a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/">Debugging in WordPress</a> for more information.%3$s',
+		(string) $function_name,
+		(string) $message,
+		$version_text
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_doing_it_wrong' );
+
+	siteintelix_write_log_entry( 'NOTICE', $notice, $file, $line );
+}
+
+function siteintelix_debug_deprecated_function_handler( $function_name, $replacement, $version ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$message = sprintf(
+		'Function %1$s is deprecated since version %2$s!%3$s',
+		(string) $function_name,
+		(string) $version,
+		$replacement ? sprintf( ' Use %s instead.', (string) $replacement ) : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_function' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $message, $file, $line );
+}
+
+function siteintelix_debug_deprecated_constructor_handler( $class_name, $version, $parent_class ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$message = sprintf(
+		'The called constructor method for %1$s is deprecated since version %2$s!%3$s',
+		(string) $class_name,
+		(string) $version,
+		$parent_class ? sprintf( ' Use %s instead.', (string) $parent_class ) : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_constructor' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $message, $file, $line );
+}
+
+function siteintelix_debug_deprecated_class_handler( $class_name, $replacement, $version ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$message = sprintf(
+		'Class %1$s is deprecated since version %2$s!%3$s',
+		(string) $class_name,
+		(string) $version,
+		$replacement ? sprintf( ' Use %s instead.', (string) $replacement ) : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_class' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $message, $file, $line );
+}
+
+function siteintelix_debug_deprecated_file_handler( $file_name, $replacement, $version, $message ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$notice = sprintf(
+		'File %1$s is deprecated since version %2$s!%3$s%4$s',
+		(string) $file_name,
+		(string) $version,
+		$replacement ? sprintf( ' Use %s instead.', (string) $replacement ) : '',
+		$message ? ' ' . (string) $message : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_file' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $notice, $file, $line );
+}
+
+function siteintelix_debug_deprecated_argument_handler( $function_name, $message, $version ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$notice = sprintf(
+		'Function %1$s was called with an argument that is deprecated since version %2$s!%3$s',
+		(string) $function_name,
+		(string) $version,
+		$message ? ' ' . (string) $message : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_argument' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $notice, $file, $line );
+}
+
+function siteintelix_debug_deprecated_hook_handler( $hook, $replacement, $version, $message ) {
+	if ( ! siteintelix_debug_capture_enabled() || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+		return;
+	}
+
+	$notice = sprintf(
+		'Hook %1$s is deprecated since version %2$s!%3$s%4$s',
+		(string) $hook,
+		(string) $version,
+		$replacement ? sprintf( ' Use %s instead.', (string) $replacement ) : '',
+		$message ? ' ' . (string) $message : ''
+	);
+	list( $file, $line ) = siteintelix_debug_core_reference( '_deprecated_hook' );
+
+	siteintelix_write_log_entry( 'DEPRECATED', $notice, $file, $line );
+}
+
 function siteintelix_debug_error_handler( $errno, $errstr, $errfile, $errline ) {
 	if ( ! siteintelix_debug_capture_enabled() ) {
 		return false;
@@ -297,6 +434,13 @@ function siteintelix_debug_bootstrap() {
 	@ini_set( 'error_log', SITEINTELIX_DEBUG_LOG_PATH );
 	error_reporting( E_ALL );
 
+	add_action( 'doing_it_wrong_run', 'siteintelix_debug_doing_it_wrong_handler', 10, 3 );
+	add_action( 'deprecated_function_run', 'siteintelix_debug_deprecated_function_handler', 10, 3 );
+	add_action( 'deprecated_constructor_run', 'siteintelix_debug_deprecated_constructor_handler', 10, 3 );
+	add_action( 'deprecated_class_run', 'siteintelix_debug_deprecated_class_handler', 10, 3 );
+	add_action( 'deprecated_file_included', 'siteintelix_debug_deprecated_file_handler', 10, 4 );
+	add_action( 'deprecated_argument_run', 'siteintelix_debug_deprecated_argument_handler', 10, 3 );
+	add_action( 'deprecated_hook_run', 'siteintelix_debug_deprecated_hook_handler', 10, 4 );
 	set_error_handler( 'siteintelix_debug_error_handler' );
 	register_shutdown_function( 'siteintelix_debug_shutdown_handler' );
 }

@@ -218,16 +218,11 @@ class SITEINTELIX_Debug_Log {
 			$message   = isset( $match[2] ) ? (string) $match[2] : $line;
 		}
 
-		// Try to extract "in /path/file.php on line N" from message.
-		if ( preg_match( '/\\s+in\\s+([^\\r\\n]+?)\\s+on\\s+line\\s+(\\d+)/', $message, $fm ) ) {
-			$file        = self::relativise_path( trim( $fm[1] ) );
-			$line_number = (int) $fm[2];
-			$message     = trim( preg_replace( '/\\s+in\\s+[^\\r\\n]+?\\s+on\\s+line\\s+\\d+/', '', $message, 1 ) );
-		} elseif ( preg_match( '/\\s+in\\s+([^\\r\\n]+?):(\\d+)/', $message, $fm ) ) {
-			// Handle "in /path/file.php:84" format.
-			$file        = self::relativise_path( trim( $fm[1] ) );
-			$line_number = (int) $fm[2];
-			$message     = trim( preg_replace( '/\\s+in\\s+[^\\r\\n]+?:\\d+/', '', $message, 1 ) );
+		$file_reference = self::extract_file_reference( $message );
+		if ( ! empty( $file_reference ) ) {
+			$file        = self::relativise_path( $file_reference['file'] );
+			$line_number = (int) $file_reference['line_number'];
+			$message     = trim( str_replace( $file_reference['raw'], '', $message ) );
 		}
 
 		// Strip leading "PHP" prefix for cleaner display.
@@ -249,11 +244,57 @@ class SITEINTELIX_Debug_Log {
 	 * @return string
 	 */
 	private static function relativise_path( $path ) {
-		$path = (string) $path;
+		$path = trim( (string) $path, " \t\n\r\0\x0B'\"" );
 		if ( defined( 'ABSPATH' ) && 0 === strpos( $path, ABSPATH ) ) {
 			$path = ltrim( substr( $path, strlen( ABSPATH ) ), '/\\' );
 		}
-		return str_replace( '\\', '/', $path );
+
+		$path = str_replace( '\\', '/', $path );
+		foreach ( array( 'wp-content', 'wp-includes', 'wp-admin' ) as $wp_dir ) {
+			if ( 0 === strpos( $path, $wp_dir . '/' ) ) {
+				return $path;
+			}
+
+			$position = strpos( $path, '/' . $wp_dir . '/' );
+			if ( false !== $position ) {
+				return substr( $path, $position + 1 );
+			}
+		}
+
+		return $path;
+	}
+
+	/**
+	 * Extract the final file/line reference from a log message.
+	 *
+	 * @param string $message Log message.
+	 * @return array{raw: string, file: string, line_number: int}|array{}
+	 */
+	private static function extract_file_reference( $message ) {
+		$path_pattern = '(?:[A-Za-z]:[\\\\/]|/|\\\\\\\\|(?:wp-content|wp-includes|wp-admin)[\\\\/])[^\\r\\n<>]+?';
+		$patterns     = array(
+			'~\\s+in\\s+(' . $path_pattern . ')\\s+on\\s+line\\s+(\\d+)~',
+			'~\\s+in\\s+(' . $path_pattern . '):(\\d+)~',
+		);
+
+		foreach ( $patterns as $pattern ) {
+			if ( ! preg_match_all( $pattern, (string) $message, $matches, PREG_SET_ORDER ) ) {
+				continue;
+			}
+
+			$match = end( $matches );
+			if ( ! is_array( $match ) || empty( $match[1] ) || empty( $match[2] ) ) {
+				continue;
+			}
+
+			return array(
+				'raw'         => (string) $match[0],
+				'file'        => (string) $match[1],
+				'line_number' => (int) $match[2],
+			);
+		}
+
+		return array();
 	}
 
 	/**

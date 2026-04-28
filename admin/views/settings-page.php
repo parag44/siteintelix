@@ -126,13 +126,14 @@ $siteintelix_active_path = $siteintelix_log_path;
 						</div>
 						<h3 class="sitx-select-card__title"><?php esc_html_e( 'MU Plugin (Recommended)', 'siteintelix' ); ?></h3>
 						<p class="sitx-select-card__desc">
-							<?php esc_html_e( 'Safe and non-invasive. Captures PHP errors without modifying any core files or site configuration.', 'siteintelix' ); ?>
+							<?php esc_html_e( 'Non-invasive capture layer that works without editing wp-config.php and writes to the private SiteIntelix log.', 'siteintelix' ); ?>
 						</p>
 						
 						<ul class="sitx-feature-list">
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'No core file edits', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Private log: siteintelix-debug.log', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Production-ready safety', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Captures PHP warnings, notices, deprecated messages, and fatal shutdown errors', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Captures WordPress doing-it-wrong and deprecation notices even when WP_DEBUG is false', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'No wp-config.php edits; logs to wp-content/siteintelix-debug.log', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-warning" style="color:var(--siteintelix-warn);"></span> <?php esc_html_e( 'Cannot capture errors that happen before MU plugins load', 'siteintelix' ); ?></li>
 						</ul>
 					</div>
 				</label>
@@ -150,13 +151,14 @@ $siteintelix_active_path = $siteintelix_log_path;
 						</div>
 						<h3 class="sitx-select-card__title"><?php esc_html_e( 'wp-config.php (Advanced)', 'siteintelix' ); ?></h3>
 						<p class="sitx-select-card__desc">
-							<?php esc_html_e( 'Uses native WordPress debugging constants. Directly edits your site configuration file.', 'siteintelix' ); ?>
+							<?php esc_html_e( 'Uses native WordPress/PHP debug constants by writing them directly into wp-config.php.', 'siteintelix' ); ?>
 						</p>
 						
 						<ul class="sitx-feature-list">
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Native WP_DEBUG integration', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Custom SiteIntelix Debug Log Viewer output', 'siteintelix' ); ?></li>
-							<li><span class="dashicons dashicons-warning" style="color:var(--siteintelix-warn);"></span> <?php esc_html_e( 'File-level modifications', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Captures native PHP and WordPress debug output through WP_DEBUG', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Can catch earlier bootstrap errors after wp-config.php is loaded', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-yes"></span> <?php esc_html_e( 'Writes native logs to wp-content/siteintelix-debug.log', 'siteintelix' ); ?></li>
+							<li><span class="dashicons dashicons-warning" style="color:var(--siteintelix-warn);"></span> <?php esc_html_e( 'Requires wp-config.php file changes and depends on WP_DEBUG being active', 'siteintelix' ); ?></li>
 						</ul>
 					</div>
 				</label>
