@@ -557,6 +557,11 @@
     margin-bottom:         var(--siteintelix-space-xl);
 }
 
+.sitx-selection-grid--compact {
+	gap: var(--siteintelix-space-md);
+	margin-bottom: var(--siteintelix-space-lg);
+}
+
 .sitx-select-card {
 	background:    var(--siteintelix-surface);
 	border:        2px solid var(--siteintelix-border);
@@ -566,6 +571,20 @@
     gap:           20px;
 	padding:       24px;
 	transition:    all 0.2s ease;
+}
+
+.sitx-select-card--compact {
+	padding: 20px;
+}
+
+.sitx-select-card--compact .sitx-select-card__icon {
+	height: 42px;
+	margin-bottom: 12px;
+	width: 42px;
+}
+
+.sitx-select-card--compact .sitx-select-card__desc {
+	margin-bottom: 0;
 }
 
 .sitx-select-card:hover {
@@ -617,6 +636,7 @@
 .sitx-select-card__icon .dashicons { font-size: 24px; width: 24px; height: 24px; }
 .sitx-select-card__icon--blue { background: #eff6ff; color: #3b82f6; }
 .sitx-select-card__icon--orange { background: #fff7ed; color: #f97316; }
+.sitx-select-card__icon--dark { background: #111827; color: #22c55e; }
 
 .sitx-select-card__title {
     font-size: 16px !important;
@@ -643,6 +663,10 @@
 	padding: 24px;
 }
 
+.sitx-settings-panel--compact {
+	margin: 24px 0 32px;
+}
+
 .sitx-settings-panel__title {
 	color: var(--siteintelix-text);
 	font-size: 18px;
@@ -665,7 +689,8 @@
 	min-width: 180px;
 }
 
-.sitx-number-field input {
+.sitx-number-field input,
+.sitx-number-field select {
 	background: var(--siteintelix-surface-2);
 	border: 1px solid var(--siteintelix-border);
 	border-radius: 8px;

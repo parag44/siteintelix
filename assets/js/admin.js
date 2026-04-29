@@ -306,9 +306,31 @@
 		var filterButtons = root.querySelectorAll( '.siteintelix-debug-filter, .sitx-filter' );
 		var searchInput = root.querySelector( '#siteintelix-log-search' );
 		var rows = root.querySelectorAll( '.siteintelix-log-row' );
-		if ( ! filterButtons.length || ! rows.length ) { return; }
+		if ( ! filterButtons.length && ! searchInput ) { return; }
 
 		var activeLevel = 'all';
+		var searchTimer = null;
+
+		function runGlobalSearch() {
+			if ( ! searchInput || ! searchInput.hasAttribute( 'data-siteintelix-global-search' ) || typeof URL === 'undefined' ) {
+				return;
+			}
+
+			var term = String( searchInput.value || '' ).trim();
+			var url = new URL( window.location.href );
+			url.searchParams.set( 'page', 'siteintelix-debug-log' );
+			url.searchParams.delete( 'siteintelix_log_page' );
+
+			if ( term ) {
+				url.searchParams.set( 'siteintelix_log_search', term );
+			} else {
+				url.searchParams.delete( 'siteintelix_log_search' );
+			}
+
+			if ( url.toString() !== window.location.href ) {
+				window.location.href = url.toString();
+			}
+		}
 
 		function rowMatchesLevel( row, level ) {
 			var rowLevel = ( row.getAttribute( 'data-level' ) || '' ).toLowerCase();
@@ -343,7 +365,17 @@
 		} );
 
 		if ( searchInput ) {
-			searchInput.addEventListener( 'input', applyFilters );
+			searchInput.addEventListener( 'input', function () {
+				var term = String( searchInput.value || '' ).trim();
+				applyFilters();
+
+				if ( ! searchInput.hasAttribute( 'data-siteintelix-global-search' ) || ( term.length > 0 && term.length < 3 ) ) {
+					return;
+				}
+
+				window.clearTimeout( searchTimer );
+				searchTimer = window.setTimeout( runGlobalSearch, 650 );
+			} );
 		}
 	}
 

@@ -24,6 +24,10 @@ $siteintelix_log_view_url  = admin_url( 'admin.php?page=siteintelix-debug-log' )
 $siteintelix_settings_saved = isset( $_GET['siteintelix_settings_saved'] );
 $siteintelix_logs_per_page  = (int) get_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, 25 );
 $siteintelix_logs_per_page  = min( 500, max( 10, $siteintelix_logs_per_page ) );
+$siteintelix_debug_ui       = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
+if ( ! in_array( $siteintelix_debug_ui, array( 'classic', 'modern', 'terminal_dark' ), true ) ) {
+	$siteintelix_debug_ui = 'modern';
+}
 
 // Log file path for display.
 $siteintelix_log_path = 'wp-content/siteintelix-debug.log';
@@ -164,11 +168,64 @@ $siteintelix_active_path = $siteintelix_log_path;
 				</label>
 			</div>
 
-			<!-- ===== 5. Log Display Settings ===== -->
-			<section class="sitx-settings-panel">
+			<!-- ===== 5. Viewer UI Selection ===== -->
+			<section class="sitx-section-header">
+				<h2 class="sitx-section-title"><?php esc_html_e( 'Select Viewer UI', 'siteintelix' ); ?></h2>
+				<p class="sitx-section-desc"><?php esc_html_e( 'Choose the Debug Log Viewer layout that works best for your workflow.', 'siteintelix' ); ?></p>
+			</section>
+
+			<div class="sitx-selection-grid sitx-selection-grid--compact">
+				<label class="sitx-select-card sitx-select-card--compact <?php echo ( 'modern' === $siteintelix_debug_ui ) ? 'is-selected' : ''; ?>" data-ui="modern">
+					<div class="sitx-select-card__radio">
+						<input type="radio" name="siteintelix_debug_ui" value="modern" <?php checked( $siteintelix_debug_ui, 'modern' ); ?>>
+						<span class="sitx-select-card__radio-custom"></span>
+					</div>
+
+					<div class="sitx-select-card__content">
+						<div class="sitx-select-card__icon sitx-select-card__icon--blue">
+							<span class="dashicons dashicons-screenoptions" aria-hidden="true"></span>
+						</div>
+						<h3 class="sitx-select-card__title"><?php esc_html_e( 'Modern grouped cards', 'siteintelix' ); ?></h3>
+						<p class="sitx-select-card__desc"><?php esc_html_e( 'Grouped error cards with summary metrics, filters, timelines, and expandable stack traces.', 'siteintelix' ); ?></p>
+					</div>
+				</label>
+
+				<label class="sitx-select-card sitx-select-card--compact <?php echo ( 'classic' === $siteintelix_debug_ui ) ? 'is-selected' : ''; ?>" data-ui="classic">
+					<div class="sitx-select-card__radio">
+						<input type="radio" name="siteintelix_debug_ui" value="classic" <?php checked( $siteintelix_debug_ui, 'classic' ); ?>>
+						<span class="sitx-select-card__radio-custom"></span>
+					</div>
+
+					<div class="sitx-select-card__content">
+						<div class="sitx-select-card__icon sitx-select-card__icon--orange">
+							<span class="dashicons dashicons-list-view" aria-hidden="true"></span>
+						</div>
+						<h3 class="sitx-select-card__title"><?php esc_html_e( 'Classic table', 'siteintelix' ); ?></h3>
+						<p class="sitx-select-card__desc"><?php esc_html_e( 'Traditional table layout with type, datetime, description, file, and line columns.', 'siteintelix' ); ?></p>
+					</div>
+				</label>
+
+				<label class="sitx-select-card sitx-select-card--compact <?php echo ( 'terminal_dark' === $siteintelix_debug_ui ) ? 'is-selected' : ''; ?>" data-ui="terminal_dark">
+					<div class="sitx-select-card__radio">
+						<input type="radio" name="siteintelix_debug_ui" value="terminal_dark" <?php checked( $siteintelix_debug_ui, 'terminal_dark' ); ?>>
+						<span class="sitx-select-card__radio-custom"></span>
+					</div>
+
+					<div class="sitx-select-card__content">
+						<div class="sitx-select-card__icon sitx-select-card__icon--dark">
+							<span class="dashicons dashicons-editor-code" aria-hidden="true"></span>
+						</div>
+						<h3 class="sitx-select-card__title"><?php esc_html_e( 'Terminal Dark', 'siteintelix' ); ?></h3>
+						<p class="sitx-select-card__desc"><?php esc_html_e( 'Dark terminal-style log stream showing the latest 100 entries without pagination.', 'siteintelix' ); ?></p>
+					</div>
+				</label>
+			</div>
+
+			<!-- ===== 6. Log Display Settings ===== -->
+			<section class="sitx-settings-panel sitx-settings-panel--compact">
 				<div>
-					<h2 class="sitx-settings-panel__title"><?php esc_html_e( 'Debug Log Display', 'siteintelix' ); ?></h2>
-					<p class="sitx-settings-panel__desc"><?php esc_html_e( 'Choose how many log entries are shown on each Debug Log Viewer page.', 'siteintelix' ); ?></p>
+					<h2 class="sitx-settings-panel__title"><?php esc_html_e( 'Log Display Settings', 'siteintelix' ); ?></h2>
+					<p class="sitx-settings-panel__desc"><?php esc_html_e( 'Choose how many log entries or groups are shown on each page.', 'siteintelix' ); ?></p>
 				</div>
 				<label class="sitx-number-field">
 					<span><?php esc_html_e( 'Logs per page', 'siteintelix' ); ?></span>
@@ -176,7 +233,7 @@ $siteintelix_active_path = $siteintelix_log_path;
 				</label>
 			</section>
 
-			<!-- ===== 6. Footer Actions ===== -->
+			<!-- ===== 7. Footer Actions ===== -->
 			<div style="display:flex; align-items:center; gap:24px; border-top:1px solid var(--siteintelix-border); padding-top:32px;">
 				<button type="submit" class="sitx-btn sitx-btn--primary">
 					<span class="dashicons dashicons-saved"></span>
@@ -194,12 +251,13 @@ jQuery(document).ready(function($) {
 	$('.sitx-select-card').on('click', function() {
 		const $card = $(this);
 		const $radio = $card.find('input[type="radio"]');
+		const radioName = $radio.attr('name');
 		
 		// Update radio button
 		$radio.prop('checked', true);
 		
-		// Update visual state
-		$('.sitx-select-card').removeClass('is-selected');
+		// Update visual state for the current radio group only.
+		$('input[type="radio"][name="' + radioName + '"]').closest('.sitx-select-card').removeClass('is-selected');
 		$card.addClass('is-selected');
 	});
 });

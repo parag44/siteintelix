@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       SiteIntelix Debug Log Viewer
  * Plugin URI:        https://wordpress.org/plugins/siteintelix
- * Description:       Displays a structured WordPress debug log viewer with pagination, filtering, diagnostics, and export-ready reporting.
- * Version:           2.2.0
+ * Description:       View, search, group, and manage WordPress debug logs with modern cards, classic tables, and terminal-style log screens.
+ * Version:           2.5.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '2.2.0' );
+define( 'SITEINTELIX_VERSION', '2.5.0' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -45,6 +45,9 @@ define( 'SITEINTELIX_DEBUG_LOG_FILENAME', 'siteintelix-debug.log' );
 
 /** Option key for debug log entries shown per page. */
 define( 'SITEINTELIX_LOGS_PER_PAGE_OPTION', 'siteintelix_logs_per_page' );
+
+/** Option key for Debug Log Viewer UI mode. */
+define( 'SITEINTELIX_DEBUG_UI_OPTION', 'siteintelix_debug_ui' );
 
 /** Minimum recommended PHP version. */
 define( 'SITEINTELIX_MIN_PHP_VERSION', '8.0' );
@@ -289,6 +292,25 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 		true       // Load in footer.
 	);
 
+	// Load the rebuilt Debug Log Viewer assets for the Modern and Terminal log screens.
+	$debug_ui_mode = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-debug-log' ) && in_array( $debug_ui_mode, array( 'modern', 'terminal_dark' ), true ) ) {
+		wp_enqueue_style(
+			'siteintelix-debug-log-viewer',
+			SITEINTELIX_PLUGIN_URL . 'assets/css/debug-log-viewer.css',
+			array( 'siteintelix-admin-style' ),
+			SITEINTELIX_VERSION
+		);
+
+		wp_enqueue_script(
+			'siteintelix-debug-log-viewer',
+			SITEINTELIX_PLUGIN_URL . 'assets/js/debug-log-viewer.js',
+			array(),
+			SITEINTELIX_VERSION,
+			true
+		);
+	}
+
 	// Pass localised strings and nonce to JS.
 	wp_localize_script(
 		'siteintelix-admin-script',
@@ -353,13 +375,19 @@ function siteintelix_save_debug_settings() {
 	check_admin_referer( 'siteintelix_save_debug_settings' );
 
 	$method        = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
+	$ui_mode       = isset( $_POST['siteintelix_debug_ui'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_ui'] ) ) : 'modern';
 	$logs_per_page = isset( $_POST['siteintelix_logs_per_page'] ) ? absint( wp_unslash( $_POST['siteintelix_logs_per_page'] ) ) : 25;
 
 	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
 		$method = 'mu';
 	}
 
+	if ( ! in_array( $ui_mode, array( 'classic', 'modern', 'terminal_dark' ), true ) ) {
+		$ui_mode = 'modern';
+	}
+
 	update_option( 'siteintelix_debug_method', $method );
+	update_option( SITEINTELIX_DEBUG_UI_OPTION, $ui_mode );
 	update_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, min( 500, max( 10, $logs_per_page ) ) );
 
 	$error_msg = '';

@@ -21,6 +21,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 $siteintelix_options = array(
 	'siteintelix_activated_at',
 	'siteintelix_enable_debug_capture',
+	'siteintelix_debug_ui',
 	'siteintelix_logs_per_page',
 	'siteintelix_debug_method',
 	'siteintelix_previous_debug_method',
