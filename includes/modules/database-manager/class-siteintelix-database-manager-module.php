@@ -121,7 +121,7 @@ class SITEINTELIX_Database_Manager_Module {
 				</div>
 
 				<?php if ( 'edit' === $active_view ) : ?>
-					<?php self::render_edit_view( $selected_table ); ?>
+					<?php self::render_edit_view( $tables, $selected_table ); ?>
 				<?php elseif ( 'tables' === $active_view ) : ?>
 					<?php self::render_tables_view( $tables, $selected_table ); ?>
 				<?php else : ?>
@@ -143,10 +143,6 @@ class SITEINTELIX_Database_Manager_Module {
 		$total_data    = array_sum( wp_list_pluck( $tables, 'data_length' ) );
 		$total_index   = array_sum( wp_list_pluck( $tables, 'index_length' ) );
 		?>
-		<div class="sitx-db-overview-title">
-			<h1><?php esc_html_e( 'Overview', 'siteintelix' ); ?></h1>
-			<span><?php echo esc_html( sprintf( _n( '%d table', '%d tables', count( $tables ), 'siteintelix' ), count( $tables ) ) ); ?></span>
-		</div>
 		<div class="sitx-db-stats">
 			<div class="si-card sitx-db-stat-card">
 				<span><?php esc_html_e( 'Total Tables', 'siteintelix' ); ?></span>
@@ -212,20 +208,7 @@ class SITEINTELIX_Database_Manager_Module {
 		$rows         = $selected_table ? self::get_table_rows( $selected_table, $columns, $row_search, $page ) : array();
 		?>
 		<div class="sitx-db-browser si-card">
-			<aside class="sitx-db-sidebar">
-				<form method="get" class="sitx-db-sidebar-search">
-					<input type="hidden" name="page" value="siteintelix-database-manager">
-					<input type="hidden" name="view" value="tables">
-					<input type="search" name="table_search" value="<?php echo esc_attr( $table_search ); ?>" placeholder="<?php esc_attr_e( 'Search for table...', 'siteintelix' ); ?>" aria-label="<?php esc_attr_e( 'Search database tables', 'siteintelix' ); ?>">
-					<button type="submit" class="si-button si-button--icon si-button--ghost" aria-label="<?php esc_attr_e( 'Search tables', 'siteintelix' ); ?>"><span class="dashicons dashicons-search"></span></button>
-				</form>
-				<ul class="sitx-db-table-list">
-					<?php foreach ( $tables as $table_name => $table ) : ?>
-						<?php if ( '' !== $table_search && false === stripos( $table_name, $table_search ) ) { continue; } ?>
-						<li><a class="<?php echo $table_name === $selected_table ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=siteintelix-database-manager&view=tables&table=' . rawurlencode( $table_name ) ) ); ?>"><span class="dashicons dashicons-database-view"></span><?php echo esc_html( $table_name ); ?></a></li>
-					<?php endforeach; ?>
-				</ul>
-			</aside>
+			<?php self::render_table_sidebar( $tables, $selected_table, $table_search ); ?>
 
 			<main class="sitx-db-rows">
 				<div class="sitx-db-row-toolbar">
@@ -292,10 +275,12 @@ class SITEINTELIX_Database_Manager_Module {
 	/**
 	 * Render dedicated row edit view.
 	 *
+	 * @param array<string,array<string,mixed>> $tables         Tables keyed by name.
 	 * @param string $selected_table Selected table.
 	 * @return void
 	 */
-	private static function render_edit_view( $selected_table ) {
+	private static function render_edit_view( $tables, $selected_table ) {
+		$table_search = isset( $_GET['table_search'] ) ? sanitize_text_field( wp_unslash( $_GET['table_search'] ) ) : '';
 		$row_search   = isset( $_GET['row_search'] ) ? sanitize_text_field( wp_unslash( $_GET['row_search'] ) ) : '';
 		$page         = isset( $_GET['db_page'] ) ? max( 1, absint( wp_unslash( $_GET['db_page'] ) ) ) : 1;
 		$selected_id  = isset( $_GET['row_id'] ) ? sanitize_text_field( wp_unslash( $_GET['row_id'] ) ) : '';
@@ -304,24 +289,57 @@ class SITEINTELIX_Database_Manager_Module {
 		$selected_row = $selected_table && $primary_key && '' !== $selected_id ? self::get_row_by_primary_key( $selected_table, $primary_key, $selected_id ) : null;
 		$back_url     = self::get_table_url( $selected_table, $page, $row_search );
 		?>
-		<div class="sitx-db-edit-page si-card">
-			<div class="sitx-db-edit-header">
-				<div>
-					<a class="sitx-db-back-link" href="<?php echo esc_url( $back_url ); ?>">
-						<span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
-						<?php esc_html_e( 'Back to rows', 'siteintelix' ); ?>
-					</a>
-					<h2><?php echo esc_html( sprintf( __( 'Edit: %s', 'siteintelix' ), $selected_table ? $selected_table : __( 'No table selected', 'siteintelix' ) ) ); ?></h2>
-					<?php if ( $primary_key && '' !== $selected_id ) : ?>
-						<p><?php echo esc_html( sprintf( __( '%1$s = %2$s', 'siteintelix' ), $primary_key, $selected_id ) ); ?></p>
-					<?php endif; ?>
+		<div class="sitx-db-browser sitx-db-edit-browser si-card">
+			<?php self::render_table_sidebar( $tables, $selected_table, $table_search ); ?>
+
+			<main class="sitx-db-edit-main">
+				<div class="sitx-db-edit-page">
+					<div class="sitx-db-edit-header">
+						<div>
+							<a class="sitx-db-back-link" href="<?php echo esc_url( $back_url ); ?>">
+								<span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
+								<?php esc_html_e( 'Back to rows', 'siteintelix' ); ?>
+							</a>
+							<h2><?php echo esc_html( sprintf( __( 'Edit: %s', 'siteintelix' ), $selected_table ? $selected_table : __( 'No table selected', 'siteintelix' ) ) ); ?></h2>
+							<?php if ( $primary_key && '' !== $selected_id ) : ?>
+								<p><?php echo esc_html( sprintf( __( '%1$s = %2$s', 'siteintelix' ), $primary_key, $selected_id ) ); ?></p>
+							<?php endif; ?>
+						</div>
+						<a class="si-button si-button--secondary" href="<?php echo esc_url( $back_url ); ?>"><?php esc_html_e( 'Cancel', 'siteintelix' ); ?></a>
+					</div>
+					<div class="sitx-db-editor sitx-db-editor--page">
+						<?php self::render_row_editor( $selected_table, $columns, $primary_key, $selected_row, $selected_id, $page, $row_search ); ?>
+					</div>
 				</div>
-				<a class="si-button si-button--secondary" href="<?php echo esc_url( $back_url ); ?>"><?php esc_html_e( 'Cancel', 'siteintelix' ); ?></a>
-			</div>
-			<div class="sitx-db-editor sitx-db-editor--page">
-				<?php self::render_row_editor( $selected_table, $columns, $primary_key, $selected_row, $selected_id, $page, $row_search ); ?>
-			</div>
+			</main>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render the database table sidebar.
+	 *
+	 * @param array<string,array<string,mixed>> $tables         Tables keyed by name.
+	 * @param string                           $selected_table Selected table.
+	 * @param string                           $table_search   Table search term.
+	 * @return void
+	 */
+	private static function render_table_sidebar( $tables, $selected_table, $table_search ) {
+		?>
+		<aside class="sitx-db-sidebar">
+			<form method="get" class="sitx-db-sidebar-search">
+				<input type="hidden" name="page" value="siteintelix-database-manager">
+				<input type="hidden" name="view" value="tables">
+				<input type="search" name="table_search" value="<?php echo esc_attr( $table_search ); ?>" placeholder="<?php esc_attr_e( 'Search for table...', 'siteintelix' ); ?>" aria-label="<?php esc_attr_e( 'Search database tables', 'siteintelix' ); ?>">
+				<button type="submit" class="si-button si-button--icon si-button--ghost" aria-label="<?php esc_attr_e( 'Search tables', 'siteintelix' ); ?>"><span class="dashicons dashicons-search"></span></button>
+			</form>
+			<ul class="sitx-db-table-list">
+				<?php foreach ( array_keys( $tables ) as $table_name ) : ?>
+					<?php if ( '' !== $table_search && false === stripos( $table_name, $table_search ) ) { continue; } ?>
+					<li><a class="<?php echo $table_name === $selected_table ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=siteintelix-database-manager&view=tables&table=' . rawurlencode( $table_name ) ) ); ?>"><span class="dashicons dashicons-database-view"></span><?php echo esc_html( $table_name ); ?></a></li>
+				<?php endforeach; ?>
+			</ul>
+		</aside>
 		<?php
 	}
 
@@ -763,7 +781,7 @@ class SITEINTELIX_Database_Manager_Module {
 
 		$value = is_scalar( $value ) ? (string) $value : wp_json_encode( $value );
 		$value = preg_replace( '/\s+/', ' ', $value );
-		return strlen( $value ) > 120 ? substr( $value, 0, 117 ) . '…' : $value;
+		return strlen( $value ) > 260 ? substr( $value, 0, 257 ) . '…' : $value;
 	}
 
 	/**

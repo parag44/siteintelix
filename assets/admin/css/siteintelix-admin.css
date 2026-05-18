@@ -2580,7 +2580,16 @@
    12. Database Manager
    ============================================================ */
 .sitx-db-manager {
-	background: var(--si-bg);
+	background: #f8fafc;
+	--si-db-sidebar-width: 260px;
+	--si-db-page-pad: 20px;
+}
+
+.sitx-db-manager .si-page-header__content,
+.sitx-db-manager .siteintelix-header__content {
+	max-width: none;
+	padding-left: var(--si-db-page-pad);
+	padding-right: var(--si-db-page-pad);
 }
 
 .sitx-db-manager .notice,
@@ -2594,10 +2603,10 @@
 	background: transparent;
 	border-bottom: 0;
 	display: flex;
-	margin: 0 auto;
-	max-width: 1280px;
+	margin: 0;
+	max-width: none;
 	min-height: 0;
-	padding: var(--si-space-5) var(--si-space-6) 0;
+	padding: 10px var(--si-db-page-pad) 0;
 }
 
 .sitx-db-brand {
@@ -2632,8 +2641,8 @@
 .sitx-db-tabs {
 	background: var(--si-surface);
 	border: 1px solid var(--si-border);
-	border-radius: var(--si-radius-lg);
-	box-shadow: var(--si-shadow-sm);
+	border-radius: 8px;
+	box-shadow: none;
 	display: inline-flex;
 	gap: var(--si-space-1);
 	padding: var(--si-space-1);
@@ -2647,8 +2656,8 @@
 	display: inline-flex;
 	font-size: 14px;
 	font-weight: 650;
-	min-height: 36px;
-	padding: 0 var(--si-space-4);
+	min-height: 32px;
+	padding: 0 14px;
 	text-decoration: none;
 }
 
@@ -2667,23 +2676,23 @@
 }
 
 .sitx-db-container {
-	margin: 0 auto;
-	max-width: 1280px;
-	padding: var(--si-space-5) var(--si-space-6) var(--si-space-7);
+	margin: 0;
+	max-width: none;
+	padding: 10px var(--si-db-page-pad) var(--si-space-6);
 }
 
 .sitx-db-stats {
 	display: grid;
-	gap: var(--si-space-4);
+	gap: 10px;
 	grid-template-columns: repeat(4, minmax(160px, 1fr));
-	margin-bottom: var(--si-space-5);
+	margin-bottom: 14px;
 }
 
 .sitx-db-stat-card {
 	display: flex;
 	flex-direction: column;
-	gap: var(--si-space-2);
-	padding: var(--si-space-4);
+	gap: 5px;
+	padding: 12px 14px;
 }
 
 .sitx-db-stat-card span {
@@ -2694,104 +2703,88 @@
 
 .sitx-db-stat-card strong {
 	color: var(--si-text);
-	font-size: 24px;
+	font-size: 20px;
 	font-weight: 700;
 	line-height: 1.2;
-}
-
-.sitx-db-overview-title {
-	align-items: baseline;
-	display: flex;
-	gap: 18px;
-	margin-bottom: 28px;
-}
-
-.sitx-db-overview-title h1 {
-	color: var(--siteintelix-text);
-	font-size: 32px;
-	line-height: 1.1;
-	margin: 0;
-}
-
-.sitx-db-overview-title span {
-	color: var(--siteintelix-text-muted);
-	font-size: 16px;
-	font-weight: 700;
 }
 
 .sitx-db-table-wrap {
 	background: var(--siteintelix-surface);
 	border: 1px solid var(--siteintelix-border);
-	border-radius: 14px;
-	box-shadow: var(--siteintelix-shadow-sm);
-	overflow: hidden;
+	border-radius: 8px;
+	box-shadow: none;
+	overflow: auto;
 }
 
 .sitx-db-table {
 	border: 0;
 	border-collapse: collapse;
-	color: #19345c;
-	font-size: 15px;
+	color: #1d2327;
+	font-size: 12px;
 	margin: 0;
 }
 
 .sitx-db-table thead th {
-	background: #dfe6ef;
-	border-color: #cdd7e4;
-	color: #19345c;
-	font-weight: 800;
-	padding: 16px 18px;
+	background: #f6f7f7;
+	border-color: #e5e7eb;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 650;
+	padding: 7px 9px;
 	text-align: left;
+	white-space: nowrap;
 }
 
 .sitx-db-table tbody td {
-	border-color: #dde5ef;
-	padding: 14px 18px;
+	border-color: #edf0f2;
+	line-height: 1.45;
+	padding: 7px 9px;
 	vertical-align: top;
 }
 
 .sitx-db-table tbody tr:nth-child(even) td {
-	background: #f2f5f9;
+	background: #fbfcfd;
 }
 
 .sitx-db-table a {
-	color: #19345c;
-	font-weight: 700;
+	color: var(--siteintelix-accent);
+	font-weight: 600;
 	text-decoration: none;
 }
 
 .sitx-db-browser {
 	background: #fff;
-	border: 1px solid var(--siteintelix-border);
-	border-radius: 16px;
-	box-shadow: var(--siteintelix-shadow-sm);
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	box-shadow: none;
 	display: grid;
-	grid-template-columns: 300px minmax(720px, 1fr);
-	min-height: 720px;
+	grid-template-columns: var(--si-db-sidebar-width) minmax(0, 1fr);
+	min-height: calc(100vh - 260px);
 	overflow: hidden;
 	padding: 0;
 }
 
 .sitx-db-sidebar {
 	border-right: 1px solid var(--siteintelix-border);
-	padding: 24px;
+	background: #fbfcfd;
+	padding: 12px;
 }
 
 .sitx-db-sidebar-search {
 	display: flex;
-	margin-bottom: 18px;
+	margin-bottom: 10px;
 	position: relative;
 }
 
 .sitx-db-sidebar-search input,
 .sitx-db-row-search input {
 	border: 1px solid var(--siteintelix-border);
-	border-radius: 8px;
+	border-radius: 4px;
 	box-shadow: none;
 	color: var(--siteintelix-text);
-	font-size: 15px;
-	min-height: 44px;
-	padding: 8px 44px 8px 12px;
+	font-size: 13px;
+	min-height: 34px;
+	padding: 6px 36px 6px 10px;
 	width: 100%;
 }
 
@@ -2802,20 +2795,20 @@
 	color: var(--siteintelix-text);
 	cursor: pointer;
 	display: flex;
-	height: 44px;
+	height: 34px;
 	justify-content: center;
 	position: absolute;
 	right: 0;
 	top: 0;
-	width: 44px;
+	width: 34px;
 }
 
 .sitx-db-table-list {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 1px;
 	margin: 0;
-	max-height: 640px;
+	max-height: calc(100vh - 330px);
 	overflow: auto;
 	padding: 0;
 }
@@ -2826,36 +2819,43 @@
 
 .sitx-db-table-list a {
 	align-items: center;
-	border-radius: 8px;
-	color: #19345c;
+	border-radius: 4px;
+	color: #1d2327;
 	display: flex;
-	font-size: 15px;
-	font-weight: 700;
-	gap: 10px;
-	padding: 9px 10px;
+	font-size: 13px;
+	font-weight: 500;
+	gap: 7px;
+	min-height: 28px;
+	padding: 4px 7px;
 	text-decoration: none;
 }
 
 .sitx-db-table-list a .dashicons {
-	color: #c4ccd8;
-	font-size: 18px;
-	height: 18px;
-	width: 18px;
+	color: #b7c0cc;
+	font-size: 15px;
+	height: 15px;
+	width: 15px;
 }
 
 .sitx-db-table-list a.is-active,
 .sitx-db-table-list a:hover {
-	background: var(--siteintelix-accent);
-	color: #fff;
+	background: #e8f0fe;
+	color: #0b57d0;
 }
 
 .sitx-db-table-list a.is-active .dashicons,
 .sitx-db-table-list a:hover .dashicons {
-	color: #fff;
+	color: #0b57d0;
 }
 
 .sitx-db-rows {
 	min-width: 0;
+}
+
+.sitx-db-edit-main {
+	background: #fff;
+	min-width: 0;
+	overflow: auto;
 }
 
 .sitx-db-row-toolbar {
@@ -2864,14 +2864,14 @@
 	display: flex;
 	gap: 14px;
 	justify-content: space-between;
-	padding: 12px 16px;
+	padding: 10px 12px;
 }
 
 .sitx-db-row-toolbar > div {
 	align-items: center;
-	color: #19345c;
+	color: #1d2327;
 	display: flex;
-	font-size: 15px;
+	font-size: 13px;
 	gap: 8px;
 	min-width: 0;
 }
@@ -2883,23 +2883,23 @@
 }
 
 .sitx-db-row-toolbar .dashicons {
-	background: #f1f5f9;
-	border-radius: 8px;
-	color: #19345c;
-	height: 34px;
-	line-height: 34px;
+	background: #eef4ff;
+	border-radius: 5px;
+	color: var(--siteintelix-accent);
+	height: 28px;
+	line-height: 28px;
 	text-align: center;
-	width: 34px;
+	width: 28px;
 }
 
 .sitx-db-row-search {
 	margin: 0;
-	max-width: 320px;
-	width: 36%;
+	max-width: 360px;
+	width: 32%;
 }
 
 .sitx-db-grid-scroll {
-	max-height: 600px;
+	max-height: calc(100vh - 336px);
 	overflow: auto;
 }
 
@@ -2910,21 +2910,29 @@
 }
 
 .sitx-db-row-table {
-	min-width: 720px;
+	min-width: 1100px;
 }
 
 .sitx-db-row-table .sitx-db-action-column {
-	padding-left: 12px;
-	padding-right: 8px;
+	background: #fff;
+	border-right: 1px solid #edf0f2;
+	padding-left: 6px;
+	padding-right: 6px;
 	position: sticky;
 	left: 0;
 	text-align: center;
-	width: 54px;
+	width: 36px;
 	z-index: 1;
 }
 
+.sitx-db-row-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+}
+
 .sitx-db-row-table thead .sitx-db-action-column {
-	z-index: 2;
+	z-index: 4;
 }
 
 .sitx-db-row-table tbody .sitx-db-action-column {
@@ -2936,9 +2944,12 @@
 }
 
 .sitx-db-edit-link {
-	height: 32px;
-	min-height: 32px;
-	width: 32px;
+	background: transparent;
+	border: 0;
+	color: var(--siteintelix-accent);
+	height: 24px;
+	min-height: 24px;
+	width: 24px;
 }
 
 .sitx-db-action-placeholder {
@@ -2953,7 +2964,7 @@
 	display: flex;
 	gap: 14px;
 	justify-content: flex-end;
-	padding: 14px 18px;
+	padding: 10px 12px;
 }
 
 .sitx-db-pagination > span {
@@ -2975,8 +2986,8 @@
 	display: inline-flex;
 	font-weight: 800;
 	justify-content: center;
-	min-height: 34px;
-	min-width: 44px;
+	min-height: 30px;
+	min-width: 38px;
 }
 
 .sitx-btn.is-disabled {
@@ -3063,8 +3074,15 @@
 }
 
 .sitx-db-edit-page {
+	border-radius: 8px;
+	box-shadow: none;
 	overflow: hidden;
 	padding: 0;
+}
+
+.sitx-db-edit-browser .sitx-db-edit-page {
+	border-radius: 0;
+	min-height: 100%;
 }
 
 .sitx-db-edit-header {
@@ -3073,14 +3091,14 @@
 	display: flex;
 	gap: 24px;
 	justify-content: space-between;
-	padding: 24px;
+	padding: 16px 18px;
 }
 
 .sitx-db-edit-header h2 {
 	color: var(--siteintelix-text);
-	font-size: 24px;
+	font-size: 20px;
 	line-height: 1.2;
-	margin: 8px 0 6px;
+	margin: 6px 0 5px;
 }
 
 .sitx-db-edit-header p {
@@ -3107,40 +3125,42 @@
 	background: #fff;
 	max-height: none;
 	overflow: visible;
-	padding: 24px;
+	padding: 16px 18px;
 }
 
 .sitx-db-editor--page .sitx-db-editor-form {
 	display: grid;
-	gap: 16px;
+	gap: 8px;
 	grid-template-columns: minmax(0, 1fr);
 }
 
 .sitx-db-editor--page .si-form-row {
 	align-items: start;
+	border-radius: 6px;
 	display: grid;
-	gap: 16px;
-	grid-template-columns: 260px minmax(0, 1fr);
+	gap: 12px;
+	grid-template-columns: 220px minmax(0, 1fr);
+	padding: 10px 12px;
 }
 
 .sitx-db-editor--page .si-form-row > span {
 	align-items: flex-start;
-	background: #f7f9fc;
-	border-radius: 8px;
+	background: #f8fafc;
+	border-radius: 5px;
 	flex-direction: column;
 	gap: 4px;
 	margin: 0;
-	padding: 12px;
+	padding: 9px 10px;
 }
 
 .sitx-db-editor--page textarea {
-	min-height: 44px;
+	min-height: 38px;
 	resize: vertical;
 }
 
 .sitx-db-editor--page .sitx-db-editor-actions {
-	margin: 8px -24px -24px;
-	padding: 16px 24px;
+	margin: 8px -18px -16px;
+	padding: 12px 18px;
 }
 
 /* ============================================================
