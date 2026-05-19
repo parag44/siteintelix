@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       SiteIntelix
+ * Plugin Name:       SiteIntelix – Essential Admin Toolkit
  * Plugin URI:        https://wordpress.org/plugins/siteintelix
- * Description:       A modular WordPress admin toolbox for diagnostics, debug logs, email logs, SMTP, cron events, database insights, and site utilities.
- * Version:           2.6.2
+ * Description:       Essential WordPress admin toolkit for diagnostics, logs, email, cron, database, maintenance mode, and troubleshooting.
+ * Version:           2.6.3
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '2.6.2' );
+define( 'SITEINTELIX_VERSION', '2.6.3' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -100,6 +100,14 @@ function siteintelix_load_includes() {
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/download-manager/class-siteintelix-download-manager-module.php';
 	}
 
+	if ( SITEINTELIX_Modules::is_enabled( 'transients_manager' ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/transients-manager/class-siteintelix-transients-manager-module.php';
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'server_diagnostics' ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/server-diagnostics/class-siteintelix-server-diagnostics-module.php';
+	}
+
 	if ( SITEINTELIX_Modules::is_enabled( 'safe_mode_debugger' ) ) {
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
 	}
@@ -152,6 +160,14 @@ function siteintelix_boot_enabled_modules() {
 
 	if ( SITEINTELIX_Modules::is_enabled( 'download_manager' ) && class_exists( 'SITEINTELIX_Download_Manager_Module' ) ) {
 		SITEINTELIX_Download_Manager_Module::init();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'transients_manager' ) && class_exists( 'SITEINTELIX_Transients_Manager_Module' ) ) {
+		SITEINTELIX_Transients_Manager_Module::init();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'server_diagnostics' ) && class_exists( 'SITEINTELIX_Server_Diagnostics_Module' ) ) {
+		SITEINTELIX_Server_Diagnostics_Module::init();
 	}
 
 	if ( SITEINTELIX_Modules::is_enabled( 'safe_mode_debugger' ) && class_exists( 'SITEINTELIX_Safe_Mode_Debugger_Module' ) ) {
@@ -419,6 +435,10 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 		true       // Load in footer.
 	);
 
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-settings' ) && SITEINTELIX_Modules::is_enabled( 'coming_soon' ) ) {
+		wp_enqueue_media();
+	}
+
 	// Load the rebuilt Debug Log Viewer assets for the Modern and Terminal log screens.
 	$debug_ui_mode = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
 	$debug_ui_mode = 'terminal_dark' === $debug_ui_mode ? 'terminal_light' : $debug_ui_mode;
@@ -451,6 +471,8 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 			'errorLabel'        => __( 'Copy failed — please copy manually.', 'siteintelix' ),
 			'moduleUpdating'    => __( 'Updating module…', 'siteintelix' ),
 			'moduleUpdated'     => __( 'Module updated.', 'siteintelix' ),
+			'chooseLogoLabel'   => __( 'Choose Logo', 'siteintelix' ),
+			'useLogoLabel'      => __( 'Use this logo', 'siteintelix' ),
 		)
 	);
 }
@@ -652,6 +674,10 @@ function siteintelix_load_module_class_for_management( $module_id ) {
 		'download_manager' => array(
 			'class' => 'SITEINTELIX_Download_Manager_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/download-manager/class-siteintelix-download-manager-module.php',
+		),
+		'transients_manager' => array(
+			'class' => 'SITEINTELIX_Transients_Manager_Module',
+			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/transients-manager/class-siteintelix-transients-manager-module.php',
 		),
 		'safe_mode_debugger' => array(
 			'class' => 'SITEINTELIX_Safe_Mode_Debugger_Module',

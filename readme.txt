@@ -1,45 +1,41 @@
-=== SiteIntelix ===
+=== SiteIntelix – Essential Admin Toolkit ===
 Contributors:      parag44
 Donate link:       https://parag.bd/donate
 Tags:              debug log, email log, site health, admin tools, toolbox
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      7.4
-Stable tag:        2.6.2
+Stable tag:        2.6.3
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-A modular WordPress admin toolbox for diagnostics, debug logs, email logs, SMTP, cron events, database insights, and site utilities.
+Essential WordPress admin toolkit for diagnostics, logs, email, cron, database, maintenance mode, and troubleshooting.
 
 == Description ==
 
-**SiteIntelix** is a lightweight, modular toolbox for WordPress administrators, developers, and support teams who need practical site diagnostics inside wp-admin.
+**SiteIntelix** is an essential WordPress admin toolkit for site owners, developers, and support teams who want practical troubleshooting tools inside wp-admin.
 
-Instead of installing separate plugins for every troubleshooting task, SiteIntelix gives you one organized admin menu with modules you can turn on only when you need them. It keeps the interface WordPress-native, fast, and focused on day-to-day maintenance work.
+It brings common maintenance and debugging tasks into one organized admin menu. Turn on only the modules you need, use them when troubleshooting, then leave the rest disabled for a cleaner admin experience.
 
-= What SiteIntelix Helps You Do =
-* Review WordPress, server, PHP, database, and environment details from one Overview screen.
-* Copy a readable diagnostics report or export site information as JSON for support and audits.
-* Capture and inspect private WordPress debug logs without relying on the default `wp-content/debug.log`.
-* Track outgoing WordPress emails, recipients, headers, failures, and message previews.
-* Route WordPress email through SMTP when your site needs reliable mail delivery.
-* Inspect scheduled WP-Cron events and manually run or remove events when troubleshooting.
-* Browse database tables, storage usage, records, and full row data with dedicated edit screens.
-* Download installed plugin and theme ZIP packages directly from WordPress admin when needed.
-* Configure a custom public error UI for database and critical WordPress errors.
-* Enable Maintenance Mode while site work is in progress.
+= Key Features =
+* 🩺 **Server Diagnostics** — check PHP settings, loaded `php.ini`, extensions, filesystem permissions, network access, database limits, and plugin compatibility signals.
+* 🧾 **Debug Log Viewer** — capture, search, group, filter, clear, and download private WordPress debug logs.
+* ✉️ **Email Log** — record outgoing WordPress emails with recipients, headers, status, failures, and message previews.
+* 📮 **SMTP Mailer** — route WordPress emails through your own SMTP provider for more reliable delivery.
+* ⏱️ **Cron Events** — inspect scheduled WP-Cron events, run due events manually, and remove selected events safely.
+* 🗄️ **Database Manager** — browse tables, inspect rows, search records, review sizes, and edit selected rows from wp-admin.
+* 📦 **Download Manager** — add secure download links for installed plugin and theme ZIP packages.
+* 🛡️ **Safe Mode Debugger** — test plugin and theme conflict scenarios privately without affecting normal visitors.
+* 🚧 **Maintenance Mode** — show a polished public maintenance page while administrators continue working.
+* 🚨 **Error Handler** — replace fatal/database error screens with branded pages and optional admin alerts.
+* 🧰 **Modular Toolbox** — enable or disable each tool from the SiteIntelix Modules screen.
 
-= Current Modules =
-* **Overview** — health cards and detailed WordPress, server, environment, and database diagnostics.
-* **Modules** — enable or disable SiteIntelix tools from a dedicated module manager.
-* **Debug Log** — modern grouped cards, classic table, and terminal-style log viewer modes.
-* **Email Log** — captures outgoing email events, failures, recipients, headers, and body previews.
-* **SMTP** — sends WordPress email through a configured SMTP provider.
-* **Cron Events** — lists scheduled events with search, countdowns, run actions, and delete actions.
-* **Database Manager** — shows table statistics, searchable rows, pagination, full row browsing, and dedicated row editing.
-* **Download Manager** — adds secure Download links for installed plugins and themes in WordPress admin.
-* **Custom Error UI** — replaces plain fatal/database error screens with a configurable visitor-facing page.
-* **Maintenance Mode** — simple maintenance content for visitors while administrators keep working.
+= Why Use SiteIntelix? =
+* Keep troubleshooting tools in one place instead of installing many small utilities.
+* Share clean diagnostic reports with support teams.
+* See the active PHP configuration and server limits that often explain plugin/import failures.
+* Review debug logs, email delivery, cron jobs, database rows, and maintenance mode from wp-admin.
+* Keep data local: SiteIntelix does not send diagnostics, logs, email data, or database details to third-party services.
 
 = Debug Log Module =
 * **Modern grouped cards** — grouped errors with occurrence counts, severity styling, timelines, expandable stack traces, and global filters.
@@ -123,12 +119,16 @@ Yes. It activates per site and reports information for that individual site.
 3. **Modern Debug Log Viewer** — grouped cards, severity filters, occurrence counts, stack traces, clear, refresh, and download actions.
 4. **Email Log** — captured email events with delivery status, recipients, previews, filters, bulk actions, and row actions.
 5. **Cron Events** — scheduled events with search, countdowns, due-now status, run actions, and delete actions.
-6. **Settings** — clean module settings for Debug Log, SMTP, Email Log, Custom Error UI, and Maintenance Mode.
+6. **Settings** — clean module settings for Debug Log, SMTP, Email Log, Error Handler, and Maintenance Mode.
 
 == Changelog ==
 
+= 2.6.3 — 2026-05-20 =
+* Added Server Diagnostics improvements for PHP settings, extensions, filesystem, network, database, and plugin compatibility checks.
+* Hardened escaping, direct access protection, request sanitization, generated bootstrap code, and WordPress.org Plugin Check compatibility.
+
 = 2.6.2 — 2026-05-18 =
-* Added a Custom Error UI option to show escaped technical error details on public error pages when explicitly enabled.
+* Added an Error Handler option to show escaped technical error details on public error pages when explicitly enabled.
 * Improved Debug Log and Email Log filter toolbar alignment for a cleaner, more consistent admin layout.
 * Refined shared Settings page spacing so module settings rows and form fields use the same visual rhythm.
 
@@ -142,7 +142,7 @@ Yes. It activates per site and reports information for that individual site.
 = 2.6.0 — 2026-05-16 =
 * Refreshed the SiteIntelix admin UI with a shared lightweight design system, common page headers, consistent cards, buttons, badges, forms, and tables.
 * Redesigned the Overview screen as a minimal command center with quick health cards, compact system details, report actions, and module enable/disable toggles.
-* Added and refined toolbox modules for Email Log, SMTP delivery, Cron Events, Database Manager, Custom Error UI, and Coming Soon.
+* Added and refined toolbox modules for Email Log, SMTP delivery, Cron Events, Database Manager, Error Handler, and Maintenance Mode.
 * Improved Database Manager with summary statistics, searchable table lists, row browsing, pagination, and selected row inspection/editing.
 * Improved Settings tabs so direct module links and save redirects return to the correct module settings panel.
 * Added a Debug Log conflict repair action for sites where `WP_DEBUG` in `wp-config.php` overrides MU debug capture.
@@ -200,6 +200,9 @@ Yes. It activates per site and reports information for that individual site.
 * Responsive card-based admin UI with zero external dependencies.
 
 == Upgrade Notice ==
+
+= 2.6.3 =
+Security and WordPress.org readiness update with clearer plugin description, Server Diagnostics polish, Maintenance Mode media logo support, layout fixes, and Plugin Check hardening.
 
 = 2.6.1 =
 Adds Download Manager, improves Database Manager row editing, renames Coming Soon to Maintenance Mode, and refreshes Settings page spacing and screenshot descriptions.

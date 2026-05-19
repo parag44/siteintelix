@@ -5,6 +5,10 @@
  * Installed to wp-content/db-error.php by the SiteIntelix Error UI plugin.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 if ( ! headers_sent() ) {
 	http_response_code( 500 );
 	header( 'Content-Type: text/html; charset=utf-8' );
@@ -75,8 +79,8 @@ if ( ! function_exists( 'ceui_error_ui_send_admin_alert' ) ) {
 if ( ! function_exists( 'ceui_error_ui_current_url' ) ) {
 	function ceui_error_ui_current_url() {
 		$scheme = ( ! empty( $_SERVER['HTTPS'] ) && 'off' !== $_SERVER['HTTPS'] ) ? 'https' : 'http';
-		$host   = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : 'unknown-host';
-		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/';
+		$host   = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : 'unknown-host';
+		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 
 		return $scheme . '://' . $host . $uri;
 	}
@@ -103,10 +107,10 @@ $ceui_settings = ceui_error_ui_get_settings();
 $ceui_subject  = '[SiteIntelix] Database error detected';
 $ceui_details  = ceui_error_ui_get_database_details();
 $ceui_body     = "A database error page was shown to a visitor.\n\n"
-	. 'Site: ' . ( isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : 'Unknown' ) . "\n"
+	. 'Site: ' . ( isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : 'Unknown' ) . "\n"
 	. 'URL: ' . ceui_error_ui_current_url() . "\n"
 	. 'Time: ' . gmdate( 'Y-m-d H:i:s' ) . " UTC\n"
-	. 'Visitor IP: ' . ( isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : 'Unknown' ) . "\n"
+	. 'Visitor IP: ' . ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'Unknown' ) . "\n"
 	. 'Error type: ' . $ceui_details['Error type'] . "\n"
 	. 'Message: ' . $ceui_details['Message'] . "\n";
 
@@ -140,12 +144,12 @@ ceui_error_ui_send_admin_alert( $ceui_settings, $ceui_subject, $ceui_body );
 </head>
 <body>
 	<main aria-labelledby="ceui-title">
-		<p class="ceui-kicker"><?php echo ceui_error_ui_escape( $ceui_settings['eyebrow'] ); ?></p>
-		<h1 id="ceui-title"><?php echo ceui_error_ui_escape( $ceui_settings['title'] ); ?></h1>
-		<p class="ceui-message"><?php echo nl2br( ceui_error_ui_escape( $ceui_settings['message'] ) ); ?></p>
+		<p class="ceui-kicker"><?php echo esc_html( $ceui_settings['eyebrow'] ); ?></p>
+		<h1 id="ceui-title"><?php echo esc_html( $ceui_settings['title'] ); ?></h1>
+		<p class="ceui-message"><?php echo nl2br( esc_html( $ceui_settings['message'] ) ); ?></p>
 		<div class="ceui-actions">
-			<a class="ceui-button ceui-button-primary" href="<?php echo ceui_error_ui_escape( $ceui_settings['primary_button_url'] ); ?>"><?php echo ceui_error_ui_escape( $ceui_settings['primary_button_text'] ); ?></a>
-			<a class="ceui-button" href="<?php echo ceui_error_ui_escape( $ceui_settings['secondary_button_url'] ); ?>"><?php echo ceui_error_ui_escape( $ceui_settings['secondary_button_text'] ); ?></a>
+			<a class="ceui-button ceui-button-primary" href="<?php echo esc_url( $ceui_settings['primary_button_url'] ); ?>"><?php echo esc_html( $ceui_settings['primary_button_text'] ); ?></a>
+			<a class="ceui-button" href="<?php echo esc_url( $ceui_settings['secondary_button_url'] ); ?>"><?php echo esc_html( $ceui_settings['secondary_button_text'] ); ?></a>
 		</div>
 		<?php if ( ! empty( $ceui_settings['show_error_details'] ) ) : ?>
 			<section class="ceui-details" aria-label="Technical error details">
@@ -153,14 +157,14 @@ ceui_error_ui_send_admin_alert( $ceui_settings, $ceui_subject, $ceui_body );
 				<dl>
 					<?php foreach ( $ceui_details as $label => $value ) : ?>
 						<div>
-							<dt><?php echo ceui_error_ui_escape( $label ); ?></dt>
-							<dd><?php echo ceui_error_ui_escape( $value ); ?></dd>
+							<dt><?php echo esc_html( $label ); ?></dt>
+							<dd><?php echo esc_html( $value ); ?></dd>
 						</div>
 					<?php endforeach; ?>
 				</dl>
 			</section>
 		<?php endif; ?>
-		<p class="ceui-meta"><?php echo ceui_error_ui_escape( $ceui_settings['status_meta'] ); ?></p>
+		<p class="ceui-meta"><?php echo esc_html( $ceui_settings['status_meta'] ); ?></p>
 	</main>
 </body>
 </html>

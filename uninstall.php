@@ -29,6 +29,8 @@ $siteintelix_options = array(
 	'siteintelix_email_log_settings',
 	'siteintelix_error_ui_settings',
 	'siteintelix_error_ui_dropins_version',
+	'siteintelix_tm_logs',
+	'siteintelix_tm_last_cleanup',
 );
 
 foreach ( $siteintelix_options as $siteintelix_option ) {

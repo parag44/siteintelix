@@ -189,8 +189,10 @@ class SITEINTELIX_System_Info {
 	 * @return string
 	 */
 	private static function get_database_client_version() {
-		if ( function_exists( 'mysqli_get_client_info' ) ) {
-			return mysqli_get_client_info();
+		global $wpdb;
+
+		if ( is_object( $wpdb ) && method_exists( $wpdb, 'db_server_info' ) ) {
+			return (string) $wpdb->db_server_info();
 		}
 
 		return __( 'Unknown', 'siteintelix' );

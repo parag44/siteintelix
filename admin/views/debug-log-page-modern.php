@@ -397,7 +397,11 @@ $siteintelix_header_actions = ob_get_clean();
 		<div class="sitx-log-section__head">
 			<div>
 				<h2><?php esc_html_e( 'Log Entries', 'siteintelix' ); ?></h2>
-				<span id="siteintelix-visible-count"><?php echo esc_html( sprintf( _n( '%d group', '%d groups', $siteintelix_total_groups, 'siteintelix' ), (int) $siteintelix_total_groups ) ); ?></span>
+				<span id="siteintelix-visible-count"><?php echo esc_html( sprintf(
+					/* translators: %d: log group count. */
+					_n( '%d group', '%d groups', $siteintelix_total_groups, 'siteintelix' ),
+					(int) $siteintelix_total_groups
+				) ); ?></span>
 			</div>
 			<div class="sitx-sort-label">
 				<?php esc_html_e( 'Sort by:', 'siteintelix' ); ?> <strong><?php esc_html_e( 'Newest First', 'siteintelix' ); ?></strong>
@@ -463,7 +467,11 @@ $siteintelix_header_actions = ob_get_clean();
 								<span class="sitx-severity-badge"><?php echo esc_html( isset( $siteintelix_level_labels[ $siteintelix_group['level'] ] ) ? $siteintelix_level_labels[ $siteintelix_group['level'] ] : $siteintelix_group['level'] ); ?></span>
 							</div>
 							<div class="sitx-log-card__body">
-								<h3><?php echo esc_html( $siteintelix_title ); ?> <span><?php echo esc_html( sprintf( _n( 'x%d occurrence', 'x%d occurrences', (int) $siteintelix_group['count'], 'siteintelix' ), (int) $siteintelix_group['count'] ) ); ?></span></h3>
+								<h3><?php echo esc_html( $siteintelix_title ); ?> <span><?php echo esc_html( sprintf(
+									/* translators: %d: log occurrence count. */
+									_n( 'x%d occurrence', 'x%d occurrences', (int) $siteintelix_group['count'], 'siteintelix' ),
+									(int) $siteintelix_group['count']
+								) ); ?></span></h3>
 								<div class="sitx-log-meta">
 									<span><?php esc_html_e( 'First seen:', 'siteintelix' ); ?> <?php echo esc_html( $siteintelix_first_seen ); ?></span>
 									<span><?php esc_html_e( 'Last seen:', 'siteintelix' ); ?> <?php echo esc_html( $siteintelix_last_seen ); ?></span>
@@ -492,7 +500,11 @@ $siteintelix_header_actions = ob_get_clean();
 										<?php endforeach; ?>
 									</ol>
 									<?php if ( (int) $siteintelix_group['count'] > 6 ) : ?>
-										<button type="button" class="sitx-debug-btn sitx-debug-btn--secondary" disabled><?php echo esc_html( sprintf( __( 'Show %d more', 'siteintelix' ), (int) $siteintelix_group['count'] - 6 ) ); ?></button>
+											<button type="button" class="sitx-debug-btn sitx-debug-btn--secondary" disabled><?php echo esc_html( sprintf(
+												/* translators: %d: remaining log occurrence count. */
+												__( 'Show %d more', 'siteintelix' ),
+												(int) $siteintelix_group['count'] - 6
+											) ); ?></button>
 									<?php endif; ?>
 								</aside>
 								<div class="sitx-stack">

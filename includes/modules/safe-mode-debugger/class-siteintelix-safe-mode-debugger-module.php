@@ -129,19 +129,21 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 			$plugin_mode = self::PLUGIN_MODE_KEEP;
 		}
 
-		$selected_plugins = array();
-		if ( self::PLUGIN_MODE_ONLY === $plugin_mode && isset( $_POST['siteintelix_safe_plugins'] ) && is_array( $_POST['siteintelix_safe_plugins'] ) ) {
-			$selected_plugins = self::sanitize_plugin_basenames( wp_unslash( $_POST['siteintelix_safe_plugins'] ) );
-		}
+			$selected_plugins = array();
+			if ( self::PLUGIN_MODE_ONLY === $plugin_mode && isset( $_POST['siteintelix_safe_plugins'] ) && is_array( $_POST['siteintelix_safe_plugins'] ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by sanitize_plugin_basenames() immediately after unslashing.
+				$selected_plugins = self::sanitize_plugin_basenames( wp_unslash( $_POST['siteintelix_safe_plugins'] ) );
+			}
 
 		$theme_mode = isset( $_POST['siteintelix_theme_mode'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_theme_mode'] ) ) : self::THEME_MODE_KEEP;
 		if ( ! in_array( $theme_mode, array( self::THEME_MODE_KEEP, self::THEME_MODE_SWITCH ), true ) ) {
 			$theme_mode = self::THEME_MODE_KEEP;
 		}
 
-		$selected_theme = '';
-		if ( self::THEME_MODE_SWITCH === $theme_mode && isset( $_POST['siteintelix_safe_theme'] ) ) {
-			$selected_theme = self::sanitize_theme_stylesheet( wp_unslash( $_POST['siteintelix_safe_theme'] ) );
+			$selected_theme = '';
+			if ( self::THEME_MODE_SWITCH === $theme_mode && isset( $_POST['siteintelix_safe_theme'] ) ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by sanitize_theme_stylesheet() immediately after unslashing.
+				$selected_theme = self::sanitize_theme_stylesheet( wp_unslash( $_POST['siteintelix_safe_theme'] ) );
 			if ( '' === $selected_theme ) {
 				$theme_mode = self::THEME_MODE_KEEP;
 			}
@@ -731,141 +733,15 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return string
 	 */
 	private static function get_mu_plugin_contents( $siteintelix_basename ) {
-		$siteintelix_basename = addslashes( $siteintelix_basename );
+		$siteintelix_basename = var_export( (string) $siteintelix_basename, true );
 
-		return <<<PHP
-<?php
-/**
- * SiteIntelix Safe Mode bootstrap.
- *
- * Filters active plugins early for the current Safe Mode session only.
- *
- * @package SiteIntelix
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
-
-if ( ! function_exists( 'siteintelix_safe_mode_hash_token' ) ) {
-	function siteintelix_safe_mode_hash_token( \$token ) {
-		\$salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'siteintelix-safe-mode' );
-		return hash_hmac( 'sha256', (string) \$token, (string) \$salt );
-	}
-}
-
-if ( ! function_exists( 'siteintelix_safe_mode_state' ) ) {
-	function siteintelix_safe_mode_state() {
-		if ( empty( \$_COOKIE['siteintelix_safe_mode'] ) ) {
-			return false;
-		}
-
-		\$cookie = sanitize_text_field( wp_unslash( \$_COOKIE['siteintelix_safe_mode'] ) );
-		\$parts  = explode( ':', \$cookie, 2 );
-		if ( 2 !== count( \$parts ) || ! absint( \$parts[0] ) || '' === \$parts[1] ) {
-			return false;
-		}
-
-		\$user_id = absint( \$parts[0] );
-		\$token   = rawurldecode( \$parts[1] );
-		\$state   = get_user_meta( \$user_id, 'siteintelix_safe_mode_state', true );
-		if ( ! is_array( \$state ) || empty( \$state['enabled'] ) || empty( \$state['token_hash'] ) ) {
-			return false;
-		}
-
-		if ( empty( \$state['expires_at'] ) || time() > absint( \$state['expires_at'] ) ) {
-			\$state['enabled'] = false;
-			\$state['stopped_at'] = time();
-			update_user_meta( \$user_id, 'siteintelix_safe_mode_state', \$state );
-			return false;
-		}
-
-		if ( empty( \$state['user_id'] ) || absint( \$state['user_id'] ) !== \$user_id ) {
-			return false;
-		}
-
-		if ( ! hash_equals( (string) \$state['token_hash'], siteintelix_safe_mode_hash_token( \$token ) ) ) {
-			return false;
-		}
-
-		return \$state;
-	}
-}
-
-if ( ! function_exists( 'siteintelix_safe_mode_filter_plugins' ) ) {
-	function siteintelix_safe_mode_filter_plugins( \$plugins ) {
-		\$state = siteintelix_safe_mode_state();
-		if ( ! \$state || empty( \$state['plugin_mode'] ) ) {
-			return \$plugins;
-		}
-
-		\$siteintelix = '{$siteintelix_basename}';
-		if ( 'keep' === \$state['plugin_mode'] ) {
-			return \$plugins;
-		}
-
-		if ( 'none' === \$state['plugin_mode'] ) {
-			return in_array( \$siteintelix, (array) \$plugins, true ) ? array( \$siteintelix ) : array();
-		}
-
-		if ( 'only' === \$state['plugin_mode'] ) {
-			\$selected = isset( \$state['selected_plugins'] ) && is_array( \$state['selected_plugins'] ) ? \$state['selected_plugins'] : array();
-			\$selected[] = \$siteintelix;
-			\$selected = array_values( array_unique( array_map( 'plugin_basename', \$selected ) ) );
-			return array_values( array_intersect( (array) \$plugins, \$selected ) );
-		}
-
-		return \$plugins;
-	}
-}
-
-add_filter( 'option_active_plugins', 'siteintelix_safe_mode_filter_plugins', 1 );
-
-if ( ! function_exists( 'siteintelix_safe_mode_filter_network_plugins' ) ) {
-	function siteintelix_safe_mode_filter_network_plugins( \$plugins ) {
-		\$state = siteintelix_safe_mode_state();
-		if ( ! \$state || empty( \$state['plugin_mode'] ) || 'keep' === \$state['plugin_mode'] ) {
-			return \$plugins;
-		}
-
-		\$siteintelix = '{$siteintelix_basename}';
-		if ( 'none' === \$state['plugin_mode'] ) {
-			return isset( \$plugins[ \$siteintelix ] ) ? array( \$siteintelix => \$plugins[ \$siteintelix ] ) : array();
-		}
-
-		if ( 'only' === \$state['plugin_mode'] ) {
-			\$selected = isset( \$state['selected_plugins'] ) && is_array( \$state['selected_plugins'] ) ? \$state['selected_plugins'] : array();
-			\$selected[] = \$siteintelix;
-			\$selected = array_values( array_unique( array_map( 'plugin_basename', \$selected ) ) );
-			return array_intersect_key( (array) \$plugins, array_flip( \$selected ) );
-		}
-
-		return \$plugins;
-	}
-}
-
-add_filter( 'site_option_active_sitewide_plugins', 'siteintelix_safe_mode_filter_network_plugins', 1 );
-
-if ( ! function_exists( 'siteintelix_safe_mode_neutralize_legacy_wp_safe_mode' ) ) {
-	function siteintelix_safe_mode_neutralize_legacy_wp_safe_mode( \$value ) {
-		\$state = siteintelix_safe_mode_state();
-		if ( ! \$state ) {
-			return \$value;
-		}
-
-		return array(
-			'load_mu_plugins'   => true,
-			'disable_themes'    => false,
-			'default_themes'    => array(),
-			'disable_plugins'   => false,
-			'plugins_to_keep'   => array(),
-			'plugins_to_enable' => array(),
-		);
-	}
-}
-
-add_filter( 'pre_option_wp_safe_mode_settings', 'siteintelix_safe_mode_neutralize_legacy_wp_safe_mode', 1 );
-
-PHP;
+		return "<?php\n"
+			. "/**\n * SiteIntelix Safe Mode bootstrap.\n *\n * @package SiteIntelix\n */\n\n"
+			. "if ( ! defined( 'ABSPATH' ) ) {\n\texit;\n}\n\n"
+			. "if ( ! function_exists( 'siteintelix_safe_mode_hash_token' ) ) {\n\tfunction siteintelix_safe_mode_hash_token( \$token ) {\n\t\t\$salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'siteintelix-safe-mode' );\n\t\treturn hash_hmac( 'sha256', (string) \$token, (string) \$salt );\n\t}\n}\n\n"
+			. "if ( ! function_exists( 'siteintelix_safe_mode_state' ) ) {\n\tfunction siteintelix_safe_mode_state() {\n\t\tif ( empty( \$_COOKIE['siteintelix_safe_mode'] ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\t\$cookie = sanitize_text_field( wp_unslash( \$_COOKIE['siteintelix_safe_mode'] ) );\n\t\t\$parts  = explode( ':', \$cookie, 2 );\n\t\tif ( 2 !== count( \$parts ) || ! absint( \$parts[0] ) || '' === \$parts[1] ) {\n\t\t\treturn false;\n\t\t}\n\n\t\t\$user_id = absint( \$parts[0] );\n\t\t\$token   = rawurldecode( \$parts[1] );\n\t\t\$state   = get_user_meta( \$user_id, 'siteintelix_safe_mode_state', true );\n\t\tif ( ! is_array( \$state ) || empty( \$state['enabled'] ) || empty( \$state['token_hash'] ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( empty( \$state['expires_at'] ) || time() > absint( \$state['expires_at'] ) ) {\n\t\t\t\$state['enabled'] = false;\n\t\t\t\$state['stopped_at'] = time();\n\t\t\tupdate_user_meta( \$user_id, 'siteintelix_safe_mode_state', \$state );\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( empty( \$state['user_id'] ) || absint( \$state['user_id'] ) !== \$user_id ) {\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( ! hash_equals( (string) \$state['token_hash'], siteintelix_safe_mode_hash_token( \$token ) ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\treturn \$state;\n\t}\n}\n\n"
+			. "if ( ! function_exists( 'siteintelix_safe_mode_filter_plugins' ) ) {\n\tfunction siteintelix_safe_mode_filter_plugins( \$plugins ) {\n\t\t\$state = siteintelix_safe_mode_state();\n\t\tif ( ! \$state || empty( \$state['plugin_mode'] ) || 'keep' === \$state['plugin_mode'] ) {\n\t\t\treturn \$plugins;\n\t\t}\n\n\t\t\$siteintelix = {$siteintelix_basename};\n\t\tif ( 'none' === \$state['plugin_mode'] ) {\n\t\t\treturn in_array( \$siteintelix, (array) \$plugins, true ) ? array( \$siteintelix ) : array();\n\t\t}\n\n\t\tif ( 'only' === \$state['plugin_mode'] ) {\n\t\t\t\$selected = isset( \$state['selected_plugins'] ) && is_array( \$state['selected_plugins'] ) ? \$state['selected_plugins'] : array();\n\t\t\t\$selected[] = \$siteintelix;\n\t\t\t\$selected = array_values( array_unique( array_map( 'plugin_basename', \$selected ) ) );\n\t\t\treturn array_values( array_intersect( (array) \$plugins, \$selected ) );\n\t\t}\n\n\t\treturn \$plugins;\n\t}\n}\n\nadd_filter( 'option_active_plugins', 'siteintelix_safe_mode_filter_plugins', 1 );\n\n"
+			. "if ( ! function_exists( 'siteintelix_safe_mode_filter_network_plugins' ) ) {\n\tfunction siteintelix_safe_mode_filter_network_plugins( \$plugins ) {\n\t\t\$state = siteintelix_safe_mode_state();\n\t\tif ( ! \$state || empty( \$state['plugin_mode'] ) || 'keep' === \$state['plugin_mode'] ) {\n\t\t\treturn \$plugins;\n\t\t}\n\n\t\t\$siteintelix = {$siteintelix_basename};\n\t\tif ( 'none' === \$state['plugin_mode'] ) {\n\t\t\treturn isset( \$plugins[ \$siteintelix ] ) ? array( \$siteintelix => \$plugins[ \$siteintelix ] ) : array();\n\t\t}\n\n\t\tif ( 'only' === \$state['plugin_mode'] ) {\n\t\t\t\$selected = isset( \$state['selected_plugins'] ) && is_array( \$state['selected_plugins'] ) ? \$state['selected_plugins'] : array();\n\t\t\t\$selected[] = \$siteintelix;\n\t\t\t\$selected = array_values( array_unique( array_map( 'plugin_basename', \$selected ) ) );\n\t\t\treturn array_intersect_key( (array) \$plugins, array_flip( \$selected ) );\n\t\t}\n\n\t\treturn \$plugins;\n\t}\n}\n\nadd_filter( 'site_option_active_sitewide_plugins', 'siteintelix_safe_mode_filter_network_plugins', 1 );\n\n"
+			. "if ( ! function_exists( 'siteintelix_safe_mode_neutralize_legacy_wp_safe_mode' ) ) {\n\tfunction siteintelix_safe_mode_neutralize_legacy_wp_safe_mode( \$value ) {\n\t\t\$state = siteintelix_safe_mode_state();\n\t\tif ( ! \$state ) {\n\t\t\treturn \$value;\n\t\t}\n\n\t\treturn array(\n\t\t\t'load_mu_plugins'   => true,\n\t\t\t'disable_themes'    => false,\n\t\t\t'default_themes'    => array(),\n\t\t\t'disable_plugins'   => false,\n\t\t\t'plugins_to_keep'   => array(),\n\t\t\t'plugins_to_enable' => array(),\n\t\t);\n\t}\n}\n\nadd_filter( 'pre_option_wp_safe_mode_settings', 'siteintelix_safe_mode_neutralize_legacy_wp_safe_mode', 1 );\n";
 	}
 }

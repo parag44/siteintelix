@@ -125,23 +125,23 @@ function siteintelix_row( $label, $value ) {
 					<?php
 						echo SITEINTELIX_Admin_UI::button( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes attributes and label.
 							array(
-								'label'      => __( 'Copy Report', 'siteintelix' ),
+									'label'      => esc_html__( 'Copy Report', 'siteintelix' ),
 								'variant'    => 'secondary',
 								'icon'       => 'dashicons-clipboard',
 								'attributes' => array(
 									'id'         => 'siteintelix-copy-btn',
-									'aria-label' => __( 'Copy report', 'siteintelix' ),
+										'aria-label' => esc_attr__( 'Copy report', 'siteintelix' ),
 								)
 							)
 						);
 					echo SITEINTELIX_Admin_UI::button( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Helper escapes attributes and label.
 						array(
-							'label'      => __( 'Export JSON', 'siteintelix' ),
+								'label'      => esc_html__( 'Export JSON', 'siteintelix' ),
 							'variant'    => 'primary',
 							'icon'       => 'dashicons-download',
 							'attributes' => array(
 								'id'         => 'siteintelix-export-btn',
-								'aria-label' => __( 'Export JSON', 'siteintelix' ),
+									'aria-label' => esc_attr__( 'Export JSON', 'siteintelix' ),
 							),
 						)
 					);

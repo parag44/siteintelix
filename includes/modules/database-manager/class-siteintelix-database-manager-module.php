@@ -249,7 +249,11 @@ class SITEINTELIX_Database_Manager_Module {
 										<?php if ( $primary_key ) : ?>
 											<td class="sitx-db-action-column">
 												<?php if ( '' !== $row_id ) : ?>
-													<a class="si-button si-button--icon si-button--ghost sitx-db-edit-link" href="<?php echo esc_url( self::get_edit_row_url( $selected_table, $primary_key, $row_id, $page, $row_search ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Edit row %s', 'siteintelix' ), $row_id ) ); ?>">
+													<a class="si-button si-button--icon si-button--ghost sitx-db-edit-link" href="<?php echo esc_url( self::get_edit_row_url( $selected_table, $primary_key, $row_id, $page, $row_search ) ); ?>" aria-label="<?php echo esc_attr( sprintf(
+														/* translators: %s: database row ID. */
+														__( 'Edit row %s', 'siteintelix' ),
+														$row_id
+													) ); ?>">
 														<span class="dashicons dashicons-edit" aria-hidden="true"></span>
 													</a>
 												<?php else : ?>
@@ -300,9 +304,18 @@ class SITEINTELIX_Database_Manager_Module {
 								<span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
 								<?php esc_html_e( 'Back to rows', 'siteintelix' ); ?>
 							</a>
-							<h2><?php echo esc_html( sprintf( __( 'Edit: %s', 'siteintelix' ), $selected_table ? $selected_table : __( 'No table selected', 'siteintelix' ) ) ); ?></h2>
+								<h2><?php echo esc_html( sprintf(
+									/* translators: %s: selected database table name. */
+									__( 'Edit: %s', 'siteintelix' ),
+									$selected_table ? $selected_table : __( 'No table selected', 'siteintelix' )
+								) ); ?></h2>
 							<?php if ( $primary_key && '' !== $selected_id ) : ?>
-								<p><?php echo esc_html( sprintf( __( '%1$s = %2$s', 'siteintelix' ), $primary_key, $selected_id ) ); ?></p>
+									<p><?php echo esc_html( sprintf(
+										/* translators: 1: primary key column, 2: primary key value. */
+										__( '%1$s = %2$s', 'siteintelix' ),
+										$primary_key,
+										$selected_id
+									) ); ?></p>
 							<?php endif; ?>
 						</div>
 						<a class="si-button si-button--secondary" href="<?php echo esc_url( $back_url ); ?>"><?php esc_html_e( 'Cancel', 'siteintelix' ); ?></a>
@@ -540,10 +553,11 @@ class SITEINTELIX_Database_Manager_Module {
 		global $wpdb;
 		$where = self::build_search_where( $columns, $search );
 
-		$sql = 'SELECT COUNT(*) FROM ' . self::identifier( $table ) . $where['sql'];
-		if ( ! empty( $where['args'] ) ) {
-			$sql = $wpdb->prepare( $sql, $where['args'] );
-		}
+			$sql = 'SELECT COUNT(*) FROM ' . self::identifier( $table ) . $where['sql'];
+			if ( ! empty( $where['args'] ) ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table/columns are validated against the current database schema before query assembly.
+				$sql = $wpdb->prepare( $sql, $where['args'] );
+			}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table/columns are whitelisted before query.
 		return (int) $wpdb->get_var( $sql );
@@ -634,7 +648,13 @@ class SITEINTELIX_Database_Manager_Module {
 		$base        = admin_url( 'admin.php?page=siteintelix-database-manager&view=tables&table=' . rawurlencode( $table ) . '&row_search=' . rawurlencode( $search ) );
 		?>
 		<div class="sitx-db-pagination">
-			<span><?php echo esc_html( sprintf( __( '%1$d-%2$d of %3$d rows', 'siteintelix' ), $start, $end, $total_rows ) ); ?></span>
+				<span><?php echo esc_html( sprintf(
+					/* translators: 1: first row number, 2: last row number, 3: total row count. */
+					__( '%1$d-%2$d of %3$d rows', 'siteintelix' ),
+					$start,
+					$end,
+					$total_rows
+				) ); ?></span>
 			<div>
 				<a class="sitx-btn sitx-btn--white sitx-btn--icon <?php echo $page <= 1 ? 'is-disabled' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'db_page', 1, $base ) ); ?>"><span class="dashicons dashicons-controls-skipback"></span></a>
 				<a class="sitx-btn sitx-btn--white sitx-btn--icon <?php echo $page <= 1 ? 'is-disabled' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'db_page', max( 1, $page - 1 ), $base ) ); ?>"><span class="dashicons dashicons-arrow-left-alt2"></span></a>

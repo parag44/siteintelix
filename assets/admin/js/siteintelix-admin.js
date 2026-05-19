@@ -268,6 +268,27 @@
 		}
 	}
 
+	function initTextCopyButtons() {
+		document.addEventListener( 'click', function ( event ) {
+			var copyButton = event.target.closest( '[data-siteintelix-copy-text]' );
+			var text;
+
+			if ( ! copyButton ) {
+				return;
+			}
+
+			text = copyButton.getAttribute( 'data-siteintelix-copy-text' ) || '';
+			if ( navigator.clipboard && navigator.clipboard.writeText ) {
+				navigator.clipboard.writeText( text ).then(
+					function () { showToast( 'Copied to clipboard.' ); },
+					function () { fallbackCopy( text ); }
+				);
+			} else {
+				fallbackCopy( text );
+			}
+		} );
+	}
+
 	// -----------------------------------------------------------------------
 	// Export JSON button
 	// -----------------------------------------------------------------------
@@ -873,6 +894,127 @@
 	}
 
 	// -----------------------------------------------------------------------
+	// Transients Manager controls
+	// -----------------------------------------------------------------------
+	function initTransientsManagerPage() {
+		var page = document.getElementById( 'siteintelix-transients-manager-page' );
+		if ( ! page ) { return; }
+
+		var selectAll = page.querySelector( '[data-siteintelix-transients-select-all]' );
+		if ( selectAll ) {
+			selectAll.addEventListener( 'change', function () {
+				page.querySelectorAll( 'input[name="transients[]"]' ).forEach( function ( checkbox ) {
+					checkbox.checked = selectAll.checked;
+				} );
+			} );
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Cron Events controls
+	// -----------------------------------------------------------------------
+	function initCronEventsPage() {
+		var page = document.getElementById( 'siteintelix-cron-events-page' );
+		if ( ! page ) { return; }
+
+		var selectAll = page.querySelector( '[data-siteintelix-cron-select-all]' );
+		if ( selectAll ) {
+			selectAll.addEventListener( 'change', function () {
+				page.querySelectorAll( 'input[name="cron_events[]"]' ).forEach( function ( checkbox ) {
+					checkbox.checked = selectAll.checked;
+				} );
+			} );
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Maintenance Mode media picker
+	// -----------------------------------------------------------------------
+	function initMaintenanceLogoPicker() {
+		var picker = document.querySelector( '[data-siteintelix-maintenance-logo-picker]' );
+		if ( ! picker ) { return; }
+
+		var selectButton = picker.querySelector( '[data-siteintelix-maintenance-logo-select]' );
+		var removeButton = picker.querySelector( '[data-siteintelix-maintenance-logo-remove]' );
+		var preview = picker.querySelector( '[data-siteintelix-maintenance-logo-preview]' );
+		var idInput = picker.querySelector( '[data-siteintelix-maintenance-logo-id]' );
+		var urlInput = picker.querySelector( '[data-siteintelix-maintenance-logo-url]' );
+		var mediaFrame;
+
+		function setPreview( url ) {
+			if ( ! preview ) { return; }
+
+			preview.textContent = '';
+			if ( url ) {
+				var image = document.createElement( 'img' );
+				image.src = url;
+				image.alt = '';
+				preview.appendChild( image );
+			} else {
+				preview.innerHTML = '<span class="dashicons dashicons-format-image" aria-hidden="true"></span>';
+			}
+		}
+
+		if ( selectButton ) {
+			selectButton.addEventListener( 'click', function () {
+				if ( ! window.wp || ! window.wp.media ) {
+					showToast( 'WordPress media library is not available.', 'error' );
+					return;
+				}
+
+				if ( mediaFrame ) {
+					mediaFrame.open();
+					return;
+				}
+
+				mediaFrame = window.wp.media( {
+					title: window.siteintelixData && siteintelixData.chooseLogoLabel ? siteintelixData.chooseLogoLabel : 'Choose Logo',
+					button: {
+						text: window.siteintelixData && siteintelixData.useLogoLabel ? siteintelixData.useLogoLabel : 'Use this logo'
+					},
+					library: {
+						type: 'image'
+					},
+					multiple: false
+				} );
+
+				mediaFrame.on( 'select', function () {
+					var attachment = mediaFrame.state().get( 'selection' ).first().toJSON();
+					var url = attachment && attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url;
+
+					if ( idInput ) {
+						idInput.value = attachment.id || '';
+					}
+					if ( urlInput ) {
+						urlInput.value = url || '';
+					}
+					setPreview( url || '' );
+				} );
+
+				mediaFrame.open();
+			} );
+		}
+
+		if ( removeButton ) {
+			removeButton.addEventListener( 'click', function () {
+				if ( idInput ) {
+					idInput.value = '';
+				}
+				if ( urlInput ) {
+					urlInput.value = '';
+				}
+				setPreview( '' );
+			} );
+		}
+
+		if ( urlInput ) {
+			urlInput.addEventListener( 'input', function () {
+				setPreview( urlInput.value.trim() );
+			} );
+		}
+	}
+
+	// -----------------------------------------------------------------------
 	// Init
 	// -----------------------------------------------------------------------
 	document.addEventListener( 'DOMContentLoaded', function () {
@@ -889,6 +1031,10 @@
 		initEmailPreviewModal();
 		initEmailLogActions();
 		initSafeModePage();
+		initTextCopyButtons();
+		initCronEventsPage();
+		initTransientsManagerPage();
+		initMaintenanceLogoPicker();
 	} );
 
 }() );

@@ -101,7 +101,11 @@ $siteintelix_header_actions = ob_get_clean();
 					<span class="sitx-terminal-dot sitx-terminal-dot--green" aria-hidden="true"></span>
 					<strong><?php echo esc_html( basename( $siteintelix_log_path ) ); ?></strong>
 				</div>
-				<span><?php echo esc_html( sprintf( __( '%d entries', 'siteintelix' ), count( $siteintelix_entries ) ) ); ?></span>
+					<span><?php echo esc_html( sprintf(
+						/* translators: %d: log entry count. */
+						__( '%d entries', 'siteintelix' ),
+						count( $siteintelix_entries )
+					) ); ?></span>
 			</div>
 
 			<div class="sitx-terminal-body" role="log" aria-live="polite">

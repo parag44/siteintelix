@@ -1,6 +1,6 @@
 <?php
 /**
- * Custom Error UI module for SiteIntelix.
+ * Error Handler module for SiteIntelix.
  *
  * @package SiteIntelix
  */
@@ -92,8 +92,8 @@ class SITEINTELIX_Error_UI_Module {
 				<div class="sitx-settings-main">
 					<div class="sitx-setting-row si-form-row">
 						<div>
-							<h3><?php esc_html_e( 'Custom Error Pages', 'siteintelix' ); ?></h3>
-							<p><?php esc_html_e( 'Shows branded public pages for database and critical WordPress errors.', 'siteintelix' ); ?></p>
+							<h3><?php esc_html_e( 'Error Handler', 'siteintelix' ); ?></h3>
+							<p><?php esc_html_e( 'Shows branded visitor pages for fatal WordPress and database errors.', 'siteintelix' ); ?></p>
 						</div>
 						<span class="sitx-badge sitx-badge--good"><?php esc_html_e( 'Active', 'siteintelix' ); ?></span>
 					</div>
@@ -101,8 +101,8 @@ class SITEINTELIX_Error_UI_Module {
 				</div>
 				<aside class="sitx-settings-sidebar">
 					<div class="sitx-side-card si-card">
-						<h3><?php esc_html_e( 'About Custom Error UI', 'siteintelix' ); ?></h3>
-						<p><?php esc_html_e( 'This module manages WordPress drop-ins only while enabled and removes SiteIntelix-managed drop-ins when disabled.', 'siteintelix' ); ?></p>
+						<h3><?php esc_html_e( 'About Error Handler', 'siteintelix' ); ?></h3>
+						<p><?php esc_html_e( 'Error Handler manages WordPress drop-ins only while enabled and removes SiteIntelix-managed drop-ins when disabled.', 'siteintelix' ); ?></p>
 					</div>
 				</aside>
 			</div>
@@ -157,7 +157,7 @@ class SITEINTELIX_Error_UI_Module {
 				<?php endforeach; ?>
 			</div>
 
-			<button type="submit" class="sitx-btn sitx-btn--primary si-button si-button--primary"><?php esc_html_e( 'Save Error UI', 'siteintelix' ); ?></button>
+			<button type="submit" class="sitx-btn sitx-btn--primary si-button si-button--primary"><?php esc_html_e( 'Save Error Handler', 'siteintelix' ); ?></button>
 		</form>
 		<?php
 	}
@@ -179,7 +179,7 @@ class SITEINTELIX_Error_UI_Module {
 
 		$result = self::write_static_config( $settings );
 		if ( is_wp_error( $result ) ) {
-			wp_die( esc_html( $result->get_error_message() ), esc_html__( 'Custom Error UI save failed', 'siteintelix' ), array( 'back_link' => true ) );
+			wp_die( esc_html( $result->get_error_message() ), esc_html__( 'Error Handler save failed', 'siteintelix' ), array( 'back_link' => true ) );
 		}
 
 		wp_safe_redirect( add_query_arg( array( 'page' => 'siteintelix-settings', 'siteintelix_settings_saved' => '1', 'tab' => 'error_ui' ), admin_url( 'admin.php' ) ) . '#siteintelix-error-ui-settings' );
@@ -206,7 +206,7 @@ class SITEINTELIX_Error_UI_Module {
 					'siteintelix_error_ui_existing_dropin',
 					sprintf(
 						/* translators: %s: drop-in filename. */
-						__( 'A different %s drop-in already exists in wp-content. Please back it up or remove it before enabling Custom Error UI.', 'siteintelix' ),
+						__( 'A different %s drop-in already exists in wp-content. Please back it up or remove it before enabling Error Handler.', 'siteintelix' ),
 						$filename
 					)
 				);
@@ -255,10 +255,10 @@ class SITEINTELIX_Error_UI_Module {
 		$settings = is_array( $settings ) ? array_merge( self::get_default_settings(), $settings ) : self::get_settings();
 		$settings['admin_email'] = sanitize_email( get_option( 'admin_email' ) );
 		$file     = trailingslashit( WP_CONTENT_DIR ) . 'siteintelix-error-ui-config.php';
-		$content  = "<?php\n/**\n * SiteIntelix Error UI generated config.\n */\n\nreturn " . var_export( $settings, true ) . ";\n";
+		$content  = "<?php\n/**\n * SiteIntelix Error Handler generated config.\n */\n\nreturn " . var_export( $settings, true ) . ";\n";
 
 		if ( false === file_put_contents( $file, $content ) ) {
-			return new WP_Error( 'siteintelix_error_ui_config_failed', __( 'Could not write the SiteIntelix Error UI config file.', 'siteintelix' ) );
+			return new WP_Error( 'siteintelix_error_ui_config_failed', __( 'Could not write the SiteIntelix Error Handler config file.', 'siteintelix' ) );
 		}
 
 		return true;

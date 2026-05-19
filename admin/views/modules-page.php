@@ -108,11 +108,12 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 			'description' => __( 'Turn tools on or off and build the admin toolbox your site needs.', 'siteintelix' ),
 			'badges'      => array(
 				'<span class="siteintelix-version-pill">v' . esc_html( SITEINTELIX_VERSION ) . '</span>',
-				SITEINTELIX_Admin_UI::badge(
-					sprintf(
-						esc_html( _n( '%d Active Module', '%d Active Modules', $siteintelix_active_count, 'siteintelix' ) ),
-						absint( $siteintelix_active_count )
-					),
+					SITEINTELIX_Admin_UI::badge(
+						sprintf(
+							/* translators: %d: active module count. */
+							esc_html( _n( '%d Active Module', '%d Active Modules', $siteintelix_active_count, 'siteintelix' ) ),
+							absint( $siteintelix_active_count )
+						),
 					'info',
 					'dashicons-admin-plugins'
 				),
