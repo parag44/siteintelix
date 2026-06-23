@@ -1,0 +1,22 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "landingPage": "/wp-admin/admin.php?page=siteintelix-debug-log",
+  "preferredVersions": {
+    "php": "8.2",
+    "wp": "latest"
+  },
+  "login": true,
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/siteintelix.zip"
+      }
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "siteintelix/siteintelix.php"
+    }
+  ]
+}
