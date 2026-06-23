@@ -1,6 +1,6 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-  "landingPage": "/wp-admin/admin.php?page=siteintelix-debug-log",
+  "landingPage": "/wp-admin/admin.php?page=siteintelix",
   "preferredVersions": {
     "php": "8.2",
     "wp": "latest"
