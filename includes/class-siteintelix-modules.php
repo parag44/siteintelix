@@ -34,7 +34,7 @@ class SITEINTELIX_Modules {
 				'default'     => true,
 				'settings'    => array(
 					'title'       => ( did_action( 'init' ) ? __( 'Debug Log Settings', 'siteintelix' ) : 'Debug Log Settings' ),
-					'description' => ( did_action( 'init' ) ? __( 'Configure debug capture, viewer layout, and pagination for the Debug Log module.', 'siteintelix' ) : 'Configure debug capture, viewer layout, and pagination for the Debug Log module.' ),
+					'description' => ( did_action( 'init' ) ? __( 'Configure debug capture and pagination for the Debug Log module.', 'siteintelix' ) : 'Configure debug capture and pagination for the Debug Log module.' ),
 					'action'      => 'siteintelix_save_debug_settings',
 				),
 			),

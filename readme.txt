@@ -38,9 +38,7 @@ It brings common maintenance and debugging tasks into one organized admin menu. 
 * Keep data local: SiteIntelix does not send diagnostics, logs, email data, or database details to third-party services.
 
 = Debug Log Module =
-* **Modern grouped cards** — grouped errors with occurrence counts, severity styling, timelines, expandable stack traces, and global filters.
-* **Classic table** — compact table layout with Type, Datetime, Description, File, and Line columns.
-* **Terminal Light** — developer-style log stream with a scrollable terminal-style layout.
+* **Cards and table viewer** — grouped errors with occurrence counts, severity styling, expandable details, and a compact table view.
 * Search and filters for Fatal, Warning, Notice, Deprecated, Database, and Info log types.
 * Configurable logs-per-page setting for paginated views.
 * Refresh, clear, and download actions protected by WordPress capabilities and nonces.
@@ -96,9 +94,6 @@ No. SiteIntelix uses its own `wp-content/siteintelix-debug.log` file so WordPres
 
 = What is the difference between MU Plugin mode and wp-config.php mode? =
 MU Plugin mode captures common PHP and WordPress runtime messages without editing core configuration. wp-config.php mode uses native WordPress debugging constants and can catch debug output through `WP_DEBUG_LOG`, but it requires editing `wp-config.php`.
-
-= What is Terminal Light mode? =
-Terminal Light mode is a developer-style log screen that shows the all parsed log entries in a light terminal layout. It does not use pagination.
 
 = Can the viewer search logs beyond the current page? =
 Yes. Search and server-side filters are applied to the parsed log dataset before pagination.

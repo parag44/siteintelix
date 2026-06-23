@@ -46,7 +46,7 @@ define( 'SITEINTELIX_DEBUG_LOG_FILENAME', 'siteintelix-debug.log' );
 /** Option key for debug log entries shown per page. */
 define( 'SITEINTELIX_LOGS_PER_PAGE_OPTION', 'siteintelix_logs_per_page' );
 
-/** Option key for Debug Log Viewer UI mode. */
+/** Legacy option key retained for uninstall/backward compatibility. */
 define( 'SITEINTELIX_DEBUG_UI_OPTION', 'siteintelix_debug_ui' );
 
 /** Option key for enabled SiteIntelix modules. */
@@ -439,10 +439,7 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 		wp_enqueue_media();
 	}
 
-	// Load the rebuilt Debug Log Viewer assets for the Modern and Terminal log screens.
-	$debug_ui_mode = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
-	$debug_ui_mode = 'terminal_dark' === $debug_ui_mode ? 'terminal_light' : $debug_ui_mode;
-	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-debug-log' ) && in_array( $debug_ui_mode, array( 'modern', 'terminal_light' ), true ) ) {
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-debug-log' ) ) {
 		wp_enqueue_style(
 			'siteintelix-debug-log-viewer',
 			SITEINTELIX_PLUGIN_URL . 'assets/admin/css/siteintelix-debug-log.css',
@@ -537,20 +534,14 @@ function siteintelix_save_debug_settings() {
 	check_admin_referer( 'siteintelix_save_debug_settings' );
 
 	$method        = isset( $_POST['siteintelix_debug_method'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_method'] ) ) : 'mu';
-	$ui_mode       = isset( $_POST['siteintelix_debug_ui'] ) ? sanitize_key( wp_unslash( $_POST['siteintelix_debug_ui'] ) ) : 'modern';
 	$logs_per_page = isset( $_POST['siteintelix_logs_per_page'] ) ? absint( wp_unslash( $_POST['siteintelix_logs_per_page'] ) ) : 25;
-	$ui_mode       = 'terminal_dark' === $ui_mode ? 'terminal_light' : $ui_mode;
 
 	if ( ! in_array( $method, array( 'mu', 'wp_config' ), true ) ) {
 		$method = 'mu';
 	}
 
-	if ( ! in_array( $ui_mode, array( 'classic', 'modern', 'terminal_light' ), true ) ) {
-		$ui_mode = 'modern';
-	}
-
 	update_option( 'siteintelix_debug_method', $method );
-	update_option( SITEINTELIX_DEBUG_UI_OPTION, $ui_mode );
+	update_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
 	update_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, min( 500, max( 10, $logs_per_page ) ) );
 
 	$error_msg = '';

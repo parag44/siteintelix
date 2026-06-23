@@ -47,9 +47,6 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
 	$siteintelix_external_dbg    = SITEINTELIX_Debug_Source::has_external_wp_debug();
 	$siteintelix_fix_url         = add_query_arg( array( 'action' => 'siteintelix_fix_debug_conflict', '_wpnonce' => wp_create_nonce( 'siteintelix_fix_debug_conflict' ) ), $siteintelix_form_url );
 	$siteintelix_logs_per_page   = min( 500, max( 10, (int) get_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, 25 ) ) );
-	$siteintelix_debug_ui        = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
-	$siteintelix_debug_ui        = 'terminal_dark' === $siteintelix_debug_ui ? 'terminal_light' : $siteintelix_debug_ui;
-	$siteintelix_debug_ui        = in_array( $siteintelix_debug_ui, array( 'classic', 'modern', 'terminal_light' ), true ) ? $siteintelix_debug_ui : 'modern';
 	$siteintelix_debug_log_url   = admin_url( 'admin.php?page=siteintelix-debug-log' );
 	$siteintelix_clear_debug_url = wp_nonce_url( admin_url( 'admin-post.php?action=siteintelix_clear_debug_log' ), 'siteintelix_clear_debug_log' );
 }
@@ -178,19 +175,8 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
 										</div>
 										<div class="sitx-setting-row si-form-row">
 											<div>
-												<h3><?php esc_html_e( 'Viewer UI', 'siteintelix' ); ?></h3>
-												<p><?php esc_html_e( 'Choose the Debug Log Viewer layout.', 'siteintelix' ); ?></p>
-											</div>
-											<select name="siteintelix_debug_ui">
-												<option value="modern" <?php selected( $siteintelix_debug_ui, 'modern' ); ?>><?php esc_html_e( 'Modern grouped cards', 'siteintelix' ); ?></option>
-												<option value="classic" <?php selected( $siteintelix_debug_ui, 'classic' ); ?>><?php esc_html_e( 'Classic table', 'siteintelix' ); ?></option>
-												<option value="terminal_light" <?php selected( $siteintelix_debug_ui, 'terminal_light' ); ?>><?php esc_html_e( 'Terminal Light', 'siteintelix' ); ?></option>
-											</select>
-										</div>
-										<div class="sitx-setting-row si-form-row">
-											<div>
 												<h3><?php esc_html_e( 'Logs Per Page', 'siteintelix' ); ?></h3>
-												<p><?php esc_html_e( 'Controls classic rows and modern grouped cards per page.', 'siteintelix' ); ?></p>
+												<p><?php esc_html_e( 'Controls grouped cards and table rows per page.', 'siteintelix' ); ?></p>
 											</div>
 											<input type="number" name="siteintelix_logs_per_page" min="10" max="500" step="5" value="<?php echo esc_attr( (string) $siteintelix_logs_per_page ); ?>">
 										</div>

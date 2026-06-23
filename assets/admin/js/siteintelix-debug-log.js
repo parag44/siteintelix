@@ -36,11 +36,9 @@
 		var list = root.querySelector( '[data-sitx-log-list]' );
 		var cards = list ? Array.prototype.slice.call( list.querySelectorAll( '[data-log-card]' ) ) : [];
 		var searchInput = root.querySelector( '#siteintelix-log-search' );
-		var typeFilter = root.querySelector( '#siteintelix-type-filter' );
 		var fileFilter = root.querySelector( '#siteintelix-file-filter' );
 		var timeFilter = root.querySelector( '#siteintelix-time-filter' );
 		var pluginFilter = root.querySelector( '#siteintelix-plugin-filter' );
-		var groupToggle = root.querySelector( '#siteintelix-group-toggle' );
 		var hideDeprecated = root.querySelector( '#siteintelix-hide-deprecated' );
 		var onlyCritical = root.querySelector( '#siteintelix-only-critical' );
 		var clearFilters = root.querySelector( '#siteintelix-clear-filters' );
@@ -48,6 +46,7 @@
 		var moreFilters = root.querySelector( '[data-sitx-more-filters]' );
 		var advancedFilters = root.querySelector( '[data-sitx-advanced-filters]' );
 		var savedFilters = root.querySelector( '#siteintelix-saved-filters' );
+		var viewButtons = Array.prototype.slice.call( root.querySelectorAll( '[data-sitx-view]' ) );
 		var searchTimer = null;
 
 		function runGlobalSearch() {
@@ -92,11 +91,9 @@
 			url.searchParams.delete( 'siteintelix_log_page' );
 
 			setParam( url, 'siteintelix_log_search', term, '' );
-			setParam( url, 'siteintelix_log_type', selectedValue( typeFilter, 'all' ), 'all' );
 			setParam( url, 'siteintelix_log_file', fileFilter ? String( fileFilter.value || 'all' ) : 'all', 'all' );
 			setParam( url, 'siteintelix_log_time', timeFilter ? String( timeFilter.value || 'all' ) : 'all', 'all' );
 			setParam( url, 'siteintelix_log_plugin', pluginFilter ? String( pluginFilter.value || 'all' ) : 'all', 'all' );
-			setParam( url, 'siteintelix_group_similar', groupToggle && ! groupToggle.checked ? '0' : '1', '1' );
 			setParam( url, 'siteintelix_hide_deprecated', hideDeprecated && hideDeprecated.checked ? '1' : '0', '0' );
 			setParam( url, 'siteintelix_only_critical', onlyCritical && onlyCritical.checked ? '1' : '0', '0' );
 
@@ -138,28 +135,16 @@
 
 		function applyFilters() {
 			var term = searchInput ? String( searchInput.value || '' ).trim().toLowerCase() : '';
-			var type = selectedValue( typeFilter, 'all' );
 			var file = fileFilter ? String( fileFilter.value || 'all' ) : 'all';
 			var plugin = pluginFilter ? String( pluginFilter.value || 'all' ) : 'all';
 			var time = timeFilter ? String( timeFilter.value || 'all' ) : 'all';
-			var grouped = ! groupToggle || groupToggle.checked;
 			var visible = 0;
 
 			cards.forEach( function ( card ) {
 				var level = String( card.getAttribute( 'data-level' ) || '' ).toLowerCase();
 				var cardFile = String( card.getAttribute( 'data-file' ) || '' );
 				var cardPlugin = String( card.getAttribute( 'data-plugin' ) || '' );
-				var isGroupCard = card.hasAttribute( 'data-group-card' );
-				var isSingleCard = card.hasAttribute( 'data-single-card' );
 				var matches = true;
-
-				if ( ( grouped && isSingleCard ) || ( ! grouped && isGroupCard ) ) {
-					matches = false;
-				}
-
-				if ( type !== 'all' && level !== type ) {
-					matches = false;
-				}
 
 				if ( file !== 'all' && cardFile !== file ) {
 					matches = false;
@@ -188,20 +173,34 @@
 			} );
 
 			if ( visibleCount && ( ! searchInput || ! searchInput.hasAttribute( 'data-siteintelix-global-search' ) ) ) {
-				visibleCount.textContent = visible === 1 ? '1 group' : visible + ' groups';
+				visibleCount.textContent = visible === 1 ? '1 log group' : visible + ' log groups';
 			}
 		}
 
 		function resetFilters() {
 			if ( searchInput ) { searchInput.value = ''; }
-			if ( typeFilter ) { typeFilter.value = 'all'; }
 			if ( fileFilter ) { fileFilter.value = 'all'; }
 			if ( timeFilter ) { timeFilter.value = 'all'; }
 			if ( pluginFilter ) { pluginFilter.value = 'all'; }
-			if ( groupToggle ) { groupToggle.checked = true; }
 			if ( hideDeprecated ) { hideDeprecated.checked = false; }
 			if ( onlyCritical ) { onlyCritical.checked = false; }
 			applyFilters();
+		}
+
+		function setView( view ) {
+			var nextView = view === 'table' ? 'table' : 'cards';
+			root.classList.toggle( 'is-table-view', nextView === 'table' );
+			root.classList.toggle( 'is-card-view', nextView !== 'table' );
+
+			viewButtons.forEach( function ( button ) {
+				var isActive = button.getAttribute( 'data-sitx-view' ) === nextView;
+				button.classList.toggle( 'is-active', isActive );
+				button.setAttribute( 'aria-pressed', isActive ? 'true' : 'false' );
+			} );
+
+			try {
+				window.localStorage.setItem( 'siteintelixDebugLogView', nextView );
+			} catch ( error ) {}
 		}
 
 		function toggleDetails( button ) {
@@ -245,18 +244,11 @@
 			} );
 		}
 
-		[ typeFilter, fileFilter, timeFilter, pluginFilter, hideDeprecated, onlyCritical ].forEach( function ( control ) {
+		[ fileFilter, timeFilter, pluginFilter, hideDeprecated, onlyCritical ].forEach( function ( control ) {
 			if ( control ) {
 				control.addEventListener( 'change', runGlobalFilters );
 			}
 		} );
-
-		if ( groupToggle ) {
-			groupToggle.addEventListener( 'change', function () {
-				root.classList.toggle( 'is-ungrouped-view', ! groupToggle.checked );
-				runGlobalFilters();
-			} );
-		}
 
 		if ( clearFilters ) {
 			clearFilters.addEventListener( 'click', function () {
@@ -283,13 +275,34 @@
 			} );
 		}
 
+		viewButtons.forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				setView( button.getAttribute( 'data-sitx-view' ) || 'cards' );
+			} );
+		} );
+
 		root.addEventListener( 'click', function ( event ) {
 			var toggle = event.target.closest( '[data-sitx-toggle-details]' );
+			var tableToggle = event.target.closest( '[data-sitx-table-toggle]' );
 			var copy = event.target.closest( '[data-copy-text]' );
 
 			if ( toggle ) {
 				event.preventDefault();
 				toggleDetails( toggle );
+				return;
+			}
+
+			if ( tableToggle ) {
+				event.preventDefault();
+				var targetId = tableToggle.getAttribute( 'aria-controls' );
+				var details = targetId ? document.getElementById( targetId ) : null;
+				var expanded = tableToggle.getAttribute( 'aria-expanded' ) === 'true';
+				if ( details ) {
+					details.hidden = expanded;
+					root.querySelectorAll( '[data-sitx-table-toggle][aria-controls="' + targetId + '"]' ).forEach( function ( button ) {
+						button.setAttribute( 'aria-expanded', expanded ? 'false' : 'true' );
+					} );
+				}
 				return;
 			}
 
@@ -311,6 +324,12 @@
 				searchInput.focus();
 			}
 		} );
+
+		try {
+			setView( window.localStorage.getItem( 'siteintelixDebugLogView' ) || 'cards' );
+		} catch ( error ) {
+			setView( 'cards' );
+		}
 
 		applyFilters();
 	}
