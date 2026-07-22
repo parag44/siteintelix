@@ -1,178 +1,243 @@
-=== SiteIntelix ===
+=== SiteIntelix – Debug Logs, Email Logs & Diagnostics ===
 Contributors:      parag44
-Donate link:       https://parag.bd/donate
-Tags:              system info, server info, site health, admin dashboard, environment
+Donate link:       https://parag.bd
+Tags:              debug log, email log, site health, admin tools, toolbox
 Requires at least: 5.8
-Tested up to:      6.9
+Tested up to:      7.0
 Requires PHP:      7.4
-Stable tag:        1.1.2
+Stable tag:        2.7.1
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-A clean, modern admin dashboard showing comprehensive WordPress, server, and environment info with colour-coded health checks and export tools.
+Lightweight WordPress diagnostics for debug logs, email logs, server health, PHP configuration, cron, database, and troubleshooting.
 
 == Description ==
 
-**SiteIntelix** gives administrators a single, beautiful dashboard to monitor their entire hosting environment — no SSH access or technical knowledge required.
+**SiteIntelix** is an essential WordPress admin toolkit for site owners, developers, and support teams who want practical troubleshooting tools inside wp-admin.
 
-Information is organised into three sections with colour-coded health indicators (green / amber / red) so issues are immediately visible.
+It brings common maintenance and debugging tasks into one organized admin menu. Turn on only the modules you need, use them when troubleshooting, then leave the rest disabled for a cleaner admin experience.
 
-= WordPress Information =
-* WordPress version (with update check)
-* Site URL and Home URL
-* Active theme name and version
-* Complete list of active plugins with versions
-* Language, charset, and multisite status
+= Key Features =
+* 🩺 **Server Diagnostics** — inspect server health, PHP configuration, extensions, filesystem permissions, network access, WordPress, and database limits.
+* 🧾 **Debug Log Viewer** — capture, search, group, filter, clear, and download private WordPress debug logs.
+* ✉️ **Email Log** — record outgoing WordPress emails with recipients, headers, status, failures, and message previews.
+* 📮 **SMTP Mailer** — route WordPress emails through your own SMTP provider for more reliable delivery.
+* ⏱️ **Cron Events** — inspect scheduled WP-Cron events, run due events manually, and remove selected events safely.
+* 🗄️ **Database Manager** — browse tables, inspect rows, search records, review sizes, and edit selected rows from wp-admin.
+* 📦 **Download Manager** — add secure download links for installed plugin and theme ZIP packages.
+* 🛡️ **Safe Mode Debugger** — test plugin and theme conflict scenarios privately without affecting normal visitors.
+* 🚧 **Maintenance Mode** — show a polished public maintenance page while administrators continue working.
+* 🧰 **Modular Toolbox** — enable or disable each tool from the SiteIntelix Modules screen.
 
-= Server Information =
-* PHP version with health indicator
-* PHP SAPI interface
-* Web server software (Apache, Nginx, etc.)
-* MySQL / MariaDB version
-* Memory limit with warning threshold
-* Maximum upload size
-* Maximum execution time and post max size
-* Operating system and architecture
+= Why Use SiteIntelix? =
+* Keep troubleshooting tools in one place instead of installing many small utilities.
+* Share clean diagnostic reports with support teams.
+* See the active PHP configuration and server limits that often explain plugin/import failures.
+* Review debug logs, email delivery, cron jobs, database rows, and maintenance mode from wp-admin.
+* Keep data local: SiteIntelix does not send diagnostics, logs, email data, or database details to third-party services.
 
-= Environment Information =
-* REST API reachability status
-* WP_DEBUG mode with production warning
-* WP-Cron enabled / disabled state
-* HTTPS / SSL status
-* WordPress environment type
-* Object cache and Script Debug flags
+= Debug Log Module =
+* **Modern grouped cards** — grouped errors with occurrence counts, severity styling, timelines, expandable stack traces, and global filters.
+* **Classic table** — compact table layout with Type, Datetime, Description, File, and Line columns.
+* **Terminal Light** — developer-style log stream with a scrollable terminal-style layout.
+* Search and filters for Fatal, Warning, Notice, Deprecated, Database, and Info log types.
+* Configurable logs-per-page setting for paginated views.
+* Refresh, clear, and download actions protected by WordPress capabilities and nonces.
 
-= Health Checks =
-The plugin evaluates eight metrics and assigns a status:
+= Logging Modes =
+* **MU Plugin mode** — non-invasive capture layer that writes to `wp-content/siteintelix-debug.log` without editing `wp-config.php`.
+* **wp-config.php mode** — uses native WordPress/PHP debug constants and writes the custom `WP_DEBUG_LOG` path into `wp-config.php`.
+* Both modes use `wp-content/siteintelix-debug.log` instead of the default `wp-content/debug.log`.
 
-* 🟢 **Good** — everything is healthy
-* 🟡 **Warning** — PHP < 8.0, memory < 256 MB, WP-Cron disabled, update available
-* 🔴 **Critical** — PHP < 7.4, REST API blocked, WP_DEBUG on in production
-
-= Export Tools =
-* **Copy Report** — copies all info as formatted plain text to the clipboard
-* **Export JSON** — downloads a timestamped `.json` file
+= Security and Privacy =
+* All SiteIntelix admin pages require the `manage_options` capability.
+* Admin actions use WordPress nonces.
+* Output is escaped with WordPress escaping functions.
+* No external CDN assets or heavy JavaScript frameworks are loaded.
+* Assets are scoped to SiteIntelix admin pages.
+* No diagnostics, logs, email data, or database details are sent to third-party services.
+* All inspected information stays inside your WordPress installation.
 
 = Shortcode =
-Use `[siteintelix_panel]` on any page or post to display a compact info table. Visible only to logged-in administrators; all other visitors see nothing.
-
-= REST API Endpoints =
-Requires Administrator authentication:
-
-    GET /wp-json/siteintelix/v1/info
-    GET /wp-json/siteintelix/v1/info?section=server
-    GET /wp-json/siteintelix/v1/health
-
-= Security =
-* All outputs escaped with WordPress functions (`esc_html`, `esc_attr`, `esc_url`, `wp_kses_post`)
-* Every admin page protected with `manage_options` capability check
-* Direct file access blocked in every PHP file via `ABSPATH` guard
-* No data sent to any external service
-* Nonces used for localised JS data
-
-= Design =
-* Card-based responsive layout
-* CSS custom properties — no external frameworks, no CDN calls
-* Loads assets only on its own admin page
-* Zero JavaScript dependencies
+Use `[siteintelix_panel]` on any page or post to display a compact system information table. The shortcode output is visible only to logged-in administrators.
 
 == Installation ==
 
-= Automatic (Recommended) =
+= Automatic =
 1. Log in to your WordPress admin.
 2. Go to **Plugins → Add New**.
 3. Search for **SiteIntelix**.
 4. Click **Install Now**, then **Activate**.
 
 = Manual Upload =
-1. Download the plugin `.zip` file.
+1. Download the plugin ZIP file.
 2. Go to **Plugins → Add New → Upload Plugin**.
-3. Select the `.zip` and click **Install Now**.
+3. Select the ZIP file and click **Install Now**.
 4. Click **Activate Plugin**.
 
 = FTP =
-1. Unzip the download.
+1. Unzip the plugin package.
 2. Upload the `siteintelix` folder to `/wp-content/plugins/`.
-3. Activate from the **Plugins** screen.
+3. Activate **SiteIntelix** from the Plugins screen.
 
-After activation, find **SiteIntelix Panel** in the left-hand admin menu.
+After activation, open **SiteIntelix** in the WordPress admin menu.
 
 == Frequently Asked Questions ==
 
-= Who can see the SiteIntelix Panel? =
-Only users with the `manage_options` capability (Administrators by default).
+= Who can access the plugin screens? =
+Only users with the `manage_options` capability can access SiteIntelix admin pages.
 
-= Does this plugin slow down my site? =
-No. CSS and JavaScript are enqueued only on the plugin's own admin page.
+= Where does SiteIntelix write debug logs? =
+Both logging modes write to `wp-content/siteintelix-debug.log`.
+
+= Does SiteIntelix use wp-content/debug.log? =
+No. SiteIntelix uses its own `wp-content/siteintelix-debug.log` file so WordPress' default `debug.log` is not used by this plugin.
+
+= What is the difference between MU Plugin mode and wp-config.php mode? =
+MU Plugin mode captures common PHP and WordPress runtime messages without editing core configuration. wp-config.php mode uses native WordPress debugging constants and can catch debug output through `WP_DEBUG_LOG`, but it requires editing `wp-config.php`.
+
+= What is Terminal Light mode? =
+Terminal Light mode is a developer-style log screen that shows the all parsed log entries in a light terminal layout. It does not use pagination.
+
+= Can the viewer search logs beyond the current page? =
+Yes. Search and server-side filters are applied to the parsed log dataset before pagination.
 
 = Does this plugin collect or send data anywhere? =
-Never. All information comes from your local server environment and stays within your admin dashboard.
+No. SiteIntelix does not transmit diagnostics, logs, or environment data to any external service.
 
 = How do I use the shortcode? =
-Add `[siteintelix_panel]` to any page or post. Only administrators see the output; all other visitors see nothing.
-
-= The REST API check shows "Blocked" — what does that mean? =
-Your site's REST API is not responding. Common causes: a security plugin blocking it, a firewall rule, or a broken `.htaccess`. Check your security plugin settings.
-
-= How do I increase my memory limit? =
-Add the following to `wp-config.php`:
-
-    define( 'WP_MEMORY_LIMIT', '256M' );
+Add `[siteintelix_panel]` to a page or post. Only administrators can see the output.
 
 = Is the plugin Multisite compatible? =
-Yes. It activates per-site and reports information for that individual site.
+Yes. It activates per site and reports information for that individual site.
 
 == Screenshots ==
 
-1. **Dashboard overview** — header with overall health status and action buttons.
-2. **Health check strip** — colour-coded pills for each metric.
-3. **WordPress card** — WP version, URLs, theme, and active plugin list.
-4. **Server card** — PHP, MySQL, memory limit and server details with status badges.
-5. **Environment card** — REST API, debug mode, cron, HTTPS, and health warnings.
+1. **Overview Dashboard** — minimal health cards, key system details, report actions, and quick module toggles.
+2. **Modules** — enable or disable toolbox modules, open available tools, and review planned modules from one screen.
+3. **Modern Debug Log Viewer** — grouped cards, severity filters, occurrence counts, stack traces, clear, refresh, and download actions.
+4. **Email Log** — captured email events with delivery status, recipients, previews, filters, bulk actions, and row actions.
+5. **Cron Events** — scheduled events with search, countdowns, due-now status, run actions, and delete actions.
+6. **Settings** — clean module settings for Debug Log, SMTP, Email Log, and Maintenance Mode.
 
 == Changelog ==
 
+= 2.7.1 — 2026-07-21 =
+* Refined the Modern Debug Log Viewer with compact, full-width WordPress admin layouts for the mode status, statistics, filters, and log rows.
+* Improved grouped log scanning with collapsed rows, structured expanded details, copy actions, and clearer severity indicators.
+* Preserved existing debug logging, filtering, pagination, clear, download, mode switching, and native editor-link workflows.
+
+= 2.7.0 — 2026-06-24 =
+* Refreshed every SiteIntelix admin screen with a lightweight WordPress-native design system.
+* Removed the Custom Error UI module and added safe cleanup for SiteIntelix-owned legacy drop-ins and settings.
+* Simplified Server Diagnostics to server, PHP, PHP configuration, filesystem, network, WordPress, and database reporting.
+* Reduced decorative styling and kept page-specific assets scoped to the screens that need them.
+
+= 2.6.3 — 2026-05-20 =
+* Added Server Diagnostics improvements for PHP settings, extensions, filesystem, network, database, and plugin compatibility checks.
+* Hardened escaping, direct access protection, request sanitization, generated bootstrap code, and WordPress.org Plugin Check compatibility.
+
+= 2.6.2 — 2026-05-18 =
+* Added an Error Handler option to show escaped technical error details on public error pages when explicitly enabled.
+* Improved Debug Log and Email Log filter toolbar alignment for a cleaner, more consistent admin layout.
+* Refined shared Settings page spacing so module settings rows and form fields use the same visual rhythm.
+
+= 2.6.1 — 2026-05-17 =
+* Added Download Manager support for secure plugin and theme ZIP downloads from WordPress admin.
+* Refined Database Manager row browsing with full row tables and dedicated row edit screens.
+* Renamed Coming Soon to Maintenance Mode while preserving existing settings compatibility.
+* Polished the Settings page layout with cleaner tabs, search, spacing, setting rows, and sidebar cards.
+* Updated screenshots descriptions for the refreshed 2.6.x admin experience.
+
+= 2.6.0 — 2026-05-16 =
+* Refreshed the SiteIntelix admin UI with a shared lightweight design system, common page headers, consistent cards, buttons, badges, forms, and tables.
+* Redesigned the Overview screen as a minimal command center with quick health cards, compact system details, report actions, and module enable/disable toggles.
+* Added and refined toolbox modules for Email Log, SMTP delivery, Cron Events, Database Manager, Error Handler, and Maintenance Mode.
+* Improved Database Manager with summary statistics, searchable table lists, row browsing, pagination, and selected row inspection/editing.
+* Improved Settings tabs so direct module links and save redirects return to the correct module settings panel.
+* Added a Debug Log conflict repair action for sites where `WP_DEBUG` in `wp-config.php` overrides MU debug capture.
+* Reorganized admin assets into scoped `assets/admin/` CSS and JS files and removed duplicated legacy assets.
+* Updated WordPress.org description, screenshots, changelog, and upgrade notice for the expanded toolbox release.
+
+= 2.2.0 — 2026-04-25 =
+* Renamed the plugin to **SiteIntelix Debug Log Viewer** while keeping the existing plugin slug and internal identifiers unchanged.
+* Added Debug Log Viewer pagination with a configurable logs-per-page setting in Debug Settings.
+* Added a complete log level filter set: Fatal, Warning, Notice, Deprecated, Database, and Info.
+* Normalized parsed log levels so PHP errors map into the supported filter groups consistently.
+* Grouped multiline PHP errors, stack traces, and SQL context into a single log table row.
+* Prevented MU Plugin mode from writing duplicate native PHP log rows alongside SiteIntelix structured rows.
+* Removed the extra log path and file-size strip below the debug log table.
+* Replaced the overview REST API endpoints card with detailed Database information.
+* Removed the custom SiteIntelix REST API endpoints and related REST hardening toggle.
+
+= 2.1.1 — 2026-04-24 =
+* Replaced the light terminal-style Debug Log Viewer with a clean, light-themed table layout.
+* Added structured columns for Type, Datetime, Description, File, and Line for easier scanning.
+* Enhanced the backend log parser to extract file paths and line numbers automatically from entries.
+* Expanded log classification with granular levels including Fatal, Database, Deprecated, Notice, and Warning.
+* Standardized both MU Plugin and `wp-config.php` modes to write to `wp-content/siteintelix-debug.log`.
+* Added Debug Log Viewer pagination with a configurable logs-per-page setting.
+* Updated the Datetime column to show human-readable relative timestamps such as "12 hours ago".
+* Refined badge colours, typography, and spacing for a more polished admin experience.
+* Optimized search and level-based filtering for the structured table layout.
+
+= 1.1.4 — 2026-04-20 =
+* Refined top header hierarchy and visual polish for a cleaner, more professional first impression.
+* Improved action button emphasis and spacing in the header.
+* Softened the header gradient and upgraded radius/shadow styles.
+* Enhanced responsive behavior for smaller viewports.
+* Replaced a non-prefixed hook usage with a plugin-prefixed filter.
+* Updated release metadata for WordPress.org submission.
+
 = 1.1.2 — 2026-04-16 =
-* Added a dedicated **Debug Log Viewer** submenu under SiteIntelix Panel.
-* Added severity-aware parsing for debug log entries (`FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `OTHER`).
+* Added a dedicated Debug Log Viewer submenu.
+* Added severity-aware parsing for debug log entries.
 * Improved Debug Log Viewer UI to match SiteIntelix panel styling.
-* Improved third-party admin notice handling so notices render above plugin UI.
-* Added live/recorded log status messaging based on `WP_DEBUG_LOG` runtime state.
-* Added `wp-config.php` snippet guidance when debug logging is disabled.
-* Improved log source path display with compact critical path highlighting.
+* Improved third-party admin notice handling.
+* Added debug logging guidance and compact path display.
 
 = 1.1.0 — 2026-04-11 =
-* Updated plugin version to 1.1.0.
 * Improved output escaping in admin dashboard rendering.
-* Hardened inline JSON output encoding for safer script embedding.
-* Renamed internal template variables to plugin-prefixed names for better coding standards compliance.
+* Hardened inline JSON output encoding.
+* Renamed internal template variables to plugin-prefixed names.
 * Reduced readme tags to WordPress.org-supported limits.
 * Minor admin label and quality improvements.
 
 = 1.0.0 — 2026-03-27 =
 * Initial release.
-* WordPress info: version, site/home URL, active theme, active plugins.
-* Server info: PHP, MySQL, memory limit, upload size, execution time, OS.
-* Environment info: REST API, debug mode, cron, HTTPS, environment type.
-* Eight health checks with good / warning / critical status indicators.
-* Copy Report button (plain-text clipboard export).
-* Export JSON download.
-* `[siteintelix_panel]` shortcode (admin-only front-end table).
-* REST API endpoints: `/info` and `/health`.
-* Fully responsive card-based admin UI.
-* Zero external dependencies.
+* WordPress, server, database, and environment information panels.
+* Health checks, Copy Report, Export JSON, and admin-only shortcode.
+* Responsive card-based admin UI with zero external dependencies.
 
 == Upgrade Notice ==
 
+= 2.6.3 =
+Security and WordPress.org readiness update with clearer plugin description, Server Diagnostics polish, Maintenance Mode media logo support, layout fixes, and Plugin Check hardening.
+
+= 2.6.1 =
+Adds Download Manager, improves Database Manager row editing, renames Coming Soon to Maintenance Mode, and refreshes Settings page spacing and screenshot descriptions.
+
+= 2.6.0 =
+Adds the refreshed admin UI, expanded toolbox modules, Email Log, SMTP, Cron Events, Database Manager improvements, settings-tab fixes, and scoped admin assets. Recommended for all users.
+
+= 2.2.0 =
+Plugin rename and Debug Log Viewer refinement release with pagination, full level filters, multiline log grouping, duplicate MU log prevention, database overview data, and removed custom REST endpoints.
+
+= 2.1.1 =
+Structured log table release with smarter parsing, relative timestamps, and faster filtering.
+
+= 1.1.4 =
+Header UX and standards polish update.
+
 = 1.1.2 =
-Debug Log Viewer release with improved notice handling, runtime logging guidance, and enhanced admin UX.
+Debug Log Viewer release with improved notice handling and runtime logging guidance.
 
 = 1.1.0 =
-Security, standards, and readme compliance update. Recommended for all users.
+Security, standards, and readme compliance update.
 
 = 1.0.0 =
-Initial release — no upgrade steps required.
+Initial release.
 
 == Privacy Policy ==
 
-SiteIntelix does not collect, store, or transmit any personal data. All system information is gathered from the local server environment and displayed exclusively in the WordPress admin to authorised administrators. No data is ever sent to any third-party service.
+SiteIntelix does not collect, store, or transmit personal data. All system information and logs are read from the local WordPress installation and displayed only to authorised administrators inside the WordPress admin area. No data is sent to any third-party service.

@@ -27,7 +27,7 @@ class SITEINTELIX_System_Info {
 	/**
 	 * Return all system information as a single nested array.
 	 *
-	 * Keys: 'wordpress', 'server', 'environment'.
+	 * Keys: 'wordpress', 'server', 'environment', 'database'.
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
@@ -36,6 +36,7 @@ class SITEINTELIX_System_Info {
 			'wordpress'   => self::get_wordpress_info(),
 			'server'      => self::get_server_info(),
 			'environment' => self::get_environment_info(),
+			'database'    => self::get_database_info(),
 		);
 	}
 
@@ -142,6 +143,82 @@ class SITEINTELIX_System_Info {
 	}
 
 	/**
+	 * Gather database connection and runtime information.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_database_info() {
+		global $wpdb;
+
+		return array(
+			'extension'          => self::get_database_extension( $wpdb ),
+			'server_version'     => self::get_mysql_version( $wpdb ),
+			'client_version'     => self::get_database_client_version(),
+			'username'           => defined( 'DB_USER' ) ? DB_USER : '',
+			'host'               => isset( $wpdb->dbhost ) ? $wpdb->dbhost : '',
+			'name'               => isset( $wpdb->dbname ) ? $wpdb->dbname : '',
+			'table_prefix'       => isset( $wpdb->prefix ) ? $wpdb->prefix : '',
+			'charset'            => isset( $wpdb->charset ) ? $wpdb->charset : '',
+			'collation'          => isset( $wpdb->collate ) ? $wpdb->collate : '',
+			'max_allowed_packet' => self::get_database_variable( 'max_allowed_packet' ),
+			'max_connections'    => self::get_database_variable( 'max_connections' ),
+		);
+	}
+
+	/**
+	 * Determine the active database PHP extension.
+	 *
+	 * @param wpdb $wpdb WordPress database abstraction object.
+	 * @return string
+	 */
+	private static function get_database_extension( $wpdb ) {
+		if ( isset( $wpdb->dbh ) && is_object( $wpdb->dbh ) ) {
+			return strtolower( get_class( $wpdb->dbh ) );
+		}
+
+		if ( extension_loaded( 'mysqli' ) ) {
+			return 'mysqli';
+		}
+
+		return extension_loaded( 'mysql' ) ? 'mysql' : __( 'Unknown', 'siteintelix' );
+	}
+
+	/**
+	 * Get the database client library version.
+	 *
+	 * @return string
+	 */
+	private static function get_database_client_version() {
+		global $wpdb;
+
+		if ( is_object( $wpdb ) && method_exists( $wpdb, 'db_server_info' ) ) {
+			return (string) $wpdb->db_server_info();
+		}
+
+		return __( 'Unknown', 'siteintelix' );
+	}
+
+	/**
+	 * Read a MySQL server variable.
+	 *
+	 * @param string $name Variable name.
+	 * @return string
+	 */
+	private static function get_database_variable( $name ) {
+		global $wpdb;
+
+		$allowed = array( 'max_allowed_packet', 'max_connections' );
+		if ( ! in_array( $name, $allowed, true ) ) {
+			return __( 'Unknown', 'siteintelix' );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$value = $wpdb->get_var( $wpdb->prepare( 'SHOW VARIABLES LIKE %s', $name ), 1 );
+
+		return null === $value ? __( 'Unknown', 'siteintelix' ) : (string) $value;
+	}
+
+	/**
 	 * Convert a PHP ini size string (e.g. "128M") to an integer in megabytes.
 	 *
 	 * Returns -1 for unlimited ("-1").
@@ -210,7 +287,8 @@ class SITEINTELIX_System_Info {
 			rest_url( '/' ),
 			array(
 				'timeout'   => 5,
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+				// Keep this filter plugin-prefixed for coding-standards compatibility.
+				'sslverify' => (bool) apply_filters( 'siteintelix_local_ssl_verify', false ),
 			)
 		);
 
@@ -247,6 +325,9 @@ class SITEINTELIX_System_Info {
 	 * @return string
 	 */
 	private static function get_disk_free() {
+		if ( ! function_exists( 'disk_free_space' ) ) {
+			return __( 'Unknown', 'siteintelix' );
+		}
 		$bytes = @disk_free_space( ABSPATH ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		return $bytes ? size_format( $bytes ) : __( 'Unknown', 'siteintelix' );
 	}
