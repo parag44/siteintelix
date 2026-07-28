@@ -64,5 +64,6 @@ siteintelix_security_assert( ! SITEINTELIX_Security::can_manage_module( 'code_sn
 siteintelix_security_assert( ! SITEINTELIX_Security::can_manage_module( 'custom_code' ), 'Custom code requires the code policy.' );
 siteintelix_security_assert( ! SITEINTELIX_Security::can_manage_module( 'database_manager' ), 'Database Manager requires the global-tools policy.' );
 siteintelix_security_assert( ! SITEINTELIX_Security::can_manage_module( 'debug_log' ), 'Debug configuration requires the global-tools policy.' );
+siteintelix_security_assert( ! SITEINTELIX_Security::can_manage_module( 'transients_manager' ), 'Transients Manager requires the global-tools policy.' );
 
 fwrite( STDOUT, "Capability policy tests passed.\n" );

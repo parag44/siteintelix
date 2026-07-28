@@ -32,6 +32,7 @@ final class SITEINTELIX_Security {
 		'debug_log',
 		'download_manager',
 		'safe_mode_debugger',
+		'transients_manager',
 	);
 
 	/**

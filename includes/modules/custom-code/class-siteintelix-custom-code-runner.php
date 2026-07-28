@@ -34,7 +34,9 @@ class SITEINTELIX_Custom_Code_Runner {
 		$type = 'css' === $entry['code_type'] ? 'css' : 'javascript';
 		if ( 'external' === $entry['loading_method'] ) {
 			$relative = (string) $entry['generated_file'];
-			$path     = SITEINTELIX_Custom_Code_File_Manager::path( $relative );
+			$path     = SITEINTELIX_Custom_Code_File_Manager::is_managed_file_for_entry( $relative, $id, $type )
+				? SITEINTELIX_Custom_Code_File_Manager::path( $relative )
+				: '';
 			if ( '' !== $path && is_readable( $path ) ) {
 				$url     = SITEINTELIX_Custom_Code_File_Manager::url( $relative );
 				$version = (string) filemtime( $path );

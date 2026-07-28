@@ -138,14 +138,15 @@ if ( $siteintelix_delete_code_snippets ) {
 	delete_transient( 'siteintelix_snippet_recovery_notice' );
 }
 
-$siteintelix_user_switcher_option_patterns = array(
-	'siteintelix_user_switcher_lock_%',
-	'_transient_siteintelix_user_switcher_session_%',
-	'_transient_timeout_siteintelix_user_switcher_session_%',
-	'_transient_siteintelix_user_switcher_target_%',
-	'_transient_timeout_siteintelix_user_switcher_target_%',
+$siteintelix_user_switcher_option_prefixes = array(
+	'siteintelix_user_switcher_lock_',
+	'_transient_siteintelix_user_switcher_session_',
+	'_transient_timeout_siteintelix_user_switcher_session_',
+	'_transient_siteintelix_user_switcher_target_',
+	'_transient_timeout_siteintelix_user_switcher_target_',
 );
-foreach ( $siteintelix_user_switcher_option_patterns as $siteintelix_user_switcher_option_pattern ) {
+foreach ( $siteintelix_user_switcher_option_prefixes as $siteintelix_user_switcher_option_prefix ) {
+	$siteintelix_user_switcher_option_pattern = $wpdb->esc_like( $siteintelix_user_switcher_option_prefix ) . '%';
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Removing short-lived plugin-owned switching state on uninstall.
 	$wpdb->query(
 		$wpdb->prepare(

@@ -88,7 +88,7 @@ class SITEINTELIX_Custom_Code_Admin {
 				SITEINTELIX_Custom_Code_Repository::update( $id, array_merge( $saved, array( 'generated_file' => $relative ) ) );
 			}
 		} elseif ( ! empty( $saved['generated_file'] ) ) {
-			SITEINTELIX_Custom_Code_File_Manager::delete( $saved['generated_file'] );
+			SITEINTELIX_Custom_Code_File_Manager::delete_for_entry( $saved['generated_file'], $id );
 			SITEINTELIX_Custom_Code_Repository::update( $id, array_merge( $saved, array( 'generated_file' => '' ) ) );
 		}
 		wp_safe_redirect( add_query_arg( array( 'page' => 'siteintelix-custom-code-new', 'entry' => $id, 'saved' => 1 ), admin_url( 'admin.php' ) ) );
@@ -107,7 +107,7 @@ class SITEINTELIX_Custom_Code_Admin {
 		} elseif ( $entry && 'duplicate' === $action ) {
 			SITEINTELIX_Custom_Code_Repository::duplicate( $id, get_current_user_id() );
 		} elseif ( $entry && 'delete' === $action ) {
-			SITEINTELIX_Custom_Code_File_Manager::delete( $entry['generated_file'] );
+			SITEINTELIX_Custom_Code_File_Manager::delete_for_entry( $entry['generated_file'], $id );
 			SITEINTELIX_Custom_Code_Repository::delete( $id );
 		}
 		wp_safe_redirect( admin_url( 'admin.php?page=siteintelix-custom-code' ) );
@@ -126,7 +126,7 @@ class SITEINTELIX_Custom_Code_Admin {
 			foreach ( $ids as $id ) {
 				$entry = SITEINTELIX_Custom_Code_Repository::get( $id );
 				if ( $entry ) {
-					SITEINTELIX_Custom_Code_File_Manager::delete( $entry['generated_file'] );
+					SITEINTELIX_Custom_Code_File_Manager::delete_for_entry( $entry['generated_file'], $id );
 					SITEINTELIX_Custom_Code_Repository::delete( $id );
 				}
 			}

@@ -26,7 +26,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function init() {
-		if ( ! is_admin() ) {
+		if ( ! is_admin() || ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			return;
 		}
 
@@ -42,6 +42,10 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function register_menu() {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
+			return;
+		}
+
 		add_submenu_page(
 			'siteintelix',
 			__( 'Transients Manager', 'siteintelix' ),
@@ -58,7 +62,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function render_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to manage transients.', 'siteintelix' ) );
 		}
 
@@ -507,7 +511,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_delete() {
-		self::require_manage_options();
+		self::require_global_tools();
 
 		$type = self::sanitize_type( self::request_value( 'type' ) );
 		$name = self::sanitize_name( self::request_value( 'name' ) );
@@ -530,7 +534,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_bulk() {
-		self::require_manage_options();
+		self::require_global_tools();
 		check_admin_referer( 'siteintelix_tm_bulk' );
 
 		$action = sanitize_key( self::request_value( 'bulk_action' ) );
@@ -590,7 +594,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_export() {
-		self::require_manage_options();
+		self::require_global_tools();
 
 		$type   = self::sanitize_type( self::request_value( 'type' ) );
 		$name   = self::sanitize_name( self::request_value( 'name' ) );
@@ -1463,8 +1467,8 @@ class SITEINTELIX_Transients_Manager_Module {
 	 *
 	 * @return void
 	 */
-	private static function require_manage_options() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+	private static function require_global_tools() {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to manage transients.', 'siteintelix' ) );
 		}
 	}

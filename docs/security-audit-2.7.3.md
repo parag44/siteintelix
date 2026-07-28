@@ -54,8 +54,37 @@ asset directory and be used by cleanup or URL generation.
 
 Fixed with an exact managed-path format:
 `siteintelix/custom-code/site-<site-id>-entry-<entry-id>.(css|js)`. File deletion,
-URL creation, and runner loading reject all other paths and do not follow
-symlinks.
+URL creation, and runner loading reject all other paths, bind the stored file to
+the expected entry ID and code type, reject symlinked managed directories, and
+do not follow file symlinks.
+
+### Medium: multisite site administrators could manage network-sensitive transients
+
+Transients Manager used the ordinary `manage_options` capability even though it
+can inspect, export, delete, and flush transient/cache state that may be shared
+across a multisite network.
+
+Fixed by classifying Transients Manager under the central global-tools policy.
+On multisite, its hooks, menu, page, and action handlers now require a super
+administrator in addition to `manage_options`.
+
+### Low: public query parameters could suppress PHP snippets for one request
+
+The Code Snippets runtime treated any request with a SiteIntelix-looking
+`action` value as an internal management request. A public visitor could add that
+query parameter and cause active snippets to be skipped for only their request.
+
+Fixed by recognizing action/page management markers only inside the WordPress
+admin context, while retaining the explicit uninstall exclusion.
+
+### Low: uninstall option-prefix matching treated underscores as SQL wildcards
+
+User Switcher option cleanup used SQL `LIKE` patterns whose literal underscores
+were not escaped. This could match and remove an unrelated option with a similar
+name during uninstall.
+
+Fixed by escaping every literal option prefix with `$wpdb->esc_like()` before
+appending the intended `%` suffix wildcard.
 
 ### Medium: transient previews could instantiate serialized objects
 
@@ -152,16 +181,16 @@ against `origin/2.7.1-stable`.
 
 ## Verification Results
 
-- Node structural/UI tests: 108 passed, 0 failed.
+- Node structural/UI tests: 109 passed, 0 failed.
 - Standalone PHP test scripts: all passed.
 - PHP syntax lint across all shipped and test PHP files: passed.
 - JavaScript syntax checks across admin and module assets: passed.
 - PluginCheck PHPCS standard: passed with 0 findings.
 - WordPress Security sniffs: 0 errors; 47 warnings were manually reviewed as
   read-only query-string, nonce, dispatcher, or fixed/allowlisted SQL patterns.
-- Full WordPress Coding Standards scan: 992 errors and 410 warnings across 46
+- Full WordPress Coding Standards scan: 966 errors and 411 warnings across 46
   files, primarily pre-existing whitespace, naming, documentation, and formatting
-  debt; 1,081 findings are mechanically fixable. A broad automated rewrite was
+  debt; 1,082 findings are mechanically fixable. A broad automated rewrite was
   intentionally not applied during the security release because it would create
   high-risk unrelated churn.
 - Distribution package inspection: passed. Required plugin files are present;

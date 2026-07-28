@@ -94,5 +94,60 @@ siteintelix_custom_code_assert(
 	=== SITEINTELIX_Custom_Code_File_Manager::url( $managed ),
 	'Managed URL is generated from the uploads base URL.'
 );
+siteintelix_custom_code_assert(
+	method_exists( 'SITEINTELIX_Custom_Code_File_Manager', 'is_managed_file_for_entry' )
+	&& SITEINTELIX_Custom_Code_File_Manager::is_managed_file_for_entry( $managed, 25, 'css' ),
+	'Managed files are bound to their expected entry ID and type.'
+);
+siteintelix_custom_code_assert(
+	method_exists( 'SITEINTELIX_Custom_Code_File_Manager', 'is_managed_file_for_entry' )
+	&& ! SITEINTELIX_Custom_Code_File_Manager::is_managed_file_for_entry( $managed, 26, 'css' )
+	&& ! SITEINTELIX_Custom_Code_File_Manager::is_managed_file_for_entry( $managed, 25, 'javascript' ),
+	'A managed filename cannot be reused by another entry or code type.'
+);
+
+$symlink_target = $siteintelix_uploads . '/' . $foreign;
+$symlink_path   = $siteintelix_uploads . '/' . $managed;
+$linked         = function_exists( 'symlink' ) && @symlink( $symlink_target, $symlink_path );
+
+if ( $linked ) {
+	$target_contents = file_get_contents( $symlink_target );
+	siteintelix_custom_code_assert( '' === SITEINTELIX_Custom_Code_File_Manager::path( $managed ), 'Managed-path resolution rejects symlinks.' );
+	siteintelix_custom_code_assert( ! SITEINTELIX_Custom_Code_File_Manager::delete( $managed ), 'Managed-file deletion preserves symlinks.' );
+	siteintelix_custom_code_assert( is_link( $symlink_path ), 'The managed-name symlink remains in place.' );
+	siteintelix_custom_code_assert( $target_contents === file_get_contents( $symlink_target ), 'The symlink target remains unchanged.' );
+
+	$write_result = SITEINTELIX_Custom_Code_File_Manager::write(
+		array(
+			'id'        => 25,
+			'code_type' => 'css',
+			'code'      => 'body{color:red}',
+		)
+	);
+	siteintelix_custom_code_assert( $write_result instanceof WP_Error, 'Generated-file writes reject an existing symlink.' );
+	siteintelix_custom_code_assert( $target_contents === file_get_contents( $symlink_target ), 'Rejected writes cannot overwrite a symlink target.' );
+
+	unlink( $symlink_path );
+	$managed_directory = dirname( $symlink_path );
+	rmdir( $managed_directory );
+	$linked_directory = @symlink( dirname( $symlink_target ), $managed_directory );
+
+	if ( $linked_directory ) {
+		$linked_output = dirname( $symlink_target ) . '/site-1-entry-25.css';
+		siteintelix_custom_code_assert( '' === SITEINTELIX_Custom_Code_File_Manager::path( $managed ), 'Managed-path resolution rejects a symlinked directory.' );
+		$write_result = SITEINTELIX_Custom_Code_File_Manager::write(
+			array(
+				'id'        => 25,
+				'code_type' => 'css',
+				'code'      => 'body{color:blue}',
+			)
+		);
+		siteintelix_custom_code_assert( $write_result instanceof WP_Error, 'Generated-file writes reject a symlinked directory.' );
+		siteintelix_custom_code_assert( ! file_exists( $linked_output ), 'Rejected writes cannot create files through a symlinked directory.' );
+
+		unlink( $managed_directory );
+		mkdir( $managed_directory, 0777, true );
+	}
+}
 
 fwrite( STDOUT, "Custom code file manager tests passed.\n" );

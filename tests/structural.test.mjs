@@ -91,6 +91,11 @@ test('uninstall removes current settings and only ownership-verified persistent 
 	assert.match(uninstall, /delete_metadata\(\s*'user',\s*0,\s*'siteintelix_safe_mode_state'/);
 	assert.match(uninstall, /delete_metadata\(\s*'user',\s*0,\s*'siteintelix_safe_mode_log'/);
 	assert.match(uninstall, /SITEINTELIX_MU_Files::remove_all\(\)/);
+	assert.match(
+		uninstall,
+		/\$wpdb->esc_like\(\s*\$siteintelix_user_switcher_option_prefix\s*\)\s*\.\s*'%'/,
+		'uninstall must escape literal option-name prefixes before adding the SQL LIKE wildcard',
+	);
 });
 
 test('2.7.3 release metadata, directory description, and privacy disclosure stay aligned', async () => {
@@ -119,6 +124,20 @@ test('2.7.3 release metadata, directory description, and privacy disclosure stay
 	assert.match(readme, /WordPress\.org endpoints/);
 	assert.doesNotMatch(readme, /No data is sent to any third-party service/);
 	assert.doesNotMatch(main, /load_plugin_textdomain\s*\(/);
+});
+
+test('network-sensitive transient operations use the central global-tools policy', async () => {
+	const [security, transients] = await Promise.all([
+		read('includes/class-siteintelix-security.php'),
+		read('includes/modules/transients-manager/class-siteintelix-transients-manager-module.php'),
+	]);
+
+	assert.match(security, /GLOBAL_MODULES[\s\S]*'transients_manager'/);
+	assert.match(transients, /SITEINTELIX_Security::can_manage_global_tools\(\)/);
+	assert.doesNotMatch(
+		transients,
+		/private static function require_manage_options\(\)[\s\S]*current_user_can\(\s*'manage_options'\s*\)/,
+	);
 });
 
 test('WordPress.org readme documents the nine approved release screenshots in order', async () => {

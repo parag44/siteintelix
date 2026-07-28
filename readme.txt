@@ -142,6 +142,7 @@ SiteIntelix removes its settings, scheduled events, logs, and only signature-ver
 * Improved User Switcher recovery, admin-bar visibility, activity logging, and secure return-to-administrator handling.
 * Hardened sensitive tools, generated files, MU bootstrap ownership checks, transient previews, SMTP credential storage, and download responses.
 * Fixed the early Code Snippets bootstrap order so the security policy is available before active snippets run.
+* Closed additional audit gaps in snippet request detection, generated-file symlink and entry ownership checks, multisite transient permissions, and uninstall option matching.
 * Updated WordPress.org metadata, privacy disclosures, multisite permission boundaries, and release verification coverage.
 
 = 2.7.2 — 2026-07-24 =

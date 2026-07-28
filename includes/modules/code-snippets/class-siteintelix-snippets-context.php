@@ -15,9 +15,17 @@ class SITEINTELIX_Snippets_Context {
 	}
 
 	public static function is_management_request() {
+		if ( defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			return true;
+		}
+
+		if ( ! is_admin() ) {
+			return false;
+		}
+
 		$action = sanitize_key( wp_unslash( $_REQUEST['action'] ?? '' ) );
 		$page   = sanitize_key( wp_unslash( $_REQUEST['page'] ?? '' ) );
-		return 0 === strpos( $action, 'siteintelix_' ) || 0 === strpos( $page, 'siteintelix-code-snippets' ) || defined( 'WP_UNINSTALL_PLUGIN' );
+		return 0 === strpos( $action, 'siteintelix_' ) || 0 === strpos( $page, 'siteintelix-code-snippets' );
 	}
 
 	public static function should_skip_all() {
