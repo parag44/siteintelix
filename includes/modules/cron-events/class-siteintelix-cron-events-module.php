@@ -550,6 +550,7 @@ class SITEINTELIX_Cron_Events_Module {
 		 */
 		private static function get_event_from_request( $action ) {
 		$timestamp = isset( $_GET['timestamp'] ) ? absint( wp_unslash( $_GET['timestamp'] ) ) : 0;
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Value is unslashed, URL-decoded, and sanitized before use.
 		$hook      = isset( $_GET['hook'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['hook'] ) ) ) : '';
 		$event_key = isset( $_GET['event_key'] ) ? sanitize_text_field( wp_unslash( $_GET['event_key'] ) ) : '';
 

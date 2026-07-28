@@ -184,6 +184,15 @@ class SITEINTELIX_Health_Check {
 	 * @return array
 	 */
 	private static function check_rest_api( $available ) {
+		if ( null === $available ) {
+			return array(
+				'status'  => self::STATUS_WARNING,
+				'label'   => __( 'REST API', 'siteintelix' ),
+				'value'   => __( 'Not checked', 'siteintelix' ),
+				'message' => __( 'Open Server Diagnostics to run a fresh REST API check.', 'siteintelix' ),
+			);
+		}
+
 		return array(
 			'status'  => $available ? self::STATUS_GOOD : self::STATUS_CRITICAL,
 			'label'   => __( 'REST API', 'siteintelix' ),

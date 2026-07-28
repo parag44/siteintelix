@@ -1,0 +1,9 @@
+/.distignore
+/.git
+/.gitignore
+/.DS_Store
+/.superpowers
+/docs
+/tests
+/includes/modules/error-ui
+/*.zip

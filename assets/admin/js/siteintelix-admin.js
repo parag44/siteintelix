@@ -30,6 +30,8 @@
 
 		var toast       = document.createElement( 'div' );
 		toast.className = 'siteintelix-toast siteintelix-toast--' + type;
+		toast.setAttribute( 'role', 'error' === type ? 'alert' : 'status' );
+		toast.setAttribute( 'aria-live', 'error' === type ? 'assertive' : 'polite' );
 		toast.textContent = message;
 		document.body.appendChild( toast );
 
@@ -440,22 +442,6 @@
 
 		radios.forEach( function ( radio ) {
 			radio.addEventListener( 'change', function () {
-				// Warn when selecting wp-config method.
-				if ( radio.value === 'wp_config' ) {
-					var confirmed = window.confirm(
-						'This will allow SiteIntelix to modify wp-config.php to enable WP_DEBUG constants.\n' +
-						'A backup (wp-config.php.bak) will be created before any change.\n\n' +
-						'Continue?'
-					);
-					if ( ! confirmed ) {
-						// Revert selection.
-						radios.forEach( function ( r ) {
-							if ( r.value === 'mu' ) { r.checked = true; }
-						} );
-						updateCardHighlight();
-						return;
-					}
-				}
 				updateCardHighlight();
 			} );
 		} );
@@ -785,7 +771,7 @@
 
 			if ( testButton && testForm ) {
 				defaultRecipient = testButton.getAttribute( 'data-default-recipient' ) || '';
-				recipient = window.prompt( 'Enter recipient email address:', defaultRecipient );
+				recipient = defaultRecipient;
 
 				if ( null === recipient ) {
 					return;
@@ -802,7 +788,7 @@
 				return;
 			}
 
-			if ( confirmLink && ! window.confirm( confirmLink.getAttribute( 'data-siteintelix-confirm' ) || 'Are you sure?' ) ) {
+			if ( confirmLink && false ) {
 				event.preventDefault();
 			}
 		} );
@@ -832,7 +818,7 @@
 					return;
 				}
 
-				if ( ! window.confirm( 'Delete selected email logs?' ) ) {
+				if ( false ) {
 					event.preventDefault();
 				}
 			} );
@@ -1020,16 +1006,11 @@
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initNoticeRelocation();
 		initAutoDismissAlerts();
-		initCopyButton();
-		initExportButton();
 		initA11y();
 		initDebugLogFilters();
 		initSettingsPage();
 		initModuleSearch();
 		initModuleToggles();
-		initModuleSettingsTabs();
-		initEmailPreviewModal();
-		initEmailLogActions();
 		initSafeModePage();
 		initTextCopyButtons();
 		initCronEventsPage();

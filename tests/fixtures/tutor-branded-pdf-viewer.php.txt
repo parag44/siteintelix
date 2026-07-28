@@ -1,0 +1,780 @@
+add_filter( 'the_content', 'custom_tutor_branded_pdf_links', 99 );
+
+function custom_tutor_branded_pdf_links( $content ) {
+	// Tutor renders frontend lesson content through admin-ajax.php.
+	if ( is_feed() || ( is_admin() && ! wp_doing_ajax() ) ) {
+		return $content;
+	}
+
+	if (
+		! function_exists( 'tutor' ) ||
+		! class_exists( 'DOMDocument' ) ||
+		false === stripos( $content, '.pdf' )
+	) {
+		return $content;
+	}
+
+	global $post;
+
+	if ( ! $post instanceof WP_Post ) {
+		return $content;
+	}
+
+	$tutor      = tutor();
+	$post_types = array_filter(
+		array(
+			$tutor->course_post_type ?? 'courses',
+			$tutor->lesson_post_type ?? 'lesson',
+		)
+	);
+
+	if ( ! in_array( $post->post_type, $post_types, true ) ) {
+		return $content;
+	}
+
+	$document = new DOMDocument( '1.0', 'UTF-8' );
+	$root_id  = 'custom-tutor-pdf-content-' . wp_rand( 1000, 999999 );
+
+	$previous_errors = libxml_use_internal_errors( true );
+	$loaded          = $document->loadHTML(
+		'<?xml encoding="utf-8" ?><div id="' . esc_attr( $root_id ) . '">' . $content . '</div>',
+		LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+	);
+
+	libxml_clear_errors();
+	libxml_use_internal_errors( $previous_errors );
+
+	if ( ! $loaded ) {
+		return $content;
+	}
+
+	$root = $document->getElementById( $root_id );
+
+	if ( ! $root ) {
+		return $content;
+	}
+
+	$anchors = array();
+
+	foreach ( $root->getElementsByTagName( 'a' ) as $anchor ) {
+		$anchors[] = $anchor;
+	}
+
+	$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+	$site_port     = (string) wp_parse_url( home_url(), PHP_URL_PORT );
+	$embedded_urls = array();
+
+	foreach ( $anchors as $anchor ) {
+		$href = trim( html_entity_decode( $anchor->getAttribute( 'href' ), ENT_QUOTES, 'UTF-8' ) );
+
+		if ( '' === $href ) {
+			continue;
+		}
+
+		$path = (string) wp_parse_url( $href, PHP_URL_PATH );
+
+		if ( ! preg_match( '/\.pdf$/i', rawurldecode( $path ) ) ) {
+			continue;
+		}
+
+		$scheme = strtolower( (string) wp_parse_url( $href, PHP_URL_SCHEME ) );
+		$host   = strtolower( (string) wp_parse_url( $href, PHP_URL_HOST ) );
+		$port   = (string) wp_parse_url( $href, PHP_URL_PORT );
+
+		if ( $scheme && ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+			continue;
+		}
+
+		// Only embed PDFs hosted by this WordPress installation.
+		if ( $host && ( $host !== $site_host || $port !== $site_port ) ) {
+			continue;
+		}
+
+		if ( ! $host ) {
+			$href = home_url( '/' . ltrim( $href, '/' ) );
+		}
+
+		$pdf_url = esc_url_raw( $href, array( 'http', 'https' ) );
+
+		if ( ! $pdf_url || isset( $embedded_urls[ $pdf_url ] ) ) {
+			continue;
+		}
+
+		$embedded_urls[ $pdf_url ] = true;
+
+		$viewer = $document->createElement( 'div' );
+		$viewer->setAttribute( 'class', 'custom-tutor-pdf-viewer' );
+		$viewer->setAttribute( 'data-pdf-url', $pdf_url );
+
+		// This remains visible when JavaScript or the CDN is unavailable.
+		$fallback = $document->createElement( 'p' );
+		$fallback->setAttribute( 'class', 'custom-tutor-pdf-fallback' );
+
+		$fallback_link = $document->createElement(
+			'a',
+			__( 'Open PDF in a new tab', 'astra' )
+		);
+		$fallback_link->setAttribute( 'href', $pdf_url );
+		$fallback_link->setAttribute( 'target', '_blank' );
+		$fallback_link->setAttribute( 'rel', 'noopener noreferrer' );
+
+		$fallback->appendChild( $fallback_link );
+		$viewer->appendChild( $fallback );
+
+		$parent        = $anchor->parentNode;
+		$is_standalone = false;
+
+		if ( $parent instanceof DOMElement && 'p' === strtolower( $parent->tagName ) ) {
+			$is_standalone = true;
+
+			foreach ( $parent->childNodes as $child ) {
+				if ( $child === $anchor ) {
+					continue;
+				}
+
+				if ( XML_TEXT_NODE === $child->nodeType && '' === trim( $child->nodeValue ) ) {
+					continue;
+				}
+
+				if (
+					XML_ELEMENT_NODE === $child->nodeType &&
+					'br' === strtolower( $child->nodeName )
+				) {
+					continue;
+				}
+
+				$is_standalone = false;
+				break;
+			}
+		}
+
+		if ( $is_standalone && $parent->parentNode ) {
+			$parent->parentNode->replaceChild( $viewer, $parent );
+		} elseif ( $parent && $parent->parentNode ) {
+			// Preserve a link that is part of a larger sentence.
+			if ( $parent->nextSibling ) {
+				$parent->parentNode->insertBefore( $viewer, $parent->nextSibling );
+			} else {
+				$parent->parentNode->appendChild( $viewer );
+			}
+		}
+	}
+
+	$output = '';
+
+	foreach ( $root->childNodes as $child ) {
+		$output .= $document->saveHTML( $child );
+	}
+
+	return $output ?: $content;
+}
+
+/**
+ * Print the branded viewer styles and PDF.js module once on Tutor content.
+ */
+add_action( 'wp_footer', 'custom_tutor_branded_pdf_assets', 99 );
+
+function custom_tutor_branded_pdf_assets() {
+	if ( is_admin() || ! function_exists( 'tutor' ) ) {
+		return;
+	}
+
+	$tutor      = tutor();
+	$post_types = array_filter(
+		array(
+			$tutor->course_post_type ?? 'courses',
+			$tutor->lesson_post_type ?? 'lesson',
+		)
+	);
+
+	if ( ! is_singular( $post_types ) ) {
+		return;
+	}
+
+	$pdfjs_module = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build/pdf.min.mjs';
+	$pdfjs_worker = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs';
+	?>
+	<style id="custom-tutor-pdf-viewer-css">
+		.custom-tutor-pdf-viewer {
+			--ctpv-brand: #3e64de;
+			--ctpv-brand-hover: #3154c7;
+			--ctpv-surface: #eef1f6;
+			--ctpv-border: #dfe3eb;
+			width: 100%;
+			margin: 24px 0;
+			overflow: hidden;
+			border: 1px solid var(--ctpv-border);
+			border-radius: 10px;
+			background: var(--ctpv-surface);
+			box-shadow: 0 6px 20px rgba(24, 34, 52, 0.08);
+		}
+
+		.custom-tutor-pdf-viewer * {
+			box-sizing: border-box;
+		}
+
+		.ctpv-toolbar {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			min-height: 54px;
+			padding: 8px 12px;
+			overflow-x: auto;
+			color: #fff;
+			background: var(--ctpv-brand);
+			scrollbar-width: thin;
+		}
+
+		.ctpv-toolbar-group {
+			display: inline-flex;
+			align-items: center;
+			flex: 0 0 auto;
+			gap: 5px;
+		}
+
+		.ctpv-divider {
+			width: 1px;
+			height: 26px;
+			flex: 0 0 auto;
+			margin: 0 3px;
+			background: rgba(255, 255, 255, 0.28);
+		}
+
+		.ctpv-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 36px;
+			height: 36px;
+			margin: 0;
+			padding: 7px 9px;
+			border: 0;
+			border-radius: 6px;
+			outline: none;
+			color: #fff;
+			background: rgba(255, 255, 255, 0.13);
+			box-shadow: none;
+			cursor: pointer;
+			transition: background-color 0.2s ease, opacity 0.2s ease;
+		}
+
+		.ctpv-button:hover,
+		.ctpv-button:focus-visible {
+			color: #fff;
+			background: rgba(255, 255, 255, 0.25);
+		}
+
+		.ctpv-button:focus-visible {
+			outline: 2px solid #fff;
+			outline-offset: 1px;
+		}
+
+		.ctpv-button:disabled {
+			opacity: 0.42;
+			cursor: not-allowed;
+		}
+
+		.ctpv-button svg {
+			width: 19px;
+			height: 19px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.8;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+			pointer-events: none;
+		}
+
+		.ctpv-zoom-value {
+			min-width: 64px;
+			font-size: 13px;
+			font-weight: 600;
+			line-height: 1;
+		}
+
+		.ctpv-page-control {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			height: 36px;
+			padding: 0 9px;
+			border-radius: 6px;
+			background: rgba(255, 255, 255, 0.14);
+			font-size: 13px;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+
+		.ctpv-page-input {
+			width: 45px !important;
+			height: 27px !important;
+			min-height: 0 !important;
+			margin: 0 !important;
+			padding: 2px 5px !important;
+			border: 1px solid rgba(255, 255, 255, 0.38) !important;
+			border-radius: 4px !important;
+			outline: none !important;
+			color: #172033 !important;
+			background: #fff !important;
+			box-shadow: none !important;
+			font-size: 13px !important;
+			font-weight: 600 !important;
+			line-height: 1 !important;
+			text-align: center !important;
+			-moz-appearance: textfield;
+		}
+
+		.ctpv-page-input::-webkit-inner-spin-button,
+		.ctpv-page-input::-webkit-outer-spin-button {
+			margin: 0;
+			-webkit-appearance: none;
+		}
+
+		.ctpv-stage {
+			position: relative;
+			width: 100%;
+			height: clamp(480px, 70vh, 800px);
+			padding: 20px;
+			overflow: auto;
+			background: var(--ctpv-surface);
+		}
+
+		.ctpv-canvas {
+			display: block;
+			margin: 0 auto;
+			background: #fff;
+			box-shadow: 0 3px 16px rgba(24, 34, 52, 0.18);
+		}
+
+		.ctpv-status {
+			position: absolute;
+			inset: 0;
+			z-index: 2;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 24px;
+			color: #596579;
+			background: var(--ctpv-surface);
+			font-size: 14px;
+			text-align: center;
+		}
+
+		.ctpv-status[hidden] {
+			display: none;
+		}
+
+		.ctpv-spinner {
+			width: 28px;
+			height: 28px;
+			margin-right: 10px;
+			border: 3px solid #d7ddea;
+			border-top-color: var(--ctpv-brand);
+			border-radius: 50%;
+			animation: ctpv-spin 0.75s linear infinite;
+		}
+
+		.ctpv-error {
+			flex-direction: column;
+			gap: 10px;
+			color: #8a2633;
+		}
+
+		.ctpv-error a {
+			color: var(--ctpv-brand);
+			font-weight: 600;
+		}
+
+		.custom-tutor-pdf-fallback {
+			margin: 0;
+			padding: 16px;
+			text-align: center;
+		}
+
+		.custom-tutor-pdf-viewer:fullscreen {
+			display: flex;
+			flex-direction: column;
+			width: 100vw;
+			height: 100vh;
+			margin: 0;
+			border: 0;
+			border-radius: 0;
+			background: var(--ctpv-surface);
+		}
+
+		.custom-tutor-pdf-viewer:fullscreen .ctpv-toolbar {
+			flex: 0 0 auto;
+		}
+
+		.custom-tutor-pdf-viewer:fullscreen .ctpv-stage {
+			flex: 1 1 auto;
+			height: auto;
+		}
+
+		@keyframes ctpv-spin {
+			to { transform: rotate(360deg); }
+		}
+
+		@media (max-width: 600px) {
+			.ctpv-toolbar {
+				justify-content: flex-start;
+			}
+
+			.ctpv-stage {
+				height: 68vh;
+				padding: 12px;
+			}
+		}
+
+		@media print {
+			.custom-tutor-pdf-viewer {
+				display: none !important;
+			}
+		}
+	</style>
+
+	<script type="module" id="custom-tutor-pdf-viewer-js">
+		const PDFJS_MODULE = <?php echo wp_json_encode( $pdfjs_module ); ?>;
+		const PDFJS_WORKER = <?php echo wp_json_encode( $pdfjs_worker ); ?>;
+
+		const pdfjsLib = await import(PDFJS_MODULE);
+		pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+
+		const icon = (paths) =>
+			`<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+
+		const icons = {
+			previous: icon('<path d="m15 18-6-6 6-6"/>'),
+			next: icon('<path d="m9 18 6-6-6-6"/>'),
+			minus: icon('<path d="M5 12h14"/>'),
+			plus: icon('<path d="M12 5v14M5 12h14"/>'),
+			fullscreen: icon('<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>'),
+			download: icon('<path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/>'),
+			print: icon('<path d="M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>')
+		};
+
+		const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+		function viewerTemplate() {
+			return `
+				<div class="ctpv-toolbar" role="toolbar" aria-label="PDF controls">
+					<div class="ctpv-toolbar-group">
+						<button type="button" class="ctpv-button" data-action="previous" aria-label="Previous page" title="Previous page">${icons.previous}</button>
+						<div class="ctpv-page-control">
+							<input class="ctpv-page-input" data-role="page-input" type="number" min="1" value="1" aria-label="Current page">
+							<span aria-hidden="true">/</span>
+							<span data-role="page-total">—</span>
+						</div>
+						<button type="button" class="ctpv-button" data-action="next" aria-label="Next page" title="Next page">${icons.next}</button>
+					</div>
+
+					<span class="ctpv-divider" aria-hidden="true"></span>
+
+					<div class="ctpv-toolbar-group">
+						<button type="button" class="ctpv-button" data-action="zoom-out" aria-label="Zoom out" title="Zoom out">${icons.minus}</button>
+						<button type="button" class="ctpv-button ctpv-zoom-value" data-action="fit" aria-label="Fit page width" title="Fit page width">
+							<span data-role="zoom-value">100%</span>
+						</button>
+						<button type="button" class="ctpv-button" data-action="zoom-in" aria-label="Zoom in" title="Zoom in">${icons.plus}</button>
+					</div>
+
+					<span class="ctpv-divider" aria-hidden="true"></span>
+
+					<div class="ctpv-toolbar-group">
+						<button type="button" class="ctpv-button" data-action="fullscreen" aria-label="Toggle fullscreen" title="Fullscreen">${icons.fullscreen}</button>
+						<button type="button" class="ctpv-button" data-action="download" aria-label="Download PDF" title="Download">${icons.download}</button>
+						<button type="button" class="ctpv-button" data-action="print" aria-label="Print PDF" title="Print">${icons.print}</button>
+					</div>
+				</div>
+
+				<div class="ctpv-stage">
+					<canvas class="ctpv-canvas" aria-label="PDF page"></canvas>
+					<div class="ctpv-status ctpv-loading" data-role="loading">
+						<span class="ctpv-spinner" aria-hidden="true"></span>
+						<span>Loading PDF…</span>
+					</div>
+					<div class="ctpv-status ctpv-error" data-role="error" hidden>
+						<strong>Unable to display this PDF.</strong>
+						<a data-role="error-link" target="_blank" rel="noopener noreferrer">Open PDF in a new tab</a>
+					</div>
+				</div>
+			`;
+		}
+
+		async function initializeViewer(viewer) {
+			if (viewer.dataset.pdfViewerReady) {
+				return;
+			}
+
+			viewer.dataset.pdfViewerReady = 'loading';
+
+			const url = viewer.dataset.pdfUrl;
+
+			if (!url) {
+				return;
+			}
+
+			viewer.innerHTML = viewerTemplate();
+
+			const stage = viewer.querySelector('.ctpv-stage');
+			const canvas = viewer.querySelector('.ctpv-canvas');
+			const context = canvas.getContext('2d', { alpha: false });
+			const loading = viewer.querySelector('[data-role="loading"]');
+			const errorBox = viewer.querySelector('[data-role="error"]');
+			const errorLink = viewer.querySelector('[data-role="error-link"]');
+			const pageInput = viewer.querySelector('[data-role="page-input"]');
+			const pageTotal = viewer.querySelector('[data-role="page-total"]');
+			const zoomValue = viewer.querySelector('[data-role="zoom-value"]');
+			const previousButton = viewer.querySelector('[data-action="previous"]');
+			const nextButton = viewer.querySelector('[data-action="next"]');
+
+			errorLink.href = url;
+
+			let pdf = null;
+			let pageNumber = 1;
+			let scale = 1;
+			let fitToWidth = true;
+			let rendering = false;
+			let renderAgain = false;
+			let resizeFrame = 0;
+
+			const updateControls = () => {
+				const pages = pdf ? pdf.numPages : 1;
+				pageInput.value = String(pageNumber);
+				pageInput.max = String(pages);
+				pageTotal.textContent = pdf ? String(pages) : '—';
+				zoomValue.textContent = `${Math.round(scale * 100)}%`;
+				previousButton.disabled = !pdf || pageNumber <= 1;
+				nextButton.disabled = !pdf || pageNumber >= pages;
+			};
+
+			const calculateFitScale = (viewport) => {
+				const horizontalPadding = window.innerWidth <= 600 ? 24 : 40;
+				const availableWidth = Math.max(stage.clientWidth - horizontalPadding, 180);
+				return clamp(availableWidth / viewport.width, 0.25, 2.5);
+			};
+
+			const renderPage = async () => {
+				if (!pdf) {
+					return;
+				}
+
+				if (rendering) {
+					renderAgain = true;
+					return;
+				}
+
+				rendering = true;
+				loading.hidden = false;
+
+				try {
+					const page = await pdf.getPage(pageNumber);
+					const baseViewport = page.getViewport({ scale: 1 });
+
+					if (fitToWidth) {
+						scale = calculateFitScale(baseViewport);
+					}
+
+					const viewport = page.getViewport({ scale });
+					const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+
+					canvas.width = Math.floor(viewport.width * outputScale);
+					canvas.height = Math.floor(viewport.height * outputScale);
+					canvas.style.width = `${Math.floor(viewport.width)}px`;
+					canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+					const transform = outputScale !== 1
+						? [outputScale, 0, 0, outputScale, 0, 0]
+						: null;
+
+					await page.render({
+						canvasContext: context,
+						transform,
+						viewport
+					}).promise;
+
+					updateControls();
+					stage.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+					viewer.dataset.pdfViewerReady = 'ready';
+				} catch (error) {
+					console.error('Tutor PDF viewer render error:', error);
+					errorBox.hidden = false;
+				} finally {
+					loading.hidden = true;
+					rendering = false;
+
+					if (renderAgain) {
+						renderAgain = false;
+						renderPage();
+					}
+				}
+			};
+
+			const goToPage = (requestedPage) => {
+				if (!pdf) {
+					return;
+				}
+
+				const nextPage = clamp(Number.parseInt(requestedPage, 10) || 1, 1, pdf.numPages);
+
+				if (nextPage !== pageNumber) {
+					pageNumber = nextPage;
+					renderPage();
+				} else {
+					updateControls();
+				}
+			};
+
+			const zoomBy = (amount) => {
+				fitToWidth = false;
+				scale = clamp(Number((scale + amount).toFixed(2)), 0.25, 3);
+				renderPage();
+			};
+
+			const downloadPdf = () => {
+				const link = document.createElement('a');
+				link.href = url;
+				link.download = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'document.pdf';
+				link.rel = 'noopener';
+				document.body.appendChild(link);
+				link.click();
+				link.remove();
+			};
+
+			const printPdf = () => {
+				const printFrame = document.createElement('iframe');
+				printFrame.setAttribute('aria-hidden', 'true');
+				printFrame.style.position = 'fixed';
+				printFrame.style.right = '0';
+				printFrame.style.bottom = '0';
+				printFrame.style.width = '1px';
+				printFrame.style.height = '1px';
+				printFrame.style.border = '0';
+				printFrame.style.opacity = '0';
+				printFrame.src = url;
+
+				printFrame.addEventListener('load', () => {
+					window.setTimeout(() => {
+						try {
+							printFrame.contentWindow.focus();
+							printFrame.contentWindow.print();
+						} catch (error) {
+							window.open(url, '_blank', 'noopener');
+						}
+
+						window.setTimeout(() => printFrame.remove(), 3000);
+					}, 750);
+				}, { once: true });
+
+				document.body.appendChild(printFrame);
+			};
+
+			viewer.addEventListener('click', (event) => {
+				const button = event.target.closest('[data-action]');
+
+				if (!button || button.disabled) {
+					return;
+				}
+
+				switch (button.dataset.action) {
+					case 'previous':
+						goToPage(pageNumber - 1);
+						break;
+					case 'next':
+						goToPage(pageNumber + 1);
+						break;
+					case 'zoom-out':
+						zoomBy(-0.15);
+						break;
+					case 'zoom-in':
+						zoomBy(0.15);
+						break;
+					case 'fit':
+						fitToWidth = true;
+						renderPage();
+						break;
+					case 'fullscreen':
+						if (document.fullscreenElement === viewer) {
+							document.exitFullscreen();
+						} else if (viewer.requestFullscreen) {
+							viewer.requestFullscreen();
+						}
+						break;
+					case 'download':
+						downloadPdf();
+						break;
+					case 'print':
+						printPdf();
+						break;
+				}
+			});
+
+			pageInput.addEventListener('change', () => goToPage(pageInput.value));
+			pageInput.addEventListener('keydown', (event) => {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					goToPage(pageInput.value);
+					pageInput.blur();
+				}
+			});
+
+			window.addEventListener('resize', () => {
+				if (!fitToWidth || !pdf) {
+					return;
+				}
+
+				window.cancelAnimationFrame(resizeFrame);
+				resizeFrame = window.requestAnimationFrame(renderPage);
+			});
+
+			document.addEventListener('fullscreenchange', () => {
+				if (fitToWidth && pdf && (document.fullscreenElement === viewer || !document.fullscreenElement)) {
+					window.setTimeout(renderPage, 80);
+				}
+			});
+
+			try {
+				pdf = await pdfjsLib.getDocument({ url }).promise;
+				pageTotal.textContent = String(pdf.numPages);
+				updateControls();
+				await renderPage();
+			} catch (error) {
+				console.error('Tutor PDF viewer load error:', error);
+				loading.hidden = true;
+				errorBox.hidden = false;
+				viewer.dataset.pdfViewerReady = 'error';
+			}
+		}
+
+		const initializeWithin = (root = document) => {
+			if (root.nodeType !== Node.ELEMENT_NODE && root !== document) {
+				return;
+			}
+
+			if (root.matches && root.matches('.custom-tutor-pdf-viewer')) {
+				initializeViewer(root);
+			}
+
+			if (root.querySelectorAll) {
+				root.querySelectorAll('.custom-tutor-pdf-viewer').forEach(initializeViewer);
+			}
+		};
+
+		initializeWithin(document);
+
+		const observer = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					initializeWithin(node);
+				}
+			}
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true
+		});
+	</script>
+	<?php
+}

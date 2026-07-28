@@ -8,6 +8,8 @@ const {
 	normalizeText,
 	filterRows,
 	orderRows,
+	sortRows,
+	applyRowView,
 	visibleRange,
 	partitionRows,
 	sectionMatchSummary,
@@ -57,6 +59,46 @@ test('filterRows skips malformed rows and safely searches circular fields', () =
 
 	assert.doesNotThrow(() => filterRows([null, false, 42, 'row', valid], 'all', 'object'));
 	assert.deepEqual(filterRows([null, false, 42, 'row', valid], 'all', 'object'), [valid]);
+});
+
+test('sortRows is stable across severity, label, and status modes', () => {
+	const sortableRows = [
+		{ label: 'Zulu', status: 'pass' },
+		{ label: 'Alpha', status: 'warning' },
+		{ label: 'Beta', status: 'danger' },
+		{ label: 'Alpha', status: 'pass' },
+	];
+
+	assert.deepEqual(sortRows(sortableRows, 'severity').map((row) => row.label), ['Beta', 'Alpha', 'Zulu', 'Alpha']);
+	assert.deepEqual(sortRows(sortableRows, 'name').map((row) => `${row.label}:${row.status}`), [
+		'Alpha:warning',
+		'Alpha:pass',
+		'Beta:danger',
+		'Zulu:pass',
+	]);
+	assert.deepEqual(sortRows(sortableRows, 'status').map((row) => row.status), ['danger', 'warning', 'pass', 'pass']);
+});
+
+test('applyRowView combines filters, hide-passed, sorting, and the initial row limit', () => {
+	const viewRows = [
+		{ label: 'Pass B', status: 'pass' },
+		{ label: 'Warning', status: 'warning' },
+		{ label: 'Pass A', status: 'pass' },
+		{ label: 'Issue', status: 'danger' },
+	];
+
+	const view = applyRowView(viewRows, {
+		filter: 'all',
+		query: '',
+		hidePassed: true,
+		sort: 'severity',
+		expanded: false,
+		limit: 10,
+	});
+
+	assert.deepEqual(view.visible.map((row) => row.label), ['Issue', 'Warning']);
+	assert.equal(view.total, 2);
+	assert.equal(view.hasMore, false);
 });
 
 test('normalizeText safely normalizes null, arrays, and objects', () => {
@@ -471,6 +513,12 @@ function createDiagnosticsFixture(sectionPayloads = [[
 	const all = append(documentObject, toolbar, 'button', { 'data-sitx-diag-filter': 'all' });
 	const issues = append(documentObject, toolbar, 'button', { 'data-sitx-diag-filter': 'issues' });
 	const search = append(documentObject, toolbar, 'input', { 'data-sitx-diag-search': '' });
+	const hidePassed = append(documentObject, toolbar, 'input', {
+		type: 'checkbox',
+		'data-sitx-diag-hide-passed': '',
+	});
+	const sort = append(documentObject, toolbar, 'select', { 'data-sitx-diag-sort': '' });
+	sort.value = 'severity';
 	const expand = append(documentObject, toolbar, 'button', { 'data-sitx-diag-expand-all': '' });
 	const collapse = append(documentObject, toolbar, 'button', { 'data-sitx-diag-collapse-all': '' });
 	const mobileControls = append(documentObject, toolbar, 'details', { 'data-sitx-diag-section-controls': '' });
@@ -486,7 +534,10 @@ function createDiagnosticsFixture(sectionPayloads = [[
 	const live = append(documentObject, page, 'p', { 'data-sitx-diag-live': '' });
 	const main = append(documentObject, page, 'main', { class: 'sitx-serverdiag-main' });
 	const sections = sectionPayloads.map((payload, index) => {
-		const section = append(documentObject, main, 'section', { 'data-sitx-diag-section': '' });
+		const section = append(documentObject, main, 'section', {
+			'data-sitx-diag-section': '',
+			...(index === 0 ? { 'data-sitx-diag-default-open': 'true' } : {}),
+		});
 		const toggle = append(documentObject, section, 'button', { 'data-sitx-diag-toggle': '' });
 		append(documentObject, section, 'span', { class: 'sitx-serverdiag-section__counts' });
 		const panel = append(documentObject, section, 'div', { id: 'panel-' + index, 'data-sitx-diag-panel': '' });
@@ -506,6 +557,8 @@ function createDiagnosticsFixture(sectionPayloads = [[
 		all,
 		issues,
 		search,
+		hidePassed,
+		sort,
 		expand,
 		collapse,
 		mobileControls,
@@ -536,11 +589,87 @@ test('initDiagnosticsPage is idempotent and accordion controls aria and hidden s
 	initDiagnosticsPage(fixture.page, fixture.documentObject, windowObject);
 
 	assert.equal(fixture.sections[0].toggle.listeners.get('click').length, 1);
-	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'false');
-	assert.equal(fixture.sections[0].panel.hidden, true);
-	fixture.sections[0].toggle.dispatch('click');
 	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'true');
 	assert.equal(fixture.sections[0].panel.hidden, false);
+	fixture.sections[0].toggle.dispatch('click');
+	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'false');
+	assert.equal(fixture.sections[0].panel.hidden, true);
+});
+
+test('the highest-severity section opens by default', () => {
+	const fixture = createDiagnosticsFixture();
+	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow());
+	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'true');
+	assert.equal(fixture.sections[0].panel.hidden, false);
+});
+
+test('Hide Passed and sorting rerender without losing accordion state', () => {
+	const fixture = createDiagnosticsFixture([[
+		{ label: 'Zulu', value: 'ok', status: 'pass', detail: 'Passed row' },
+		{ label: 'Alpha', value: 'low', status: 'warning', detail: 'Warning row' },
+	]]);
+	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow());
+	fixture.hidePassed.checked = true;
+	fixture.hidePassed.dispatch('change');
+	assert.equal(fixture.sections[0].panel.querySelectorAll('[data-sitx-diag-row]').length, 1);
+	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'true');
+	fixture.sort.value = 'name';
+	fixture.sort.dispatch('change');
+	assert.equal(fixture.sections[0].toggle.getAttribute('aria-expanded'), 'true');
+});
+
+test('rows are limited to ten and Details uses an accessible disclosure', () => {
+	const limitedRows = Array.from({ length: 12 }, (_, index) => ({
+		label: `Check ${index + 1}`,
+		value: `Value ${index + 1}`,
+		recommended: index === 0 ? 'Recommended value' : undefined,
+		status: index === 0 ? 'warning' : 'pass',
+		detail: `Detail ${index + 1}`,
+	}));
+	const fixture = createDiagnosticsFixture([limitedRows]);
+	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow());
+	assert.equal(fixture.sections[0].panel.querySelectorAll('[data-sitx-diag-row]').length, 10);
+	const showAll = fixture.sections[0].panel.querySelector('[data-sitx-diag-show-all]');
+	assert.ok(showAll);
+	showAll.dispatch('click');
+	assert.equal(fixture.sections[0].panel.querySelectorAll('[data-sitx-diag-row]').length, 12);
+	const details = fixture.sections[0].panel.querySelector('[data-sitx-diag-row-details]');
+	assert.equal(details.getAttribute('aria-expanded'), 'false');
+	details.dispatch('click');
+	assert.equal(details.getAttribute('aria-expanded'), 'true');
+	const detailPanel = fixture.documentObject.getElementById(details.getAttribute('aria-controls'));
+	assert.ok(detailPanel.querySelectorAll('code').some((code) => code.textContent === 'Recommended value'));
+});
+
+test('rows omit the Recommended column while keeping recommendations in Details', () => {
+	const fixture = createDiagnosticsFixture([[
+		{
+			label: 'Disk free space',
+			value: '13 GB',
+			recommended: '20 GB',
+			status: 'info',
+			detail: 'Available disk space.',
+		},
+	]]);
+	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow());
+	const row = fixture.sections[0].panel.querySelector('[data-sitx-diag-row]');
+	const action = row.querySelector('[data-sitx-diag-row-details]');
+	const detail = fixture.documentObject.getElementById(action.getAttribute('aria-controls'));
+
+	assert.equal(row.querySelector('.sitx-serverdiag-row__recommended'), null);
+	assert.ok(detail.querySelectorAll('code').some((code) => code.textContent === '20 GB'));
+});
+
+test('the row action remains in its grid column before expanded details', () => {
+	const fixture = createDiagnosticsFixture([[
+		{ label: 'WordPress root writable', value: 'Yes', status: 'warning', detail: 'Root write access is usually not required.' },
+	]]);
+	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow());
+	const row = fixture.sections[0].panel.querySelector('[data-sitx-diag-row]');
+	const action = row.querySelector('[data-sitx-diag-row-details]');
+	const detail = fixture.documentObject.getElementById(action.getAttribute('aria-controls'));
+
+	assert.ok(row.children.indexOf(action) < row.children.indexOf(detail));
 });
 
 test('mobile expand all uses shared section behavior, closes its menu, and restores summary focus', () => {
@@ -633,12 +762,10 @@ test('virtualized DOM measures variable rows and exposes full list semantics', (
 		disconnect() {}
 	}
 	initDiagnosticsPage(fixture.page, fixture.documentObject, immediateWindow({ ResizeObserver }));
-	fixture.sections[0].toggle.dispatch('click');
-	const disclosure = fixture.sections[0].panel.querySelector('.sitx-serverdiag-disclosure');
-	disclosure.dispatch('click');
+	fixture.sections[0].panel.querySelector('[data-sitx-diag-show-all]').dispatch('click');
 	const list = fixture.sections[0].panel.querySelector('.sitx-serverdiag-virtual-list');
 	assert.equal(list.getAttribute('role'), 'list');
-	assert.equal(list.getAttribute('aria-label'), 'Passed checks (201 total)');
+	assert.equal(list.getAttribute('aria-label'), 'Check (201 total)');
 	assert.ok(observed.length > 0, 'rendered rows are observed for their actual height');
 	const firstItem = list.querySelector('[role="listitem"]');
 	assert.equal(firstItem.getAttribute('aria-setsize'), '201');
@@ -699,11 +826,10 @@ test('localized diagnostics data drives generated UI, ARIA, and live-region stri
 
 	fixture.search.value = 'PHP version';
 	fixture.search.dispatch('input');
-	fixture.sections[0].toggle.dispatch('click');
 	assert.equal(fixture.live.textContent, '1 examen visible');
 	assert.equal(
-		fixture.sections[0].panel.querySelector('.sitx-serverdiag-problems').getAttribute('aria-label'),
-		'Examens à corriger (1 examen)',
+		fixture.sections[0].panel.querySelector('.sitx-serverdiag-checks-table').getAttribute('aria-label'),
+		'Check (1 examen)',
 	);
 	fixture.copy.dispatch('click');
 	assert.equal(fixture.live.textContent, 'Informations copiées.');
@@ -711,11 +837,13 @@ test('localized diagnostics data drives generated UI, ARIA, and live-region stri
 	const php = readFileSync(new URL('../siteintelix.php', import.meta.url), 'utf8');
 	assert.match(php, /wp_localize_script\(\s*'siteintelix-server-diagnostics-script'/);
 	assert.match(php, /siteintelixDiagnosticsData/);
-	assert.match(php, /\/\* translators: %d: Number of diagnostic checks\. \*\//);
-	assert.match(php, /for \( \$siteintelix_count = 0; \$siteintelix_count <= \$siteintelix_diagnostics_count_max; \$siteintelix_count\+\+ \)/);
-	assert.match(php, /'checksShown'\]\[ \$siteintelix_count \] = _n\(\s*'%d check shown',\s*'%d checks shown',\s*\$siteintelix_count/);
-	assert.match(php, /'listTotal'\]\[ \$siteintelix_count \] = _n\(/);
+	assert.doesNotMatch(php, /\$siteintelix_count_strings/);
+	assert.match(php, /'wp-i18n'/);
+	assert.match(php, /wp_set_script_translations/);
 	assert.doesNotMatch(php, /_n\([^;]+,\s*[12],\s*'siteintelix'\s*\)/);
+	for (const key of ['details', 'showAllChecks', 'showFewer', 'statusColumn', 'checkColumn', 'descriptionColumn', 'actionColumn']) {
+		assert.match(php, new RegExp(`'${key}'\\s*=>`));
+	}
 });
 
 test('repeated filters destroy expanded virtual render resources before replacing lists', () => {
@@ -750,8 +878,7 @@ test('repeated filters destroy expanded virtual render resources before replacin
 	};
 
 	initDiagnosticsPage(fixture.page, fixture.documentObject, windowObject);
-	fixture.sections[0].toggle.dispatch('click');
-	fixture.sections[0].panel.querySelector('.sitx-serverdiag-disclosure').dispatch('click');
+	fixture.sections[0].panel.querySelector('[data-sitx-diag-show-all]').dispatch('click');
 	let list = fixture.sections[0].panel.querySelector('.sitx-serverdiag-virtual-list');
 	const firstObserver = observers[0];
 	const firstDisconnectBaseline = firstObserver.disconnectCount;
@@ -770,6 +897,7 @@ test('repeated filters destroy expanded virtual render resources before replacin
 	assert.equal(list.firstChild, staleFirstChild, 'a stale ResizeObserver callback cannot mutate a destroyed list');
 
 	fixture.all.dispatch('click');
+	fixture.sections[0].panel.querySelector('[data-sitx-diag-show-all]').dispatch('click');
 	list = fixture.sections[0].panel.querySelector('.sitx-serverdiag-virtual-list');
 	const secondObserver = observers[1];
 	const secondDisconnectBaseline = secondObserver.disconnectCount;

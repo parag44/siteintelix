@@ -68,6 +68,58 @@ function orderRows(rows) {
 		});
 }
 
+function sortRows(rows, mode) {
+	var ranks = {
+		danger: 0,
+		warning: 1,
+		info: 2,
+		neutral: 2,
+		pass: 3,
+	};
+
+	return (Array.isArray(rows) ? rows : [])
+		.filter(function (row) {
+			return row !== null && typeof row === 'object' && !Array.isArray(row);
+		})
+		.map(function (row, index) {
+			return { row: row, index: index };
+		})
+		.sort(function (left, right) {
+			var result = 0;
+			if ('name' === mode) {
+				result = normalizeText(left.row.label).localeCompare(normalizeText(right.row.label));
+			} else {
+				var leftRank = Object.prototype.hasOwnProperty.call(ranks, left.row.status) ? ranks[left.row.status] : 4;
+				var rightRank = Object.prototype.hasOwnProperty.call(ranks, right.row.status) ? ranks[right.row.status] : 4;
+				result = leftRank - rightRank;
+			}
+			return result || left.index - right.index;
+		})
+		.map(function (item) {
+			return item.row;
+		});
+}
+
+function applyRowView(rows, options) {
+	var settings = options || {};
+	var matched = filterRows(rows, settings.filter || 'all', settings.query || '');
+	var limit = Number(settings.limit) > 0 ? Math.floor(Number(settings.limit)) : 10;
+
+	if (settings.hidePassed && 'passed' !== settings.filter) {
+		matched = matched.filter(function (row) {
+			return 'pass' !== row.status;
+		});
+	}
+	matched = sortRows(matched, settings.sort || 'severity');
+
+	return {
+		total: matched.length,
+		visible: settings.expanded ? matched : matched.slice(0, limit),
+		hasMore: !settings.expanded && matched.length > limit,
+		rows: matched,
+	};
+}
+
 function visibleRange(total, rowHeight, scrollTop, viewportHeight, overscan) {
 	var numericTotal = Number(total);
 	var numericRowHeight = Number(rowHeight);
@@ -174,12 +226,22 @@ function diagnosticsStrings(windowObject) {
 		passed: 'Passed',
 		current: 'Current',
 		recommended: 'Recommended',
+		details: 'Details',
+		showAllChecks: 'Show all checks',
+		showFewer: 'Show fewer',
+		statusColumn: 'Status',
+		checkColumn: 'Check',
+		descriptionColumn: 'Description',
+		actionColumn: 'Action',
 		issueSingular: '%d issue',
 		issuePlural: '%d issues',
 		warningSingular: '%d warning',
 		warningPlural: '%d warnings',
 		passedCount: '%d passed',
 		informationCount: '%d information',
+		refreshing: 'Refreshing diagnostics…',
+		refreshComplete: 'Diagnostics refreshed.',
+		refreshFailed: 'Refresh failed. The previous results are still available.',
 	};
 	var localized = windowObject && windowObject.siteintelixDiagnosticsData;
 	var key;
@@ -192,6 +254,7 @@ function diagnosticsStrings(windowObject) {
 			}
 		}
 	}
+	defaults.__i18n = windowObject && windowObject.wp && windowObject.wp.i18n ? windowObject.wp.i18n : null;
 
 	return defaults;
 }
@@ -231,6 +294,18 @@ function resolveDiagnosticTemplate(strings, key, count) {
 		listTotal: ['listTotal', 'listTotal'],
 	};
 	var fallback;
+	var pluralPairs = {
+		checksShown: ['%d check shown', '%d checks shown'],
+		showPassed: ['Show %d passed check', 'Show %d passed checks'],
+		hidePassed: ['Hide %d passed check', 'Hide %d passed checks'],
+		showInformation: ['Show %d informational check', 'Show %d informational checks'],
+		hideInformation: ['Hide %d informational check', 'Hide %d informational checks'],
+		issueCount: ['%d issue', '%d issues'],
+		warningCount: ['%d warning', '%d warnings'],
+		passedCount: ['%d passed', '%d passed'],
+		informationCount: ['%d information', '%d information'],
+		listTotal: ['%1$s (%2$d total check)', '%1$s (%2$d total checks)'],
+	};
 
 	if (templates && typeof templates === 'object') {
 		if (typeof templates[safeCount] === 'string') {
@@ -247,6 +322,9 @@ function resolveDiagnosticTemplate(strings, key, count) {
 			});
 			return templates[fallback];
 		}
+	}
+	if (labels.__i18n && typeof labels.__i18n._n === 'function' && pluralPairs[key]) {
+		return labels.__i18n._n(pluralPairs[key][0], pluralPairs[key][1], safeCount, 'siteintelix');
 	}
 
 	if (typeof templates === 'string') {
@@ -365,10 +443,14 @@ function createRowItem(documentObject, row, position, total, strings) {
 	var header = documentObject.createElement('div');
 	var label = documentObject.createElement('strong');
 	var status = documentObject.createElement('span');
+	var detailButton = documentObject.createElement('button');
+	var summary;
 	var detail;
+	var detailId = 'sitx-serverdiag-row-detail-' + String(position || 1) + '-' + normalizeText(row.label).replace(/[^a-z0-9]+/g, '-');
 
 	item.className = 'sitx-serverdiag-row is-' + (row.status || 'neutral');
 	item.setAttribute('role', 'listitem');
+	item.setAttribute('data-sitx-diag-row', '');
 	if (Number.isFinite(position) && Number.isFinite(total)) {
 		item.setAttribute('aria-posinset', String(position));
 		item.setAttribute('aria-setsize', String(total));
@@ -379,28 +461,50 @@ function createRowItem(documentObject, row, position, total, strings) {
 	label.textContent = displayText(row.label) || strings.unnamedCheck;
 	status.className = 'sitx-serverdiag-row__status';
 	status.textContent = statusLabel(row.status, strings);
-	header.appendChild(label);
 	header.appendChild(status);
+	header.appendChild(label);
 	item.appendChild(header);
 	appendLabeledValue(documentObject, item, strings.current, row.value, 'sitx-serverdiag-row__current');
 
-	if (row.recommended !== null && typeof row.recommended !== 'undefined' && '' !== displayText(row.recommended)) {
-		appendLabeledValue(documentObject, item, strings.recommended, row.recommended, 'sitx-serverdiag-row__recommended');
-	}
-
+	summary = documentObject.createElement('p');
+	summary.className = 'sitx-serverdiag-row__summary';
+	summary.textContent = displayText(row.detail) || '—';
+	item.appendChild(summary);
+	detail = documentObject.createElement('div');
+	detail.className = 'sitx-serverdiag-row__detail';
+	detail.id = detailId;
+	detail.hidden = true;
 	if (row.detail !== null && typeof row.detail !== 'undefined' && '' !== displayText(row.detail)) {
-		detail = documentObject.createElement('p');
-		detail.className = 'sitx-serverdiag-row__detail';
-		detail.textContent = displayText(row.detail);
-		item.appendChild(detail);
+		var detailText = documentObject.createElement('p');
+		detailText.textContent = displayText(row.detail);
+		detail.appendChild(detailText);
 	}
+	appendLabeledValue(documentObject, detail, strings.current, row.value, 'sitx-serverdiag-row__detail-value');
+	if (row.recommended !== null && typeof row.recommended !== 'undefined' && '' !== displayText(row.recommended)) {
+		appendLabeledValue(documentObject, detail, strings.recommended, row.recommended, 'sitx-serverdiag-row__detail-value');
+	}
+	detailButton.type = 'button';
+	detailButton.className = 'sitx-serverdiag-row__action';
+	detailButton.setAttribute('data-sitx-diag-row-details', '');
+	detailButton.setAttribute('aria-controls', detailId);
+	detailButton.setAttribute('aria-expanded', 'false');
+	detailButton.textContent = strings.details;
+	detailButton.addEventListener('click', function () {
+		var expanded = 'true' === detailButton.getAttribute('aria-expanded');
+		detailButton.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+		if (detail) {
+			detail.hidden = expanded;
+		}
+	});
+	item.appendChild(detailButton);
+	item.appendChild(detail);
 
 	return item;
 }
 
 function appendRows(documentObject, container, rows, strings) {
-	rows.forEach(function (row) {
-		container.appendChild(createRowItem(documentObject, row, undefined, undefined, strings));
+	rows.forEach(function (row, index) {
+		container.appendChild(createRowItem(documentObject, row, index + 1, rows.length, strings));
 	});
 }
 
@@ -606,36 +710,59 @@ function createDisclosure(documentObject, parent, rows, type, state, windowObjec
 }
 
 function renderSectionRows(documentObject, state, rows, windowObject, strings) {
-	var groups = partitionRows(rows);
-	var directInformation;
-	var problems;
+	var view = applyRowView(rows, {
+		filter: 'all',
+		query: '',
+		hidePassed: false,
+		sort: state.sort || 'severity',
+		expanded: state.showAll || state.printRendering,
+		limit: 10,
+	});
+	var tableHeader = documentObject.createElement('div');
+	var list = documentObject.createElement('div');
+	var showAllButton;
 
 	state.virtualRenders.forEach(function (virtualState) {
 		virtualState.destroy();
 	});
 	state.virtualRenders = [];
 	removeChildren(state.panel);
-	if (groups.problems.length) {
-		problems = documentObject.createElement('div');
-		problems.className = 'sitx-serverdiag-problems';
-		renderRowCollection(documentObject, problems, groups.problems, strings.problemsListLabel, windowObject, strings, state);
-		state.panel.appendChild(problems);
+	tableHeader.className = 'sitx-serverdiag-checks-header';
+	[
+		strings.statusColumn,
+		strings.checkColumn,
+		strings.current,
+		strings.descriptionColumn,
+		strings.actionColumn,
+	].forEach(function (heading) {
+		var cell = documentObject.createElement('span');
+		cell.textContent = heading;
+		tableHeader.appendChild(cell);
+	});
+	state.panel.appendChild(tableHeader);
+	list.className = 'sitx-serverdiag-checks-table';
+	if (state.showAll && shouldVirtualize(view.rows.length) && !state.printRendering) {
+		state.virtualRenders.push(renderVirtualRows(documentObject, list, view.rows, strings.checkColumn, windowObject, strings));
+	} else {
+		renderRowCollection(documentObject, list, view.visible, strings.checkColumn, windowObject, strings, state);
+	}
+	state.panel.appendChild(list);
+
+	if (view.rows.length > 10) {
+		showAllButton = documentObject.createElement('button');
+		showAllButton.type = 'button';
+		showAllButton.className = 'sitx-serverdiag-show-all';
+		showAllButton.setAttribute('data-sitx-diag-show-all', '');
+		showAllButton.textContent = state.showAll ? strings.showFewer : strings.showAllChecks + ' (' + view.rows.length + ')';
+		showAllButton.addEventListener('click', function () {
+			state.showAll = !state.showAll;
+			state.renderKey = null;
+			renderSectionRows(documentObject, state, rows, windowObject, strings);
+		});
+		state.panel.appendChild(showAllButton);
 	}
 
-	if (groups.information.length > 10) {
-		createDisclosure(documentObject, state.panel, groups.information, 'information', state, windowObject, strings);
-	} else if (groups.information.length) {
-		directInformation = documentObject.createElement('div');
-		directInformation.className = 'sitx-serverdiag-information';
-		renderRowCollection(documentObject, directInformation, groups.information, strings.informationListLabel, windowObject, strings, state);
-		state.panel.appendChild(directInformation);
-	}
-
-	if (groups.passed.length) {
-		createDisclosure(documentObject, state.panel, groups.passed, 'passed', state, windowObject, strings);
-	}
-
-	if (!groups.ordered.length) {
+	if (!view.rows.length) {
 		var empty = documentObject.createElement('p');
 		empty.className = 'sitx-serverdiag-section__empty';
 		empty.textContent = strings.sectionNoMatches;
@@ -659,20 +786,68 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 	diagnosticsPage.setAttribute('data-sitx-diag-initialized', 'true');
 	var filterButtons = Array.prototype.slice.call(diagnosticsPage.querySelectorAll('[data-sitx-diag-filter]'));
 	var searchInput = diagnosticsPage.querySelector('[data-sitx-diag-search]');
+	var hidePassedInput = diagnosticsPage.querySelector('[data-sitx-diag-hide-passed]');
+	var sortSelect = diagnosticsPage.querySelector('[data-sitx-diag-sort]');
 	var expandAll = diagnosticsPage.querySelector('[data-sitx-diag-expand-all]');
 	var collapseAll = diagnosticsPage.querySelector('[data-sitx-diag-collapse-all]');
 	var sectionControls = diagnosticsPage.querySelector('[data-sitx-diag-section-controls]');
 	var mobileExpandAll = diagnosticsPage.querySelector('[data-sitx-diag-mobile-expand-all]');
 	var mobileCollapseAll = diagnosticsPage.querySelector('[data-sitx-diag-mobile-collapse-all]');
 	var copyButton = diagnosticsPage.querySelector('[data-sitx-diag-copy-system-info]');
+	var mobileCopyButton = diagnosticsPage.querySelector('[data-sitx-diag-copy-system-info-mobile]');
+	var refreshButton = diagnosticsPage.querySelector('[data-sitx-diag-refresh]');
+	var refreshStatus = diagnosticsPage.querySelector('[data-sitx-diag-refresh-status]');
 	var liveRegion = diagnosticsPage.querySelector('[data-sitx-diag-live]');
 	var main = diagnosticsPage.querySelector('.sitx-serverdiag-main');
 	var currentFilter = 'all';
 	var currentQuery = '';
+	var hidePassed = false;
+	var currentSort = 'severity';
 	var sections = [];
 	var noResults;
 	var strings = diagnosticsStrings(windowObject);
 	var printSnapshot = null;
+
+	if (refreshButton) {
+		refreshButton.addEventListener('click', function () {
+			var data = windowObject.siteintelixDiagnosticsData || {};
+			var body = new URLSearchParams();
+			body.set('action', 'siteintelix_refresh_server_diagnostics');
+			body.set('nonce', data.refreshNonce || '');
+			refreshButton.disabled = true;
+			refreshButton.setAttribute('aria-busy', 'true');
+			if (refreshStatus) {
+				refreshStatus.classList.remove('has-error');
+				refreshStatus.textContent = strings.refreshing;
+			}
+
+			windowObject.fetch(data.ajaxUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+				body: body.toString(),
+			}).then(function (response) {
+				return response.json();
+			}).then(function (response) {
+				if (!response || !response.success) {
+					throw new Error('Diagnostics refresh failed');
+				}
+				if (refreshStatus) {
+					refreshStatus.textContent = strings.refreshComplete;
+				}
+				windowObject.setTimeout(function () {
+					windowObject.location.reload();
+				}, 350);
+			}).catch(function () {
+				refreshButton.disabled = false;
+				refreshButton.removeAttribute('aria-busy');
+				if (refreshStatus) {
+					refreshStatus.classList.add('has-error');
+					refreshStatus.textContent = strings.refreshFailed;
+				}
+			});
+		});
+	}
 
 	function announce(message) {
 		if (liveRegion) {
@@ -706,10 +881,19 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 	}
 
 	function matchingRows(state) {
+		var matched;
 		if (!parseSection(state)) {
 			return null;
 		}
-		state.match = sectionMatchSummary(state.rows, currentFilter, currentQuery);
+		matched = filterRows(state.rows, currentFilter, currentQuery);
+		if (hidePassed && 'passed' !== currentFilter) {
+			matched = matched.filter(function (row) {
+				return 'pass' !== row.status;
+			});
+		}
+		matched = sortRows(matched, currentSort);
+		state.sort = currentSort;
+		state.match = sectionMatchSummary(matched, 'all', '');
 		return state.match;
 	}
 
@@ -719,7 +903,7 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 		if (!summary) {
 			return;
 		}
-		renderKey = currentFilter + '\n' + currentQuery;
+		renderKey = currentFilter + '\n' + currentQuery + '\n' + String(hidePassed) + '\n' + currentSort + '\n' + String(state.showAll);
 		if (state.renderKey === renderKey && 'true' === state.panel.getAttribute('data-rendered')) {
 			return;
 		}
@@ -899,6 +1083,8 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 			expanded: false,
 			informationExpanded: false,
 			passedExpanded: false,
+			showAll: false,
+			sort: 'severity',
 			renderKey: null,
 			virtualRenders: [],
 			printRendering: false,
@@ -920,15 +1106,50 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 		});
 	});
 
+	sections.some(function (state) {
+		if ('true' !== state.element.getAttribute('data-sitx-diag-default-open')) {
+			return false;
+		}
+		setSectionOpen(state, true);
+		return true;
+	});
+
+	function resetRowLimits() {
+		sections.forEach(function (state) {
+			state.showAll = false;
+			state.renderKey = null;
+		});
+	}
+
 	filterButtons.forEach(function (button) {
 		button.addEventListener('click', function () {
 			currentFilter = button.getAttribute('data-sitx-diag-filter') || 'all';
+			if ('passed' === currentFilter && hidePassedInput) {
+				hidePassed = false;
+				hidePassedInput.checked = false;
+			}
+			resetRowLimits();
 			applyFilters();
 		});
 	});
 	if (searchInput) {
 		searchInput.addEventListener('input', function () {
 			currentQuery = (searchInput.value || '').trim();
+			resetRowLimits();
+			applyFilters();
+		});
+	}
+	if (hidePassedInput) {
+		hidePassedInput.addEventListener('change', function () {
+			hidePassed = true === hidePassedInput.checked;
+			resetRowLimits();
+			applyFilters();
+		});
+	}
+	if (sortSelect) {
+		sortSelect.addEventListener('change', function () {
+			currentSort = ['severity', 'name', 'status'].indexOf(sortSelect.value) !== -1 ? sortSelect.value : 'severity';
+			resetRowLimits();
 			applyFilters();
 		});
 	}
@@ -954,9 +1175,12 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 		windowObject.addEventListener('beforeprint', prepareForPrint);
 		windowObject.addEventListener('afterprint', restoreAfterPrint);
 	}
-	if (copyButton) {
-		copyButton.addEventListener('click', function () {
-			var sourceId = copyButton.getAttribute('aria-controls');
+	function bindCopyButton(button) {
+		if (!button) {
+			return;
+		}
+		button.addEventListener('click', function () {
+			var sourceId = button.getAttribute('aria-controls');
 			var source = sourceId ? documentObject.getElementById(sourceId) : null;
 			var report = source ? source.value : '';
 			var result;
@@ -1011,6 +1235,8 @@ function initDiagnosticsPage(diagnosticsPage, documentObject, windowObject) {
 			}
 		});
 	}
+	bindCopyButton(copyButton);
+	bindCopyButton(mobileCopyButton);
 
 	diagnosticsPage.classList.add('is-enhanced');
 	ensureNoResults();
@@ -1021,6 +1247,8 @@ if (typeof module !== 'undefined' && module.exports) {
 		normalizeText: normalizeText,
 		filterRows: filterRows,
 		orderRows: orderRows,
+		sortRows: sortRows,
+		applyRowView: applyRowView,
 		visibleRange: visibleRange,
 		partitionRows: partitionRows,
 		sectionMatchSummary: sectionMatchSummary,

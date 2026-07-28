@@ -202,11 +202,13 @@ class SITEINTELIX_Download_Manager_Module {
 	 */
 	private static function get_request_value( $key ) {
 		if ( isset( $_GET[ $key ] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Shared reader; the fixed type and package item are sanitized and allow-listed by handle_download().
 			return (string) wp_unslash( $_GET[ $key ] );
 		}
 
 		$escaped_key = 'amp;' . $key;
 		if ( isset( $_GET[ $escaped_key ] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Shared reader for HTML-escaped URLs; handle_download() sanitizes and allow-lists the result.
 			return (string) wp_unslash( $_GET[ $escaped_key ] );
 		}
 
@@ -223,6 +225,7 @@ class SITEINTELIX_Download_Manager_Module {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The copied nonce is immediately validated by check_admin_referer().
 		$_REQUEST['_wpnonce'] = wp_unslash( $_REQUEST['amp;_wpnonce'] );
 	}
 

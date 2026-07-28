@@ -54,6 +54,35 @@
 	--si-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
+/* Shared, keyboard-contained confirmation dialog used by focused screen bundles. */
+.sitx-core-dialog {
+	align-items: center;
+	background: rgba(15, 23, 42, .62);
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	padding: 20px;
+	position: fixed;
+	z-index: 100100;
+}
+
+.sitx-core-dialog__panel {
+	background: var(--si-surface, #fff);
+	border-radius: var(--si-radius-lg, 12px);
+	box-shadow: 0 24px 64px rgba(15, 23, 42, .3);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	max-width: 460px;
+	padding: 24px;
+	width: 100%;
+}
+
+.sitx-core-dialog__panel h2,
+.sitx-core-dialog__panel p {
+	flex-basis: 100%;
+}
+
 /* ============================================================
    16. Final WordPress-native visual overrides
    Keep this block last so the shared design system wins.
@@ -410,6 +439,7 @@
 	min-width: 280px;
 	width: 32%;
 }
+
 
 /* Settings token refresh. Keep final. */
 #siteintelix-settings-page .siteintelix-container,
@@ -3249,9 +3279,16 @@
 }
 
 .sitx-toggle input {
+	border: 0;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
 	height: 1px;
+	margin: -1px;
 	opacity: 0;
+	overflow: hidden;
+	padding: 0;
 	position: absolute;
+	white-space: nowrap;
 	width: 1px;
 }
 
@@ -3285,6 +3322,11 @@
 
 .sitx-toggle input:checked + .sitx-toggle__slider::before {
 	transform: translateX(20px);
+}
+
+.sitx-toggle input:focus-visible {
+	box-shadow: none;
+	outline: 0;
 }
 
 .sitx-toggle input:focus-visible + .sitx-toggle__slider {
@@ -5457,4 +5499,440 @@
 .siteintelix-log-table .col-file {
 	min-width: 280px;
 	width: 32%;
+}
+
+/* Database Manager screenshot-matched dashboard */
+.sitx-db-manager {
+	background: #f7f9fc;
+}
+
+.sitx-db-manager .sitx-db-header {
+	background: var(--si-surface);
+	border-bottom: 1px solid var(--si-border);
+	box-sizing: border-box;
+	margin-inline: auto;
+	max-width: 1440px;
+	padding: 0 var(--si-db-page-pad);
+	width: 100%;
+}
+
+.sitx-db-manager .sitx-db-tabs {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	display: flex;
+	gap: 8px;
+	padding: 0;
+	width: 100%;
+}
+
+.sitx-db-manager .sitx-db-tabs a {
+	border-bottom: 2px solid transparent;
+	border-radius: 0;
+	color: var(--si-muted);
+	min-height: 54px;
+	padding: 0 16px;
+}
+
+.sitx-db-manager .sitx-db-tabs a.is-active {
+	background: transparent;
+	border-bottom-color: var(--si-primary);
+	color: var(--si-primary);
+}
+
+.sitx-db-manager .sitx-db-container {
+	padding-top: 20px;
+}
+
+.sitx-db-manager .sitx-db-stats {
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.sitx-db-manager .sitx-db-stat-card {
+	align-items: center;
+	border-color: var(--si-border);
+	border-radius: 10px;
+	box-shadow: 0 2px 8px rgba(15, 23, 42, .035);
+	display: flex;
+	flex-direction: row;
+	gap: 16px;
+	min-height: 112px;
+	padding: 18px 20px;
+}
+
+.sitx-db-stat-icon {
+	align-items: center;
+	background: #eaf2ff;
+	border: 1px solid #cfe0ff;
+	border-radius: 10px;
+	color: var(--si-primary);
+	display: inline-flex;
+	flex: 0 0 48px;
+	height: 48px;
+	justify-content: center;
+	width: 48px;
+}
+
+.sitx-db-stat-icon .dashicons {
+	font-size: 26px;
+	height: 26px;
+	width: 26px;
+}
+
+.sitx-db-stat-card--records .sitx-db-stat-icon {
+	background: #f3edff;
+	border-color: #e1d4ff;
+	color: #7c3aed;
+}
+
+.sitx-db-stat-card--data .sitx-db-stat-icon {
+	background: #eaf8ef;
+	border-color: #cfead7;
+	color: #16803b;
+}
+
+.sitx-db-stat-card--index .sitx-db-stat-icon {
+	background: #fff2e8;
+	border-color: #ffdcc4;
+	color: #ea6a14;
+}
+
+.sitx-db-stat-copy {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.sitx-db-manager .sitx-db-stat-copy > span {
+	color: var(--si-muted);
+	font-size: 12px;
+	font-weight: 650;
+}
+
+.sitx-db-manager .sitx-db-stat-copy > strong {
+	color: var(--si-text);
+	font-size: 25px;
+	font-weight: 750;
+	line-height: 1.15;
+	margin-top: 3px;
+}
+
+.sitx-db-stat-copy small {
+	color: #17845b;
+	font-size: 12px;
+	margin-top: 7px;
+}
+
+.sitx-db-dashboard-card {
+	background: var(--si-surface);
+	border: 1px solid var(--si-border);
+	border-radius: 10px;
+	box-shadow: 0 2px 8px rgba(15, 23, 42, .035);
+	overflow: visible;
+	padding: 16px;
+}
+
+.sitx-db-dashboard-toolbar {
+	align-items: center;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.sitx-db-dashboard-heading {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	min-width: max-content;
+}
+
+.sitx-db-dashboard-heading h2 {
+	color: var(--si-text);
+	font-size: 15px;
+	font-weight: 700;
+	margin: 0;
+}
+
+.sitx-db-dashboard-heading .dashicons {
+	color: var(--si-muted);
+	font-size: 17px;
+	height: 17px;
+	width: 17px;
+}
+
+.sitx-db-dashboard-filter {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin: 0;
+	min-width: 0;
+}
+
+.sitx-db-dashboard-filter select {
+	border-color: var(--si-border);
+	border-radius: var(--si-radius-md);
+	box-shadow: none;
+	font-size: 13px;
+	min-height: 38px;
+	max-width: 142px;
+}
+
+.sitx-db-dashboard-search {
+	align-items: center;
+	display: flex;
+	position: relative;
+	width: min(260px, 34vw);
+}
+
+.sitx-db-dashboard-search .dashicons {
+	color: var(--si-muted);
+	left: 10px;
+	pointer-events: none;
+	position: absolute;
+}
+
+.sitx-db-dashboard-search input {
+	border-color: var(--si-border);
+	border-radius: var(--si-radius-md);
+	box-shadow: none;
+	min-height: 38px;
+	padding-left: 34px;
+	width: 100%;
+}
+
+.sitx-db-dashboard-submit {
+	flex: 0 0 38px;
+	min-height: 38px;
+	padding: 0;
+	width: 38px;
+}
+
+.sitx-db-dashboard-card .sitx-db-table-wrap {
+	border-radius: 8px;
+	overflow: visible;
+}
+
+.sitx-db-dashboard-card .sitx-db-table {
+	table-layout: auto;
+}
+
+.sitx-db-dashboard-card .sitx-db-table thead th {
+	background: #f8fafc;
+	color: #475569;
+	padding: 9px 12px;
+}
+
+.sitx-db-dashboard-card .sitx-db-table tbody td {
+	color: #334155;
+	padding: 8px 12px;
+	vertical-align: middle;
+}
+
+.sitx-db-dashboard-card .sitx-db-table th:first-child,
+.sitx-db-dashboard-card .sitx-db-table td:first-child {
+	text-align: center;
+	width: 52px;
+}
+
+.sitx-db-dashboard-card .sitx-db-table th:last-child,
+.sitx-db-dashboard-card .sitx-db-table td:last-child {
+	text-align: center;
+	width: 58px;
+}
+
+.sitx-db-dashboard-action-cell {
+	overflow: visible;
+	position: relative;
+}
+
+.sitx-db-dashboard-actions {
+	display: inline-block;
+	position: relative;
+}
+
+.sitx-db-dashboard-actions summary {
+	align-items: center;
+	background: #fff;
+	border: 1px solid var(--si-border);
+	border-radius: 6px;
+	color: #475569;
+	cursor: pointer;
+	display: inline-flex;
+	height: 30px;
+	justify-content: center;
+	list-style: none;
+	width: 30px;
+}
+
+.sitx-db-dashboard-actions summary::-webkit-details-marker {
+	display: none;
+}
+
+.sitx-db-dashboard-actions summary:hover,
+.sitx-db-dashboard-actions summary:focus-visible {
+	background: var(--si-primary-soft);
+	border-color: #9ec8f2;
+	color: var(--si-primary);
+}
+
+.sitx-db-dashboard-actions > div {
+	background: #fff;
+	border: 1px solid var(--si-border);
+	border-radius: 7px;
+	box-shadow: 0 12px 28px rgba(15, 23, 42, .16);
+	min-width: 132px;
+	padding: 5px;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 5px);
+	z-index: 20;
+}
+
+.sitx-db-dashboard-actions > div a {
+	border-radius: 5px;
+	display: block;
+	padding: 7px 9px;
+	text-align: left;
+}
+
+.sitx-db-dashboard-actions > div a:hover,
+.sitx-db-dashboard-actions > div a:focus {
+	background: var(--si-primary-soft);
+}
+
+.sitx-db-dashboard-footer {
+	align-items: center;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	padding-top: 12px;
+}
+
+.sitx-db-dashboard-page-size,
+.sitx-db-dashboard-page-size label {
+	align-items: center;
+	color: var(--si-muted);
+	display: flex;
+	font-size: 12px;
+	gap: 7px;
+	margin: 0;
+}
+
+.sitx-db-dashboard-page-size select {
+	border-color: var(--si-border);
+	border-radius: 6px;
+	box-shadow: none;
+	font-size: 12px;
+	min-height: 34px;
+}
+
+.sitx-db-dashboard-pagination {
+	align-items: center;
+	color: var(--si-muted);
+	display: flex;
+	font-size: 12px;
+	gap: 6px;
+}
+
+.sitx-db-dashboard-pagination > span:first-child {
+	margin-right: 8px;
+}
+
+.sitx-db-dashboard-pagination .page-numbers {
+	align-items: center;
+	background: #fff;
+	border: 1px solid var(--si-border);
+	border-radius: 6px;
+	color: var(--si-text);
+	display: inline-flex;
+	justify-content: center;
+	min-height: 32px;
+	min-width: 32px;
+	padding: 0 8px;
+	text-decoration: none;
+}
+
+.sitx-db-dashboard-pagination .page-numbers.current {
+	background: var(--si-primary);
+	border-color: var(--si-primary);
+	color: #fff;
+}
+
+.sitx-db-dashboard-pagination .page-numbers:hover,
+.sitx-db-dashboard-pagination .page-numbers:focus {
+	background: var(--si-primary-soft);
+	border-color: #9ec8f2;
+	color: var(--si-primary-hover);
+}
+
+@media (max-width: 1200px) {
+	.sitx-db-manager .sitx-db-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.sitx-db-dashboard-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.sitx-db-dashboard-filter {
+		justify-content: flex-start;
+	}
+}
+
+@media (max-width: 900px) {
+	.sitx-db-dashboard-card .sitx-db-table-wrap {
+		overflow-x: auto;
+	}
+
+	.sitx-db-dashboard-card .sitx-db-table {
+		min-width: 820px;
+	}
+
+	.sitx-db-dashboard-footer {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 782px) {
+	.sitx-db-manager .sitx-db-header,
+	.sitx-db-manager .sitx-db-container {
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.sitx-db-manager .sitx-db-stats {
+		grid-template-columns: 1fr;
+	}
+
+	.sitx-db-dashboard-filter {
+		align-items: stretch;
+		flex-wrap: wrap;
+	}
+
+	.sitx-db-dashboard-search {
+		flex: 1 1 100%;
+		width: 100%;
+	}
+
+	.sitx-db-dashboard-filter label:not(.sitx-db-dashboard-search) {
+		flex: 1 1 calc(50% - 4px);
+	}
+
+	.sitx-db-dashboard-filter select {
+		max-width: none;
+		width: 100%;
+	}
+
+	.sitx-db-dashboard-pagination {
+		flex-wrap: wrap;
+	}
+
+	.sitx-db-dashboard-pagination > span:first-child {
+		flex-basis: 100%;
+	}
 }

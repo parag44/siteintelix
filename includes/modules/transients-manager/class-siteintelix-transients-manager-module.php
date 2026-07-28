@@ -1058,9 +1058,9 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return array<string,mixed>|null
 	 */
 	private static function get_view_item() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Read-only value is normalized by sanitize_name().
 		$name = isset( $_GET['view_transient'] ) ? self::sanitize_name( wp_unslash( $_GET['view_transient'] ) ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Read-only value is allow-listed by sanitize_type().
 		$type = isset( $_GET['view_type'] ) ? self::sanitize_type( wp_unslash( $_GET['view_type'] ) ) : '';
 
 		return $name && $type ? self::fetch_item( $type, $name ) : null;
@@ -1446,6 +1446,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	 * @return string
 	 */
 	private static function request_value( $key ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Shared reader; every mutating caller verifies its action nonce before use.
 		if ( isset( $_POST[ $key ] ) ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Shared reader; mutating callers verify nonces before use.
 			return sanitize_text_field( wp_unslash( $_POST[ $key ] ) );

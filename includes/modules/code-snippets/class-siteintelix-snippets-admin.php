@@ -53,27 +53,38 @@ class SITEINTELIX_Snippets_Admin {
 
 	public static function save() {
 		self::auth('siteintelix_snippet_save');
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- auth() verified the action-specific nonce immediately above.
 		$id=absint($_POST['snippet_id']??0); $input=SITEINTELIX_Snippets_Repository::normalize_request($_POST);
 		$valid=SITEINTELIX_Snippets_Validator::validate($input['code']);
 		if(is_wp_error($valid)){ wp_safe_redirect(add_query_arg('snippet_error',rawurlencode($valid->get_error_message()),wp_get_referer())); exit; }
 		if('save_activate'===sanitize_key($_POST['submit_mode']??'')) $input['status']='active';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$id=$id?(SITEINTELIX_Snippets_Repository::update($id,$input)?$id:0):SITEINTELIX_Snippets_Repository::insert($input);
 		wp_safe_redirect(add_query_arg(array('page'=>'siteintelix-code-snippets-new','snippet'=>$id,'saved'=>1),admin_url('admin.php'))); exit;
 	}
 
 	public static function action() {
-		self::auth('siteintelix_snippet_action'); $id=absint($_GET['snippet']??0); $do=sanitize_key($_GET['do']??''); $item=SITEINTELIX_Snippets_Repository::get($id);
+		self::auth('siteintelix_snippet_action');
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- auth() verified the action-specific nonce immediately above.
+		$id=absint($_GET['snippet']??0); $do=sanitize_key($_GET['do']??'');
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		$item=SITEINTELIX_Snippets_Repository::get($id);
 		if($item&&in_array($do,array('activate','deactivate'),true)) SITEINTELIX_Snippets_Repository::set_status(array($id),'activate'===$do?'active':'inactive');
 		elseif($item&&'duplicate'===$do) SITEINTELIX_Snippets_Repository::duplicate($id); elseif($item&&'delete'===$do) SITEINTELIX_Snippets_Repository::delete($id);
 		wp_safe_redirect(admin_url('admin.php?page=siteintelix-code-snippets')); exit;
 	}
 	public static function bulk() {
-		self::auth('siteintelix_snippet_bulk'); $ids=array_map('absint',(array)($_POST['snippet_ids']??array())); $do=sanitize_key($_POST['bulk_action']??'');
+		self::auth('siteintelix_snippet_bulk');
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- auth() verified the action-specific nonce immediately above.
+		$ids=array_map('absint',(array)($_POST['snippet_ids']??array())); $do=sanitize_key($_POST['bulk_action']??'');
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		if(in_array($do,array('activate','deactivate'),true)) SITEINTELIX_Snippets_Repository::set_status($ids,'activate'===$do?'active':'inactive'); elseif('delete'===$do) foreach($ids as $id) SITEINTELIX_Snippets_Repository::delete($id);
 		wp_safe_redirect(admin_url('admin.php?page=siteintelix-code-snippets')); exit;
 	}
 	public static function run_once() {
-		self::auth('siteintelix_snippet_run_once'); $id=absint($_POST['snippet_id']??0); $item=SITEINTELIX_Snippets_Repository::get($id);
+		self::auth('siteintelix_snippet_run_once');
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- auth() verified the action-specific nonce immediately above.
+		$id=absint($_POST['snippet_id']??0); $item=SITEINTELIX_Snippets_Repository::get($id);
 		if($item){ SITEINTELIX_Snippets_Repository::set_status(array($id),'running_once'); SITEINTELIX_Snippets_Runner::execute($item); SITEINTELIX_Snippets_Repository::set_status(array($id),'inactive'); }
 		wp_safe_redirect(admin_url('admin.php?page=siteintelix-code-snippets')); exit;
 	}

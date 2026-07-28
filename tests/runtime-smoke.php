@@ -9,6 +9,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 wp_set_current_user( 1 );
 
+if ( ! method_exists( 'SITEINTELIX_Modules', 'reset_cache' ) ) {
+	WP_CLI::error( 'Module registry must expose request-cache invalidation.' );
+}
+
+$siteintelix_module_filter_calls = 0;
+$siteintelix_module_filter       = static function ( $modules ) use ( &$siteintelix_module_filter_calls ) {
+	$siteintelix_module_filter_calls++;
+	return $modules;
+};
+add_filter( 'siteintelix_modules', $siteintelix_module_filter );
+SITEINTELIX_Modules::reset_cache();
+SITEINTELIX_Modules::get_all();
+SITEINTELIX_Modules::get_all();
+SITEINTELIX_Modules::is_enabled( 'debug_log' );
+
+if ( 1 !== $siteintelix_module_filter_calls ) {
+	WP_CLI::error( 'Module registry filter must run once per request cache generation.' );
+}
+
+SITEINTELIX_Modules::reset_cache();
+SITEINTELIX_Modules::get_all();
+if ( 2 !== $siteintelix_module_filter_calls ) {
+	WP_CLI::error( 'Resetting module caches must rebuild the filtered registry.' );
+}
+remove_filter( 'siteintelix_modules', $siteintelix_module_filter );
+
 /**
  * Invoke a private static diagnostics helper for focused runtime assertions.
  *

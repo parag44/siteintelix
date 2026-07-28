@@ -15,6 +15,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SITEINTELIX_Email_Log_Module {
 
 	const SETTINGS_OPTION = 'siteintelix_email_log_settings';
+	const SCHEMA_OPTION   = 'siteintelix_email_log_schema_version';
+	const SCHEMA_VERSION  = '2';
+	const RETENTION_HOOK  = 'siteintelix_email_log_retention';
+	const RETENTION_BATCH_SIZE = 250;
+
+	/**
+	 * Whether the request's mail capture hooks are registered.
+	 *
+	 * @var bool
+	 */
+	private static $capture_hooks_registered = false;
 
 	/**
 	 * Register module hooks.
@@ -22,8 +33,12 @@ class SITEINTELIX_Email_Log_Module {
 	 * @return void
 	 */
 	public static function init() {
-		add_action( 'wp_mail_succeeded', array( __CLASS__, 'log_success' ), 10, 1 );
-		add_action( 'wp_mail_failed', array( __CLASS__, 'log_failure' ), 10, 1 );
+		self::register_capture_hooks();
+		add_action( self::RETENTION_HOOK, array( __CLASS__, 'run_retention_batch' ) );
+
+		if ( self::SCHEMA_VERSION !== (string) get_option( self::SCHEMA_OPTION, '' ) ) {
+			self::activate();
+		}
 
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 30 );
@@ -32,8 +47,28 @@ class SITEINTELIX_Email_Log_Module {
 			add_action( 'admin_post_siteintelix_bulk_email_logs', array( __CLASS__, 'handle_bulk_action' ) );
 			add_action( 'admin_post_siteintelix_send_test_email', array( __CLASS__, 'handle_send_test_email' ) );
 			add_action( 'admin_post_siteintelix_save_email_log_settings', array( __CLASS__, 'handle_save_settings' ) );
+			add_action( 'wp_ajax_siteintelix_get_email_preview', array( __CLASS__, 'handle_get_email_preview' ) );
 			add_action( 'siteintelix_render_module_settings_sections', array( __CLASS__, 'render_settings_section' ), 10, 2 );
 		}
+	}
+
+	/**
+	 * Register outgoing mail capture as early as possible.
+	 *
+	 * Safe to call from both the plugin bootstrap and the normal module
+	 * lifecycle without adding the callbacks more than once.
+	 *
+	 * @return void
+	 */
+	public static function register_capture_hooks() {
+		if ( self::$capture_hooks_registered ) {
+			return;
+		}
+
+		add_action( 'wp_mail_succeeded', array( __CLASS__, 'log_success' ), 10, 1 );
+		add_action( 'wp_mail_failed', array( __CLASS__, 'log_failure' ), 10, 1 );
+
+		self::$capture_hooks_registered = true;
 	}
 
 	/**
@@ -61,7 +96,8 @@ class SITEINTELIX_Email_Log_Module {
 			PRIMARY KEY  (id),
 			KEY status (status),
 			KEY sent_at (sent_at),
-			KEY created_at (created_at)
+				KEY created_at (created_at),
+				KEY status_sent_at_id (status, sent_at, id)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -70,6 +106,9 @@ class SITEINTELIX_Email_Log_Module {
 		if ( false === get_option( self::SETTINGS_OPTION, false ) ) {
 			add_option( self::SETTINGS_OPTION, self::get_default_settings() );
 		}
+
+		update_option( self::SCHEMA_OPTION, self::SCHEMA_VERSION, false );
+		self::schedule_retention();
 	}
 
 	/**
@@ -186,8 +225,6 @@ class SITEINTELIX_Email_Log_Module {
 			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		self::maybe_apply_retention();
-
 		return $inserted ? (int) $wpdb->insert_id : false;
 	}
 
@@ -226,17 +263,18 @@ class SITEINTELIX_Email_Log_Module {
 
 		$where_sql = implode( ' AND ', $where );
 		$count_sql = "SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql}";
-		$rows_sql  = "SELECT * FROM {$table_name} WHERE {$where_sql} ORDER BY sent_at DESC, id DESC LIMIT %d OFFSET %d";
+		$rows_sql  = "SELECT id, status, sent_at, to_email, subject, error_message FROM {$table_name} WHERE {$where_sql} ORDER BY sent_at DESC, id DESC LIMIT %d OFFSET %d";
 		$args_rows = array_merge( $args, array( $per_page, ( $current_page - 1 ) * $per_page ) );
+		$date_time_format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned admin log query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Module-owned admin log query; identifiers are plugin-owned and values use placeholders.
 		$total = $args ? (int) $wpdb->get_var( $wpdb->prepare( $count_sql, $args ) ) : (int) $wpdb->get_var( $count_sql );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned admin log query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Module-owned admin log query; identifiers are plugin-owned and values use placeholders.
 		$rows = $wpdb->get_results( $wpdb->prepare( $rows_sql, $args_rows ) );
 
 		$clear_url = wp_nonce_url( admin_url( 'admin-post.php?action=siteintelix_clear_email_logs' ), 'siteintelix_clear_email_logs' );
 		?>
-		<div class="wrap siteintelix-wrap si-admin-wrap">
+		<div class="wrap siteintelix-wrap si-admin-wrap" id="siteintelix-email-log-page">
 			<?php
 			SITEINTELIX_Admin_UI::page_header(
 				array(
@@ -268,10 +306,13 @@ class SITEINTELIX_Email_Log_Module {
 						),
 						SITEINTELIX_Admin_UI::button(
 							array(
-								'label'   => __( 'Clear Logs', 'siteintelix' ),
+									'label'   => __( 'Clear Logs', 'siteintelix' ),
 								'url'     => $clear_url,
 								'variant' => 'danger',
-								'icon'    => 'dashicons-trash',
+									'icon'    => 'dashicons-trash',
+									'attributes' => array(
+										'data-siteintelix-confirm' => __( 'Delete all email logs? This cannot be undone.', 'siteintelix' ),
+									),
 							)
 						),
 					),
@@ -323,12 +364,14 @@ class SITEINTELIX_Email_Log_Module {
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sitx-email-log-bulk-form">
 						<input type="hidden" name="action" value="siteintelix_bulk_email_logs">
 						<?php wp_nonce_field( 'siteintelix_bulk_email_logs' ); ?>
-						<div class="sitx-email-log-bulk-actions">
+							<div class="sitx-email-log-bulk-actions">
 							<select name="bulk_action" aria-label="<?php esc_attr_e( 'Bulk action', 'siteintelix' ); ?>">
-								<option value=""><?php esc_html_e( 'Bulk actions', 'siteintelix' ); ?></option>
-								<option value="delete"><?php esc_html_e( 'Delete selected', 'siteintelix' ); ?></option>
+							<option value=""><?php esc_html_e( 'Bulk actions', 'siteintelix' ); ?></option>
+							<option value="delete"><?php esc_html_e( 'Delete selected', 'siteintelix' ); ?></option>
+							<option value="delete_all"><?php esc_html_e( 'Delete all logs', 'siteintelix' ); ?></option>
 							</select>
-							<button type="submit" class="sitx-btn sitx-btn--white sitx-btn--small si-button si-button--secondary si-button--small"><?php esc_html_e( 'Apply', 'siteintelix' ); ?></button>
+								<button type="submit" class="sitx-btn sitx-btn--white sitx-btn--small si-button si-button--secondary si-button--small"><?php esc_html_e( 'Apply', 'siteintelix' ); ?></button>
+								<span data-siteintelix-email-selection-status role="status" aria-live="polite"></span>
 						</div>
 						<div class="si-table-wrap">
 							<table class="widefat striped sitx-email-log-table si-table">
@@ -356,8 +399,7 @@ class SITEINTELIX_Email_Log_Module {
 									<?php else : ?>
 										<?php foreach ( $rows as $row ) : ?>
 											<?php
-											$preview    = self::get_preview_payload( $row );
-											$delete_url = wp_nonce_url(
+										$delete_url = wp_nonce_url(
 												add_query_arg(
 													array(
 														'action' => 'siteintelix_delete_email_log',
@@ -371,12 +413,12 @@ class SITEINTELIX_Email_Log_Module {
 											<tr>
 												<th scope="row" class="check-column"><input type="checkbox" name="log_ids[]" value="<?php echo esc_attr( (string) absint( $row->id ) ); ?>" aria-label="<?php esc_attr_e( 'Select email log', 'siteintelix' ); ?>"></th>
 												<td><?php echo wp_kses_post( self::status_badge( $row->status ) ); ?></td>
-												<td><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $row->sent_at ) ); ?></td>
+											<td><?php echo esc_html( mysql2date( $date_time_format, $row->sent_at ) ); ?></td>
 												<td><?php echo esc_html( wp_trim_words( (string) $row->to_email, 8, '…' ) ); ?></td>
 												<td><strong><?php echo esc_html( $row->subject ? $row->subject : __( '(No subject)', 'siteintelix' ) ); ?></strong></td>
 												<td><?php echo esc_html( wp_trim_words( (string) $row->error_message, 16, '…' ) ); ?></td>
 												<td class="sitx-email-log-actions">
-													<button type="button" class="sitx-btn sitx-btn--white sitx-btn--small si-button si-button--secondary si-button--small" data-siteintelix-email-preview="<?php echo esc_attr( wp_json_encode( $preview ) ); ?>"><?php esc_html_e( 'View email', 'siteintelix' ); ?></button>
+												<button type="button" class="sitx-btn sitx-btn--white sitx-btn--small si-button si-button--secondary si-button--small" data-siteintelix-email-id="<?php echo esc_attr( (string) absint( $row->id ) ); ?>"><?php esc_html_e( 'View email', 'siteintelix' ); ?></button>
 													<a class="sitx-btn sitx-btn--danger sitx-btn--small si-button si-button--danger si-button--small" href="<?php echo esc_url( $delete_url ); ?>" data-siteintelix-confirm="<?php esc_attr_e( 'Delete this email log?', 'siteintelix' ); ?>"><?php esc_html_e( 'Delete', 'siteintelix' ); ?></a>
 												</td>
 											</tr>
@@ -396,17 +438,19 @@ class SITEINTELIX_Email_Log_Module {
 				<div class="sitx-email-modal__panel" role="dialog" aria-modal="true" aria-labelledby="siteintelix-email-modal-title">
 					<button type="button" class="sitx-email-modal__close" data-siteintelix-email-modal-close aria-label="<?php esc_attr_e( 'Close email preview', 'siteintelix' ); ?>">&times;</button>
 					<h2 id="siteintelix-email-modal-title"></h2>
+					<p class="sitx-email-modal__status" data-siteintelix-email-modal-status role="status" aria-live="polite"></p>
+					<button type="button" class="si-button si-button--secondary" data-siteintelix-email-preview-retry hidden><?php esc_html_e( 'Retry', 'siteintelix' ); ?></button>
 					<div class="sitx-email-modal__meta" data-siteintelix-email-modal-meta></div>
 					<div class="sitx-email-modal__grid">
 						<div><h3><?php esc_html_e( 'Headers', 'siteintelix' ); ?></h3><pre data-siteintelix-email-modal-headers></pre></div>
 						<div><h3><?php esc_html_e( 'Attachments', 'siteintelix' ); ?></h3><pre data-siteintelix-email-modal-attachments></pre></div>
 					</div>
-					<div class="sitx-email-modal__tabs">
-						<button type="button" class="is-active" data-siteintelix-email-tab="html"><?php esc_html_e( 'HTML view', 'siteintelix' ); ?></button>
-						<button type="button" data-siteintelix-email-tab="source"><?php esc_html_e( 'Text/source view', 'siteintelix' ); ?></button>
+					<div class="sitx-email-modal__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Email preview format', 'siteintelix' ); ?>">
+						<button type="button" class="is-active" role="tab" id="siteintelix-email-tab-html" aria-controls="siteintelix-email-panel-html" aria-selected="true" data-siteintelix-email-tab="html"><?php esc_html_e( 'HTML view', 'siteintelix' ); ?></button>
+						<button type="button" role="tab" id="siteintelix-email-tab-source" aria-controls="siteintelix-email-panel-source" aria-selected="false" tabindex="-1" data-siteintelix-email-tab="source"><?php esc_html_e( 'Text/source view', 'siteintelix' ); ?></button>
 					</div>
-					<iframe class="sitx-email-modal__frame is-active" data-siteintelix-email-panel="html" title="<?php esc_attr_e( 'Email HTML preview', 'siteintelix' ); ?>" sandbox></iframe>
-					<pre class="sitx-email-modal__source" data-siteintelix-email-panel="source"></pre>
+					<iframe class="sitx-email-modal__frame is-active" role="tabpanel" id="siteintelix-email-panel-html" aria-labelledby="siteintelix-email-tab-html" data-siteintelix-email-panel="html" title="<?php esc_attr_e( 'Email HTML preview', 'siteintelix' ); ?>" sandbox></iframe>
+					<pre class="sitx-email-modal__source" role="tabpanel" id="siteintelix-email-panel-source" aria-labelledby="siteintelix-email-tab-source" data-siteintelix-email-panel="source" hidden></pre>
 				</div>
 			</div>
 		</div>
@@ -427,7 +471,7 @@ class SITEINTELIX_Email_Log_Module {
 
 		$settings = self::get_settings();
 		?>
-		<section class="sitx-settings-panel-tab <?php echo 'email_log' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-email-log-settings" data-siteintelix-settings-panel="email_log">
+		<section class="sitx-settings-panel-tab <?php echo 'email_log' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-email-log-settings" role="tabpanel" aria-labelledby="siteintelix-settings-tab-email_log" data-siteintelix-settings-panel="email_log" <?php echo 'email_log' === $active_tab ? '' : 'hidden'; ?>>
 			<div class="sitx-settings-content-grid">
 				<div class="sitx-settings-main">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sitx-tab-form">
@@ -516,10 +560,38 @@ class SITEINTELIX_Email_Log_Module {
 			)
 		);
 
-		self::maybe_apply_retention();
+		self::schedule_retention();
 
 		wp_safe_redirect( add_query_arg( array( 'page' => 'siteintelix-settings', 'siteintelix_settings_saved' => '1', 'tab' => 'email_log' ), admin_url( 'admin.php' ) ) . '#siteintelix-email-log-settings' );
 		exit;
+	}
+
+	/**
+	 * Return one full preview on demand instead of embedding bodies in the list.
+	 *
+	 * @return void
+	 */
+	public static function handle_get_email_preview() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Email preview is unavailable.', 'siteintelix' ) ), 404 );
+		}
+
+		check_ajax_referer( 'siteintelix_email_preview', 'nonce' );
+		$log_id = isset( $_POST['log_id'] ) ? absint( wp_unslash( $_POST['log_id'] ) ) : 0;
+		if ( ! $log_id ) {
+			wp_send_json_error( array( 'message' => __( 'Email preview is unavailable.', 'siteintelix' ) ), 404 );
+		}
+
+		global $wpdb;
+		$table_name = esc_sql( self::get_table_name() );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Fetching one module-owned log by primary key.
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, sent_at, to_email, subject, message, headers, attachments, error_message FROM {$table_name} WHERE id = %d LIMIT 1", $log_id ) );
+
+		if ( ! $row ) {
+			wp_send_json_error( array( 'message' => __( 'Email preview is unavailable.', 'siteintelix' ) ), 404 );
+		}
+
+		wp_send_json_success( self::get_preview_payload( $row ) );
 	}
 
 	/**
@@ -534,11 +606,7 @@ class SITEINTELIX_Email_Log_Module {
 
 		check_admin_referer( 'siteintelix_clear_email_logs' );
 
-		global $wpdb;
-		$table_name = esc_sql( self::get_table_name() );
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Clearing module-owned table.
-		$wpdb->query( "TRUNCATE TABLE {$table_name}" );
+		self::clear_logs_table();
 
 		wp_safe_redirect( admin_url( 'admin.php?page=siteintelix-email-log' ) );
 		exit;
@@ -580,6 +648,12 @@ class SITEINTELIX_Email_Log_Module {
 		$bulk_action = isset( $_POST['bulk_action'] ) ? sanitize_key( wp_unslash( $_POST['bulk_action'] ) ) : '';
 		$log_ids     = isset( $_POST['log_ids'] ) && is_array( $_POST['log_ids'] ) ? array_map( 'absint', wp_unslash( $_POST['log_ids'] ) ) : array();
 
+		if ( 'delete_all' === $bulk_action ) {
+			self::clear_logs_table();
+			wp_safe_redirect( self::get_email_log_redirect_url( array( 'siteintelix_email_deleted' => '1' ) ) );
+			exit;
+		}
+
 		if ( 'delete' === $bulk_action && ! empty( $log_ids ) ) {
 			self::delete_logs_by_ids( $log_ids );
 			wp_safe_redirect( self::get_email_log_redirect_url( array( 'siteintelix_email_deleted' => '1' ) ) );
@@ -588,6 +662,19 @@ class SITEINTELIX_Email_Log_Module {
 
 		wp_safe_redirect( self::get_email_log_redirect_url() );
 		exit;
+	}
+
+	/**
+	 * Clear every row in the module-owned Email Log table.
+	 *
+	 * @return void
+	 */
+	private static function clear_logs_table() {
+		global $wpdb;
+		$table_name = esc_sql( self::get_table_name() );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Clearing the module-owned table after capability and nonce validation.
+		$wpdb->query( "TRUNCATE TABLE {$table_name}" );
 	}
 
 	/**
@@ -628,19 +715,43 @@ class SITEINTELIX_Email_Log_Module {
 	}
 
 	/**
-	 * Apply retention settings.
+	 * Ensure hourly retention is scheduled once.
 	 *
 	 * @return void
 	 */
-	public static function maybe_apply_retention() {
+	public static function schedule_retention() {
+		if ( ! wp_next_scheduled( self::RETENTION_HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', self::RETENTION_HOOK );
+		}
+	}
+
+	/**
+	 * Remove all retention events when the module/plugin is disabled.
+	 *
+	 * @return void
+	 */
+	public static function unschedule_retention() {
+		wp_clear_scheduled_hook( self::RETENTION_HOOK );
+	}
+
+	/**
+	 * Delete at most one bounded batch for each retention policy.
+	 *
+	 * @return int Number of rows deleted.
+	 */
+	public static function run_retention_batch() {
 		global $wpdb;
 
 		$settings   = self::get_settings();
 		$table_name = esc_sql( self::get_table_name() );
+		$deleted    = 0;
 
 		if ( ! empty( $settings['retention_days'] ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned retention cleanup.
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE created_at < DATE_SUB(%s, INTERVAL %d DAY)", current_time( 'mysql' ), absint( $settings['retention_days'] ) ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded cleanup of module-owned rows.
+			$result = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE created_at < DATE_SUB(%s, INTERVAL %d DAY) ORDER BY id ASC LIMIT %d", current_time( 'mysql' ), absint( $settings['retention_days'] ), self::RETENTION_BATCH_SIZE ) );
+			if ( false !== $result ) {
+				$deleted += (int) $result;
+			}
 		}
 
 		if ( ! empty( $settings['max_logs'] ) ) {
@@ -648,16 +759,17 @@ class SITEINTELIX_Email_Log_Module {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned count.
 			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
 
-			if ( $count > $max_logs ) {
-				$offset = max( 0, $max_logs - 1 );
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned retention lookup.
-				$cutoff = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_name} ORDER BY id DESC LIMIT 1 OFFSET %d", $offset ) );
-				if ( $cutoff ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Module-owned retention cleanup.
-					$wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE id < %d", absint( $cutoff ) ) );
+				if ( $count > $max_logs ) {
+					$overflow = min( self::RETENTION_BATCH_SIZE, $count - $max_logs );
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded cleanup of oldest module-owned rows.
+					$result = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} ORDER BY id ASC LIMIT %d", $overflow ) );
+					if ( false !== $result ) {
+						$deleted += (int) $result;
+					}
 				}
 			}
-		}
+
+		return $deleted;
 	}
 
 	/**

@@ -487,11 +487,11 @@ $siteintelix_header_actions = ob_get_clean();
 									(int) $siteintelix_group['count']
 								) ); ?></strong>
 									<?php if ( ! empty( $siteintelix_editor_link['url'] ) ) : ?>
-										<a class="sitx-log-path sitx-log-path--editor" href="<?php echo esc_url( $siteintelix_editor_link['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+										<a class="sitx-log-path sitx-log-path--editor" href="<?php echo esc_url( $siteintelix_editor_link['url'] ); ?>" target="_blank" rel="noopener noreferrer" title="<?php echo esc_attr( $siteintelix_file ? $siteintelix_file . ( $siteintelix_line ? ':' . (int) $siteintelix_line : '' ) : __( 'No source path', 'siteintelix' ) ); ?>">
 											<span class="dashicons dashicons-media-code" aria-hidden="true"></span><?php echo esc_html( $siteintelix_file ); ?><?php echo $siteintelix_line ? ':' . (int) $siteintelix_line : ''; ?>
 										</a>
 									<?php else : ?>
-										<span class="sitx-log-path"><span class="dashicons dashicons-media-code" aria-hidden="true"></span><?php echo esc_html( $siteintelix_file ? $siteintelix_file : '-' ); ?><?php echo $siteintelix_line ? ':' . (int) $siteintelix_line : ''; ?></span>
+										<span class="sitx-log-path" title="<?php echo esc_attr( $siteintelix_file ? $siteintelix_file . ( $siteintelix_line ? ':' . (int) $siteintelix_line : '' ) : __( 'No source path', 'siteintelix' ) ); ?>"><span class="dashicons dashicons-media-code" aria-hidden="true"></span><?php echo esc_html( $siteintelix_file ? $siteintelix_file : '-' ); ?><?php echo $siteintelix_line ? ':' . (int) $siteintelix_line : ''; ?></span>
 									<?php endif; ?>
 								</div>
 							</div>

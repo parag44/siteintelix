@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $siteintelix_info         = SITEINTELIX_System_Info::get_all();
+$siteintelix_export_info  = SITEINTELIX_System_Info::get_redacted_export( $siteintelix_info );
 $siteintelix_checks       = SITEINTELIX_Health_Check::run( $siteintelix_info );
 $siteintelix_overall      = SITEINTELIX_Health_Check::overall_status( $siteintelix_checks );
 $siteintelix_modules      = SITEINTELIX_Modules::get_all();
@@ -75,7 +76,7 @@ function siteintelix_row( $label, $value ) {
 
 	<div class="siteintelix-container">
 		<script id="siteintelix-data-json" type="application/json">
-			<?php echo wp_json_encode( $siteintelix_info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ); ?>
+				<?php echo wp_json_encode( $siteintelix_export_info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ); ?>
 		</script>
 
 		<?php $siteintelix_featured_checks = array( 'php_version', 'memory_limit', 'debug_mode', 'https', 'rest_api', 'cron' ); ?>
@@ -85,12 +86,14 @@ function siteintelix_row( $label, $value ) {
 				if ( empty( $siteintelix_checks[ $siteintelix_check_key ] ) ) {
 					continue;
 				}
-				$siteintelix_check = $siteintelix_checks[ $siteintelix_check_key ];
-				?>
-				<div class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $siteintelix_check['status'] ); ?>" title="<?php echo esc_attr( $siteintelix_check['message'] ); ?>" role="listitem" tabindex="0">
-					<span class="siteintelix-health-pill__name"><?php echo esc_html( $siteintelix_check['label'] ); ?></span>
-					<span class="siteintelix-health-pill__value"><?php echo esc_html( $siteintelix_check['value'] ); ?></span>
-				</div>
+					$siteintelix_check = $siteintelix_checks[ $siteintelix_check_key ];
+					$siteintelix_check_description_id = 'siteintelix-health-' . sanitize_html_class( $siteintelix_check_key ) . '-description';
+					?>
+					<div class="siteintelix-health-pill siteintelix-health-pill--<?php echo esc_attr( $siteintelix_check['status'] ); ?>" role="listitem" tabindex="0" aria-describedby="<?php echo esc_attr( $siteintelix_check_description_id ); ?>">
+						<span class="siteintelix-health-pill__name"><?php echo esc_html( $siteintelix_check['label'] ); ?></span>
+						<span class="siteintelix-health-pill__value"><?php echo esc_html( $siteintelix_check['value'] ); ?></span>
+						<small id="<?php echo esc_attr( $siteintelix_check_description_id ); ?>" class="siteintelix-health-pill__message"><?php echo esc_html( $siteintelix_check['message'] ); ?></small>
+					</div>
 			<?php endforeach; ?>
 		</div>
 

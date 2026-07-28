@@ -15,12 +15,39 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SITEINTELIX_Modules {
 
+	/** @var array<string,array<string,mixed>>|null */
+	private static $all_cache = null;
+
+	/** @var string[]|null */
+	private static $enabled_cache = null;
+
+	/** @var array<string,bool>|null */
+	private static $enabled_lookup_cache = null;
+
+	/**
+	 * Reset request-local module caches.
+	 *
+	 * This is also called after translations become available so presentation
+	 * strings cached during early bootstrap are rebuilt for admin rendering.
+	 *
+	 * @return void
+	 */
+	public static function reset_cache() {
+		self::$all_cache            = null;
+		self::$enabled_cache        = null;
+		self::$enabled_lookup_cache = null;
+	}
+
 	/**
 	 * Return all known modules.
 	 *
 	 * @return array<string,array<string,mixed>>
 	 */
 	public static function get_all() {
+		if ( null !== self::$all_cache ) {
+			return self::$all_cache;
+		}
+
 		$modules = array(
 			'debug_log' => array(
 				'id'          => 'debug_log',
@@ -136,6 +163,55 @@ class SITEINTELIX_Modules {
 				'available'   => true,
 				'default'     => false,
 			),
+			'user_switcher' => array(
+				'id'          => 'user_switcher',
+				'slug'        => 'user-switcher',
+				'title'       => ( did_action( 'init' ) ? __( 'User Switcher', 'siteintelix' ) : 'User Switcher' ),
+				'menu_title'  => ( did_action( 'init' ) ? __( 'User Switcher', 'siteintelix' ) : 'User Switcher' ),
+				'description' => ( did_action( 'init' ) ? __( 'Temporarily access the site as another user to troubleshoot account-specific issues without requesting their password.', 'siteintelix' ) : 'Temporarily access the site as another user to troubleshoot account-specific issues without requesting their password.' ),
+				'icon'        => 'dashicons-admin-users',
+				'color'       => 'purple',
+				'status'      => 'core',
+				'available'   => true,
+				'default'     => false,
+				'settings'    => array(
+					'title'       => ( did_action( 'init' ) ? __( 'User Switcher Settings', 'siteintelix' ) : 'User Switcher Settings' ),
+					'description' => ( did_action( 'init' ) ? __( 'Configure operators, target roles, secure session limits, redirects, and activity retention.', 'siteintelix' ) : 'Configure operators, target roles, secure session limits, redirects, and activity retention.' ),
+					'action'      => 'siteintelix_save_user_switcher_settings',
+				),
+			),
+			'custom_code' => array(
+				'id'          => 'custom_code',
+				'title'       => ( did_action( 'init' ) ? __( 'Custom CSS & JS', 'siteintelix' ) : 'Custom CSS & JS' ),
+				'menu_title'  => ( did_action( 'init' ) ? __( 'Custom CSS & JS', 'siteintelix' ) : 'Custom CSS & JS' ),
+				'description' => ( did_action( 'init' ) ? __( 'Add reusable CSS and JavaScript with precise placement and loading controls.', 'siteintelix' ) : 'Add reusable CSS and JavaScript with precise placement and loading controls.' ),
+				'icon'        => 'dashicons-editor-code',
+				'color'       => 'indigo',
+				'status'      => 'core',
+				'available'   => true,
+				'default'     => false,
+				'settings'    => array(
+					'title'       => ( did_action( 'init' ) ? __( 'Custom CSS & JS Settings', 'siteintelix' ) : 'Custom CSS & JS Settings' ),
+					'description' => ( did_action( 'init' ) ? __( 'Configure data retention for Custom CSS & JS.', 'siteintelix' ) : 'Configure data retention for Custom CSS & JS.' ),
+					'action'      => 'siteintelix_save_custom_css_js_settings',
+				),
+			),
+			'code_snippets' => array(
+				'id'          => 'code_snippets',
+				'title'       => ( did_action( 'init' ) ? __( 'Code Snippets', 'siteintelix' ) : 'Code Snippets' ),
+				'menu_title'  => ( did_action( 'init' ) ? __( 'Code Snippets', 'siteintelix' ) : 'Code Snippets' ),
+				'description' => ( did_action( 'init' ) ? __( 'Safely organize and run administrator-authored PHP snippets without editing theme files.', 'siteintelix' ) : 'Safely organize and run administrator-authored PHP snippets without editing theme files.' ),
+				'icon'        => 'dashicons-editor-code',
+				'color'       => 'purple',
+				'status'      => 'core',
+				'available'   => true,
+				'default'     => false,
+				'settings'    => array(
+					'title'       => ( did_action( 'init' ) ? __( 'Code Snippets Settings', 'siteintelix' ) : 'Code Snippets Settings' ),
+					'description' => ( did_action( 'init' ) ? __( 'Configure data retention for PHP snippets.', 'siteintelix' ) : 'Configure data retention for PHP snippets.' ),
+					'action'      => 'siteintelix_save_code_snippets_settings',
+				),
+			),
 			'activity_log' => array(
 				'id'          => 'activity_log',
 				'title'       => ( did_action( 'init' ) ? __( 'Activity Log', 'siteintelix' ) : 'Activity Log' ),
@@ -192,7 +268,9 @@ class SITEINTELIX_Modules {
 		 *
 		 * @param array<string,array<string,mixed>> $modules Module definitions.
 		 */
-		return apply_filters( 'siteintelix_modules', $modules );
+		self::$all_cache = apply_filters( 'siteintelix_modules', $modules );
+
+		return self::$all_cache;
 	}
 
 	/**
@@ -218,10 +296,15 @@ class SITEINTELIX_Modules {
 	 * @return string[]
 	 */
 	public static function get_enabled() {
+		if ( null !== self::$enabled_cache ) {
+			return self::$enabled_cache;
+		}
+
 		$saved = get_option( SITEINTELIX_MODULES_OPTION, null );
 
 		if ( ! is_array( $saved ) ) {
-			return self::get_default_enabled();
+			self::$enabled_cache = self::get_default_enabled();
+			return self::$enabled_cache;
 		}
 
 		$enabled = array();
@@ -234,7 +317,9 @@ class SITEINTELIX_Modules {
 			}
 		}
 
-		return array_values( array_unique( $enabled ) );
+		self::$enabled_cache = array_values( array_unique( $enabled ) );
+
+		return self::$enabled_cache;
 	}
 
 	/**
@@ -244,7 +329,11 @@ class SITEINTELIX_Modules {
 	 * @return bool
 	 */
 	public static function is_enabled( $module_id ) {
-		return in_array( sanitize_key( $module_id ), self::get_enabled(), true );
+		if ( null === self::$enabled_lookup_cache ) {
+			self::$enabled_lookup_cache = array_fill_keys( self::get_enabled(), true );
+		}
+
+		return isset( self::$enabled_lookup_cache[ sanitize_key( $module_id ) ] );
 	}
 
 	/**
@@ -265,6 +354,7 @@ class SITEINTELIX_Modules {
 		}
 
 		update_option( SITEINTELIX_MODULES_OPTION, array_values( array_unique( $enabled ) ) );
+		self::reset_cache();
 	}
 
 	/**

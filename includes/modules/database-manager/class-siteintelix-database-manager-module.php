@@ -654,6 +654,7 @@ class SITEINTELIX_Database_Manager_Module {
 		}
 
 		$allowed_columns = wp_list_pluck( $columns, 'Field' );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each allow-listed scalar value is unslashed, UTF-8 checked, NUL stripped, and written through $wpdb->update().
 		$raw_values      = isset( $_POST['values'] ) && is_array( $_POST['values'] ) ? wp_unslash( $_POST['values'] ) : array();
 		$data            = array();
 
@@ -688,8 +689,11 @@ class SITEINTELIX_Database_Manager_Module {
 			wp_die( esc_html__( 'You do not have permission to delete database rows.', 'siteintelix' ) );
 		}
 
-		$table         = isset( $_GET['table'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['table'] ) ) ) : '';
-		$primary_key   = isset( $_GET['primary_key'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['primary_key'] ) ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Value is decoded, sanitized, then checked against the live table allow-list.
+		$table = isset( $_GET['table'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['table'] ) ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Value is decoded, sanitized, then checked against the table primary key.
+		$primary_key = isset( $_GET['primary_key'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['primary_key'] ) ) ) : '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Value is decoded, sanitized, nonce-bound, and passed as a prepared update value.
 		$primary_value = isset( $_GET['primary_value'] ) ? sanitize_text_field( rawurldecode( wp_unslash( $_GET['primary_value'] ) ) ) : '';
 		$page          = isset( $_GET['db_page'] ) ? max( 1, absint( wp_unslash( $_GET['db_page'] ) ) ) : 1;
 		$row_search    = isset( $_GET['row_search'] ) ? sanitize_text_field( wp_unslash( $_GET['row_search'] ) ) : '';

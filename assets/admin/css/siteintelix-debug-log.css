@@ -2283,3 +2283,24 @@
 		padding-right: 16px;
 	}
 }
+
+/* Modern Debug Log maximum-width source paths */
+.siteintelix-log-item .sitx-log-card__body {
+	min-width: 0;
+}
+
+.siteintelix-log-item .sitx-log-meta {
+	flex-wrap: nowrap;
+	width: 100%;
+}
+
+.siteintelix-log-item .sitx-log-path {
+	display: flex;
+	flex: 1 1 auto;
+	max-width: none;
+	min-width: 0;
+}
+
+.siteintelix-log-item .sitx-log-path .dashicons {
+	flex: 0 0 auto;
+}

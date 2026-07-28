@@ -20,6 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SITEINTELIX_System_Info {
 
+	const OVERVIEW_REMOTE_HEALTH_TRANSIENT = 'siteintelix_overview_remote_health';
+
 	// -----------------------------------------------------------------------
 	// Public API
 	// -----------------------------------------------------------------------
@@ -38,6 +40,32 @@ class SITEINTELIX_System_Info {
 			'environment' => self::get_environment_info(),
 			'database'    => self::get_database_info(),
 		);
+	}
+
+	/**
+	 * Return an export-safe copy of collected system information.
+	 *
+	 * @param array<string,array<string,mixed>> $info Collected system information.
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function get_redacted_export( array $info ) {
+		$redacted = $info;
+
+		unset( $redacted['wordpress']['admin_email'] );
+		unset( $redacted['server']['db_name'], $redacted['server']['db_host'], $redacted['server']['uploads_dir'] );
+		unset(
+			$redacted['database']['username'],
+			$redacted['database']['host'],
+			$redacted['database']['name'],
+			$redacted['database']['table_prefix']
+		);
+
+		$redacted['privacy'] = array(
+			'redacted' => true,
+			'note'     => __( 'Private paths, database identifiers, and administrator email are omitted.', 'siteintelix' ),
+		);
+
+		return $redacted;
 	}
 
 	// -----------------------------------------------------------------------
@@ -258,8 +286,11 @@ class SITEINTELIX_System_Info {
 	 * @return array<string, mixed>
 	 */
 	public static function get_environment_info() {
+		$rest_status = self::get_cached_rest_api_status();
+
 		return array(
-			'rest_api'     => self::check_rest_api(),
+			'rest_api'     => $rest_status['available'],
+			'rest_api_stale' => $rest_status['stale'],
 			'debug_mode'   => defined( 'WP_DEBUG' ) && WP_DEBUG,
 			'debug_log'    => defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG,
 			'cron'         => ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ),
@@ -276,27 +307,25 @@ class SITEINTELIX_System_Info {
 	}
 
 	/**
-	 * Check whether the REST API is reachable with a local loopback request.
+	 * Read the most recently cached REST health result without making a request.
 	 *
-	 * Uses a 5-second timeout and skips SSL verification for local requests.
-	 *
-	 * @return bool  TRUE when the REST API responds with HTTP 200.
+	 * @return array{available:bool|null,stale:bool,collected_at:string}
 	 */
-	private static function check_rest_api() {
-		$response = wp_remote_get(
-			rest_url( '/' ),
-			array(
-				'timeout'   => 5,
-				// Keep this filter plugin-prefixed for coding-standards compatibility.
-				'sslverify' => (bool) apply_filters( 'siteintelix_local_ssl_verify', false ),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return false;
+	private static function get_cached_rest_api_status() {
+		$cached = get_transient( self::OVERVIEW_REMOTE_HEALTH_TRANSIENT );
+		if ( ! is_array( $cached ) || ! array_key_exists( 'available', $cached ) ) {
+			return array(
+				'available'    => null,
+				'stale'        => true,
+				'collected_at' => '',
+			);
 		}
 
-		return 200 === (int) wp_remote_retrieve_response_code( $response );
+		return array(
+			'available'    => (bool) $cached['available'],
+			'stale'        => ! empty( $cached['stale'] ),
+			'collected_at' => isset( $cached['collected_at'] ) ? sanitize_text_field( $cached['collected_at'] ) : '',
+		);
 	}
 
 	// -----------------------------------------------------------------------

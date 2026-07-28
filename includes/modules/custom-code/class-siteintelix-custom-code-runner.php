@@ -39,9 +39,9 @@ class SITEINTELIX_Custom_Code_Runner {
 				$url     = SITEINTELIX_Custom_Code_File_Manager::url( $relative );
 				$version = (string) filemtime( $path );
 				if ( 'css' === $type ) {
-					printf( "\n<link id=\"siteintelix-custom-css-%d\" rel=\"stylesheet\" href=\"%s\">\n", $id, esc_url( add_query_arg( 'ver', $version, $url ) ) );
+					printf( "\n<link id=\"siteintelix-custom-css-%s\" rel=\"stylesheet\" href=\"%s\">\n", esc_attr( (string) $id ), esc_url( add_query_arg( 'ver', $version, $url ) ) );
 				} else {
-					printf( "\n<script id=\"siteintelix-custom-js-%d\" src=\"%s\"></script>\n", $id, esc_url( add_query_arg( 'ver', $version, $url ) ) );
+					printf( "\n<script id=\"siteintelix-custom-js-%s\" src=\"%s\"></script>\n", esc_attr( (string) $id ), esc_url( add_query_arg( 'ver', $version, $url ) ) );
 				}
 				return;
 			}

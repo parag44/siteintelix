@@ -45,7 +45,7 @@ class SITEINTELIX_Coming_Soon_Module {
 		$settings = self::get_settings();
 		$logo_url = ! empty( $settings['logo_url'] ) ? $settings['logo_url'] : '';
 		?>
-		<section class="sitx-settings-panel-tab <?php echo 'coming_soon' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-coming-soon-settings" data-siteintelix-settings-panel="coming_soon">
+		<section class="sitx-settings-panel-tab <?php echo 'coming_soon' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-coming-soon-settings" role="tabpanel" aria-labelledby="siteintelix-settings-tab-coming_soon" data-siteintelix-settings-panel="coming_soon" <?php echo 'coming_soon' === $active_tab ? '' : 'hidden'; ?>>
 			<div class="sitx-settings-content-grid">
 				<div class="sitx-settings-main">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sitx-tab-form">

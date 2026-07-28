@@ -1,0 +1,16 @@
+[data-siteintelix-settings-clear] {
+	white-space: nowrap;
+}
+
+[data-siteintelix-settings-panel][hidden],
+.sitx-setting-row[hidden],
+.sitx-side-card[hidden] {
+	display: none !important;
+}
+
+@media (max-width: 782px) {
+	.sitx-settings-topbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}

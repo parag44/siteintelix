@@ -68,11 +68,13 @@ class SITEINTELIX_Custom_Code_Admin {
 
 	public static function handle_save() {
 		self::authorize( 'siteintelix_custom_code_save' );
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- authorize() verified the action-specific nonce immediately above.
 		$id    = absint( $_POST['entry_id'] ?? 0 );
 		$entry = SITEINTELIX_Custom_Code_Repository::normalize_entry( $_POST );
 		if ( 'save_enable' === sanitize_key( $_POST['submit_mode'] ?? '' ) ) {
 			$entry['status'] = 'enabled';
 		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$entry['code'] = SITEINTELIX_Custom_Code_File_Manager::strip_outer_tags( $entry['code'], $entry['code_type'] );
 		$id = $id ? ( SITEINTELIX_Custom_Code_Repository::update( $id, $entry ) ? $id : 0 ) : SITEINTELIX_Custom_Code_Repository::insert( $entry );
 		if ( ! $id ) {
@@ -95,8 +97,10 @@ class SITEINTELIX_Custom_Code_Admin {
 
 	public static function handle_action() {
 		self::authorize( 'siteintelix_custom_code_action' );
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- authorize() verified the action-specific nonce immediately above.
 		$id     = absint( $_GET['entry'] ?? 0 );
 		$action = sanitize_key( $_GET['do'] ?? '' );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		$entry  = SITEINTELIX_Custom_Code_Repository::get( $id );
 		if ( $entry && in_array( $action, array( 'enable', 'disable' ), true ) ) {
 			SITEINTELIX_Custom_Code_Repository::set_status( array( $id ), 'enable' === $action ? 'enabled' : 'disabled' );
@@ -112,8 +116,10 @@ class SITEINTELIX_Custom_Code_Admin {
 
 	public static function handle_bulk() {
 		self::authorize( 'siteintelix_custom_code_bulk' );
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- authorize() verified the action-specific nonce immediately above.
 		$ids    = array_map( 'absint', (array) ( $_POST['entry_ids'] ?? array() ) );
 		$action = sanitize_key( $_POST['bulk_action'] ?? '' );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		if ( in_array( $action, array( 'enable', 'disable' ), true ) ) {
 			SITEINTELIX_Custom_Code_Repository::set_status( $ids, 'enable' === $action ? 'enabled' : 'disabled' );
 		} elseif ( 'delete' === $action ) {

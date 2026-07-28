@@ -154,6 +154,7 @@ class SITEINTELIX_SMTP_Module {
 		check_admin_referer( 'siteintelix_save_smtp_settings' );
 
 		$current  = self::get_settings();
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Valid password characters are preserved by bounded sanitize_password().
 		$password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 
 		$settings = array(
