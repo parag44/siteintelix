@@ -1221,6 +1221,7 @@ class SITEINTELIX_Transients_Manager_Module {
 	private static function stream_export( $items, $format, $name ) {
 		nocache_headers();
 		header( 'Content-Type: ' . ( 'txt' === $format ? 'text/plain' : 'application/json' ) . '; charset=utf-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $name ) . '.' . $format . '"' );
 
 		if ( 'txt' === $format ) {

@@ -1225,6 +1225,7 @@ function siteintelix_download_debug_log() {
 
 	nocache_headers();
 	header( 'Content-Type: text/plain; charset=utf-8' );
+	header( 'X-Content-Type-Options: nosniff' );
 	header( 'Content-Disposition: attachment; filename="' . $download_filename . '"' );
 	header( 'Content-Length: ' . strlen( $contents ) );
 	echo $contents; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

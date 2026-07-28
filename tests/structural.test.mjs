@@ -1,12 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
+
+const listFiles = async (directory) => {
+	const entries = await readdir(directory, { withFileTypes: true });
+	const files = [];
+	for (const entry of entries) {
+		if (['.git', '.superpowers', 'docs', 'tests'].includes(entry.name)) {
+			continue;
+		}
+		const absolute = path.join(directory, entry.name);
+		if (entry.isDirectory()) {
+			files.push(...await listFiles(absolute));
+		} else {
+			files.push(absolute);
+		}
+	}
+	return files;
+};
 
 test('plugin exposes the approved public name without changing internal identity', async () => {
 	const main = await read('siteintelix.php');
@@ -16,6 +33,46 @@ test('plugin exposes the approved public name without changing internal identity
 	assert.match(readme, /^=== SiteIntelix – WordPress Toolkit ===/);
 	assert.match(main, /Text Domain:\s+siteintelix/);
 	assert.match(main, /'siteintelix'/);
+});
+
+test('shipped PHP files block direct access and dangerous process execution', async () => {
+	const phpFiles = (await listFiles(root)).filter((file) => file.endsWith('.php'));
+	let evalCount = 0;
+
+	for (const file of phpFiles) {
+		const source = await readFile(file, 'utf8');
+		const relative = path.relative(root, file);
+		assert.match(
+			source,
+			/defined\(\s*'ABSPATH'\s*\)|WP_UNINSTALL_PLUGIN/,
+			`${relative} must block direct execution`
+		);
+		assert.doesNotMatch(
+			source,
+			/\b(?:shell_exec|exec|system|passthru|proc_open)\s*\(/,
+			`${relative} must not execute system commands`
+		);
+		const matches = source.match(/\beval\s*\(/g) ?? [];
+		evalCount += matches.length;
+		if (matches.length) {
+			assert.equal(relative, 'includes/modules/code-snippets/class-siteintelix-snippets-runner.php');
+		}
+	}
+
+	assert.equal(evalCount, 1, 'only the isolated administrator-authored snippet runner may use eval()');
+});
+
+test('download and export responses prevent MIME sniffing', async () => {
+	const files = [
+		'siteintelix.php',
+		'includes/modules/download-manager/class-siteintelix-download-manager-module.php',
+		'includes/modules/server-diagnostics/class-siteintelix-server-diagnostics-module.php',
+		'includes/modules/transients-manager/class-siteintelix-transients-manager-module.php',
+	];
+
+	for (const file of files) {
+		assert.match(await read(file), /X-Content-Type-Options:\s*nosniff/, `${file} must send a nosniff header`);
+	}
 });
 
 test('2.7.3 release metadata, directory description, and privacy disclosure stay aligned', async () => {

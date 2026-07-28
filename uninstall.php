@@ -15,6 +15,16 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
+$siteintelix_mu_files_class = __DIR__ . '/includes/class-siteintelix-mu-files.php';
+if ( file_exists( $siteintelix_mu_files_class ) ) {
+	require_once $siteintelix_mu_files_class;
+	SITEINTELIX_MU_Files::remove_all();
+}
+
+$siteintelix_legacy_delete_custom_code = (bool) get_option( 'siteintelix_delete_custom_code_on_uninstall', false );
+$siteintelix_delete_custom_css_js      = (bool) get_option( 'siteintelix_delete_custom_css_js_on_uninstall', $siteintelix_legacy_delete_custom_code );
+$siteintelix_delete_code_snippets      = (bool) get_option( 'siteintelix_delete_code_snippets_on_uninstall', $siteintelix_legacy_delete_custom_code );
+
 // ---------------------------------------------------------------------------
 // Remove plugin options.
 // ---------------------------------------------------------------------------
@@ -27,33 +37,38 @@ $siteintelix_options = array(
 	'siteintelix_debug_method',
 	'siteintelix_previous_debug_method',
 	'siteintelix_email_log_settings',
+	'siteintelix_email_log_schema_version',
 	'siteintelix_error_ui_settings',
 	'siteintelix_error_ui_dropins_version',
 	'siteintelix_migration_version',
 	'siteintelix_tm_logs',
 	'siteintelix_tm_last_cleanup',
+	'siteintelix_user_switcher_settings',
+	'siteintelix_user_switcher_schema_version',
+	'siteintelix_user_switcher_managed_roles',
+	'siteintelix_delete_custom_code_on_uninstall',
+	'siteintelix_delete_custom_css_js_on_uninstall',
+	'siteintelix_delete_code_snippets_on_uninstall',
+	'siteintelix_custom_code_schema_version',
+	'siteintelix_snippets_schema_version',
 );
+
+// Remove only role capabilities that SiteIntelix recorded as module-managed.
+$siteintelix_user_switcher_managed_roles = get_option( 'siteintelix_user_switcher_managed_roles', array() );
+foreach ( (array) $siteintelix_user_switcher_managed_roles as $siteintelix_user_switcher_role_slug ) {
+	$siteintelix_user_switcher_role = get_role( sanitize_key( $siteintelix_user_switcher_role_slug ) );
+	if ( $siteintelix_user_switcher_role ) {
+		$siteintelix_user_switcher_role->remove_cap( 'siteintelix_switch_users' );
+	}
+}
 
 foreach ( $siteintelix_options as $siteintelix_option ) {
 	delete_option( $siteintelix_option );
 }
 
-// ---------------------------------------------------------------------------
-// Remove MU-plugin file.
-// ---------------------------------------------------------------------------
-$siteintelix_mu_file = trailingslashit( WPMU_PLUGIN_DIR ) . 'siteintelix-debug-capture.php';
-
-if ( file_exists( $siteintelix_mu_file ) ) {
-	if ( ! function_exists( 'WP_Filesystem' ) ) {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-	}
-
-	global $wp_filesystem;
-
-	if ( WP_Filesystem() && $wp_filesystem ) {
-		$wp_filesystem->delete( $siteintelix_mu_file, false, 'f' );
-	}
-}
+wp_clear_scheduled_hook( 'siteintelix_email_log_retention' );
+wp_clear_scheduled_hook( 'siteintelix_user_switcher_retention' );
+wp_clear_scheduled_hook( 'siteintelix_user_switcher_retention_continue' );
 
 // ---------------------------------------------------------------------------
 // Remove SiteIntelix-managed Custom Error UI drop-ins.
@@ -79,8 +94,53 @@ foreach ( $siteintelix_error_ui_files as $siteintelix_error_ui_file ) {
 global $wpdb;
 
 $siteintelix_email_table = $wpdb->prefix . 'siteintelix_email_logs';
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching -- Removing plugin-owned table on uninstall.
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Removing plugin-owned table on uninstall.
 $wpdb->query( "DROP TABLE IF EXISTS {$siteintelix_email_table}" );
+
+$siteintelix_user_switcher_table = $wpdb->prefix . 'siteintelix_user_switch_logs';
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Removing plugin-owned table on uninstall.
+$wpdb->query( "DROP TABLE IF EXISTS {$siteintelix_user_switcher_table}" );
+
+if ( $siteintelix_delete_custom_css_js ) {
+	$siteintelix_custom_code_table = $wpdb->prefix . 'siteintelix_custom_code';
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Explicit opt-in removal of a fixed plugin-owned table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$siteintelix_custom_code_table}" );
+	$siteintelix_uploads = wp_upload_dir();
+	$siteintelix_custom_code_dir = trailingslashit( $siteintelix_uploads['basedir'] ) . 'siteintelix/custom-code';
+	if ( is_dir( $siteintelix_custom_code_dir ) ) {
+		$siteintelix_custom_code_files = glob( $siteintelix_custom_code_dir . '/*' );
+		foreach ( (array) $siteintelix_custom_code_files as $siteintelix_custom_code_file ) {
+			if ( is_file( $siteintelix_custom_code_file ) ) {
+				wp_delete_file( $siteintelix_custom_code_file );
+			}
+		}
+		@rmdir( $siteintelix_custom_code_dir ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	}
+}
+
+if ( $siteintelix_delete_code_snippets ) {
+	$siteintelix_snippets_table = $wpdb->prefix . 'siteintelix_snippets';
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Explicit opt-in removal of a fixed plugin-owned table.
+	$wpdb->query( "DROP TABLE IF EXISTS {$siteintelix_snippets_table}" );
+	delete_transient( 'siteintelix_snippet_recovery_notice' );
+}
+
+$siteintelix_user_switcher_option_patterns = array(
+	'siteintelix_user_switcher_lock_%',
+	'_transient_siteintelix_user_switcher_session_%',
+	'_transient_timeout_siteintelix_user_switcher_session_%',
+	'_transient_siteintelix_user_switcher_target_%',
+	'_transient_timeout_siteintelix_user_switcher_target_%',
+);
+foreach ( $siteintelix_user_switcher_option_patterns as $siteintelix_user_switcher_option_pattern ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Removing short-lived plugin-owned switching state on uninstall.
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+			$siteintelix_user_switcher_option_pattern
+		)
+	);
+}
 
 // Note: wp-config.php is NOT modified during uninstall.
 // If the user enabled WP_DEBUG via the plugin's wp-config method,

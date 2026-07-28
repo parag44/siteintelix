@@ -174,8 +174,10 @@ class SITEINTELIX_Snippets_Repository {
 		if ( ! empty( $args['recent'] ) ) { $where[]='deactivated_at >= %s'; $values[]=gmdate( 'Y-m-d H:i:s', time() - 7 * DAY_IN_SECONDS ); }
 		if ( ! empty( $args['search'] ) ) { $like='%'.$wpdb->esc_like( sanitize_text_field( $args['search'] ) ).'%'; $where[]='(name LIKE %s OR description LIKE %s)'; $values[]=$like; $values[]=$like; }
 		$base=' FROM '.self::table_name().' WHERE '.implode(' AND ',$where);
+		// phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name and where fragments are generated from fixed internal allow-lists.
 		$total=(int)( $values ? $wpdb->get_var($wpdb->prepare('SELECT COUNT(*)'.$base,$values)) : $wpdb->get_var('SELECT COUNT(*)'.$base) );
 		$query='SELECT *'.$base.' ORDER BY updated_at DESC,id DESC LIMIT %d OFFSET %d';
+		// phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table name is fixed and all request values are prepared.
 		$rows=$wpdb->get_results($wpdb->prepare($query,array_merge($values,array($per_page,($page-1)*$per_page))),ARRAY_A);
 		return array( $rows, $total );
 	}

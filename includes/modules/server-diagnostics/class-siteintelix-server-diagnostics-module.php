@@ -16,6 +16,11 @@ class SITEINTELIX_Server_Diagnostics_Module {
 
 	const ENDPOINT_WORDPRESS = 'https://wordpress.org/';
 	const ENDPOINT_API       = 'https://api.wordpress.org/';
+	const CACHE_PREFIX       = 'siteintelix_server_diagnostics_cache_';
+	const CACHE_TTL          = 5 * MINUTE_IN_SECONDS;
+
+	/** @var array<string,array<string,mixed>> Cache metadata for the current report. */
+	private static $cache_metadata = array();
 
 	/**
 	 * Register hooks.
@@ -29,6 +34,7 @@ class SITEINTELIX_Server_Diagnostics_Module {
 
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 38 );
 		add_action( 'admin_post_siteintelix_server_diag_export', array( __CLASS__, 'handle_export' ) );
+		add_action( 'wp_ajax_siteintelix_refresh_server_diagnostics', array( __CLASS__, 'handle_refresh' ) );
 	}
 
 	/**
@@ -100,13 +106,24 @@ class SITEINTELIX_Server_Diagnostics_Module {
 							'dashicons-heart'
 						),
 					),
-					'actions'     => array(
-						SITEINTELIX_Admin_UI::button(
+						'actions'     => array(
+							SITEINTELIX_Admin_UI::button(
+								array(
+									'label'      => __( 'Refresh checks', 'siteintelix' ),
+									'variant'    => 'secondary',
+									'icon'       => 'dashicons-update',
+									'attributes' => array(
+										'data-sitx-diag-refresh' => 'true',
+									),
+								)
+							),
+							SITEINTELIX_Admin_UI::button(
 							array(
 								'label'   => __( 'Download JSON', 'siteintelix' ),
 								'url'     => $json_url,
 								'variant' => 'secondary',
 								'icon'    => 'dashicons-download',
+								'classes' => array( 'sitx-serverdiag-header-secondary' ),
 							)
 						),
 						SITEINTELIX_Admin_UI::button(
@@ -115,6 +132,7 @@ class SITEINTELIX_Server_Diagnostics_Module {
 								'url'     => $text_url,
 								'variant' => 'primary',
 								'icon'    => 'dashicons-clipboard',
+								'classes' => array( 'sitx-serverdiag-header-secondary' ),
 							)
 						),
 					),
@@ -123,12 +141,23 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			?>
 
 			<div class="siteintelix-container sitx-serverdiag-container">
+				<details class="sitx-serverdiag-actions-menu">
+					<summary class="si-button"><span class="dashicons dashicons-admin-generic" aria-hidden="true"></span><?php esc_html_e( 'Page actions', 'siteintelix' ); ?></summary>
+					<div class="sitx-serverdiag-actions-menu__panel">
+						<a href="<?php echo esc_url( $json_url ); ?>"><?php esc_html_e( 'Download JSON', 'siteintelix' ); ?></a>
+						<a href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Export Report', 'siteintelix' ); ?></a>
+						<button type="button" data-sitx-diag-copy-system-info-mobile aria-controls="sitx-serverdiag-copy-source"><?php esc_html_e( 'Copy System Info', 'siteintelix' ); ?></button>
+					</div>
+				</details>
+				<p class="sitx-serverdiag-refresh-status" data-sitx-diag-refresh-status role="status" aria-live="polite">
+					<?php echo esc_html( self::cache_status_text( $report ) ); ?>
+				</p>
 				<?php self::render_overview( $report ); ?>
 				<?php self::render_filterbar( $report['summary'] ); ?>
 				<div class="sitx-serverdiag-layout">
 					<main class="sitx-serverdiag-main">
-						<?php foreach ( $sections as $section ) : ?>
-							<?php self::render_section( $section ); ?>
+						<?php foreach ( $sections as $section_index => $section ) : ?>
+							<?php self::render_section( $section, 0 === $section_index ); ?>
 						<?php endforeach; ?>
 					</main>
 					<aside class="sitx-serverdiag-sidebar">
@@ -154,11 +183,12 @@ class SITEINTELIX_Server_Diagnostics_Module {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce verified above.
 		$format = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : 'json';
-		$report = self::get_report( true );
+		$report = self::redact_report( self::get_report() );
 
 		if ( 'text' === $format ) {
 			nocache_headers();
 			header( 'Content-Type: text/plain; charset=' . get_option( 'blog_charset' ) );
+			header( 'X-Content-Type-Options: nosniff' );
 			header( 'Content-Disposition: attachment; filename=siteintelix-server-diagnostics.txt' );
 			echo self::format_text_report( $report ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Plain text download generated from sanitized diagnostics values.
 			exit;
@@ -166,9 +196,42 @@ class SITEINTELIX_Server_Diagnostics_Module {
 
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Content-Disposition: attachment; filename=siteintelix-server-diagnostics.json' );
 		echo wp_json_encode( $report, JSON_PRETTY_PRINT );
 		exit;
+	}
+
+	/**
+	 * Refresh expensive checks without blocking the page request.
+	 *
+	 * @return void
+	 */
+	public static function handle_refresh() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to refresh diagnostics.', 'siteintelix' ) ), 403 );
+		}
+
+		check_ajax_referer( 'siteintelix_refresh_server_diagnostics', 'nonce' );
+
+		$rest = self::remote_check( rest_url( '/' ), false );
+		set_transient(
+			SITEINTELIX_System_Info::OVERVIEW_REMOTE_HEALTH_TRANSIENT,
+			array(
+				'available'    => 'pass' === $rest['status'],
+				'stale'        => false,
+				'collected_at' => current_time( 'mysql' ),
+			),
+			self::CACHE_TTL
+		);
+
+		$report = self::get_report( false, true );
+		wp_send_json_success(
+			array(
+				'summary'      => $report['summary'],
+				'generated_at' => $report['generated_at'],
+			)
+		);
 	}
 
 	/**
@@ -218,10 +281,11 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			<h2 id="sitx-serverdiag-health-title" class="screen-reader-text"><?php esc_html_e( 'Diagnostics health overview', 'siteintelix' ); ?></h2>
 			<div class="sitx-serverdiag-stats">
 			<?php
-			self::render_stat_card( __( 'Overall Health Score', 'siteintelix' ), $summary['score'] . '%', self::score_badge_type( $summary['score'] ), __( 'Overall server readiness', 'siteintelix' ), true );
+			self::render_stat_card( __( 'Health Score', 'siteintelix' ), $summary['score'] . '%', self::score_badge_type( $summary['score'] ), self::score_status_text( $summary['score'] ), true );
 			self::render_stat_card( __( 'Critical Issues', 'siteintelix' ), (string) $summary['failed'], $summary['failed'] ? 'danger' : 'success', __( 'Checks that need attention', 'siteintelix' ) );
 			self::render_stat_card( __( 'Warnings', 'siteintelix' ), (string) $summary['warnings'], $summary['warnings'] ? 'warning' : 'success', __( 'Recommended improvements', 'siteintelix' ) );
 			self::render_stat_card( __( 'Passed Checks', 'siteintelix' ), (string) $summary['passed'], 'success', __( 'Checks meeting recommendations', 'siteintelix' ) );
+			self::render_stat_card( __( 'Total Checks', 'siteintelix' ), (string) $summary['total'], 'neutral', __( 'Across all categories', 'siteintelix' ), false, 'sitx-serverdiag-stat--total' );
 			?>
 			</div>
 			<?php if ( 0 === $summary['failed'] && 0 === $summary['warnings'] ) : ?>
@@ -257,14 +321,28 @@ class SITEINTELIX_Server_Diagnostics_Module {
 	 * @param string $type  Badge type.
 	 * @param string $meta  Meta text.
 	 * @param bool   $primary Whether this is the primary KPI.
+	 * @param string $class   Optional modifier class.
 	 * @return void
 	 */
-	private static function render_stat_card( $label, $value, $type, $meta, $primary = false ) {
+	private static function render_stat_card( $label, $value, $type, $meta, $primary = false, $class = '' ) {
+		$score = $primary ? min( 100, max( 0, absint( $value ) ) ) : 0;
 		?>
-		<div class="si-card sitx-serverdiag-stat sitx-serverdiag-stat--<?php echo esc_attr( sanitize_html_class( $type ) ); ?><?php echo $primary ? ' is-primary' : ''; ?>">
-			<span><?php echo esc_html( $label ); ?></span>
-			<strong><?php echo esc_html( $value ); ?></strong>
-			<small><?php echo esc_html( $meta ); ?></small>
+			<div class="si-card sitx-serverdiag-stat sitx-serverdiag-stat--<?php echo esc_attr( sanitize_html_class( $type ) ); ?><?php echo $primary ? ' is-primary' : ''; ?> <?php echo esc_attr( sanitize_html_class( $class ) ); ?>">
+				<?php if ( $primary ) : ?>
+					<?php /* translators: %d: server health score percentage. */ ?>
+					<span class="sitx-serverdiag-score-ring" style="<?php echo esc_attr( '--sitx-diag-score:' . $score ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Health score: %d percent', 'siteintelix' ), $score ) ); ?>">
+					<strong><?php echo esc_html( $score . '%' ); ?></strong>
+				</span>
+				<span class="sitx-serverdiag-stat__content">
+					<small><?php echo esc_html( $label ); ?></small>
+					<strong><?php echo esc_html( $meta ); ?></strong>
+					<em><?php esc_html_e( 'Current server health', 'siteintelix' ); ?></em>
+				</span>
+			<?php else : ?>
+				<span><?php echo esc_html( $label ); ?></span>
+				<strong><?php echo esc_html( $value ); ?></strong>
+				<small><?php echo esc_html( $meta ); ?></small>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -295,6 +373,16 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			<div class="sitx-serverdiag-filterbar__tools">
 				<label class="screen-reader-text" for="sitx-serverdiag-search"><?php esc_html_e( 'Search diagnostics', 'siteintelix' ); ?></label>
 				<input type="search" id="sitx-serverdiag-search" data-sitx-diag-search placeholder="<?php esc_attr_e( 'Search checks', 'siteintelix' ); ?>">
+				<label class="sitx-serverdiag-hide-passed">
+					<input type="checkbox" data-sitx-diag-hide-passed>
+					<span><?php esc_html_e( 'Hide Passed', 'siteintelix' ); ?></span>
+				</label>
+				<label class="screen-reader-text" for="sitx-serverdiag-sort"><?php esc_html_e( 'Sort diagnostics', 'siteintelix' ); ?></label>
+				<select id="sitx-serverdiag-sort" data-sitx-diag-sort>
+					<option value="severity"><?php esc_html_e( 'Sort: Severity', 'siteintelix' ); ?></option>
+					<option value="name"><?php esc_html_e( 'Sort: Check name', 'siteintelix' ); ?></option>
+					<option value="status"><?php esc_html_e( 'Sort: Status', 'siteintelix' ); ?></option>
+				</select>
 				<button type="button" class="si-button" data-sitx-diag-collapse-all><?php esc_html_e( 'Collapse All', 'siteintelix' ); ?></button>
 				<button type="button" class="si-button" data-sitx-diag-expand-all><?php esc_html_e( 'Expand All', 'siteintelix' ); ?></button>
 				<details class="sitx-serverdiag-section-controls" data-sitx-diag-section-controls>
@@ -371,13 +459,16 @@ class SITEINTELIX_Server_Diagnostics_Module {
 	/**
 	 * Render a diagnostics accordion section.
 	 *
-	 * @param array<string,mixed> $section Section definition.
+	 * @param array<string,mixed> $section      Section definition.
+	 * @param bool                $default_open Whether this section opens first.
 	 * @return void
 	 */
-	private static function render_section( $section ) {
+	private static function render_section( $section, $default_open = false ) {
 		$toggle_id = 'sitx-serverdiag-toggle-' . $section['key'];
 		$panel_id  = 'sitx-serverdiag-panel-' . $section['key'];
 		$payload   = array();
+		$total     = max( 1, absint( $section['summary']['total'] ) );
+		$progress  = (int) round( ( absint( $section['summary']['passed'] ) / $total ) * 100 );
 		foreach ( $section['rows'] as $row ) {
 			$item = array(
 				'label'  => (string) $row['label'],
@@ -391,7 +482,7 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			$payload[] = $item;
 		}
 		?>
-		<section id="sitx-serverdiag-section-<?php echo esc_attr( $section['key'] ); ?>" class="si-card sitx-serverdiag-section" data-sitx-diag-section data-severity="<?php echo esc_attr( $section['summary']['severity'] ); ?>" aria-labelledby="<?php echo esc_attr( $toggle_id ); ?>">
+		<section id="sitx-serverdiag-section-<?php echo esc_attr( $section['key'] ); ?>" class="si-card sitx-serverdiag-section" data-sitx-diag-section data-severity="<?php echo esc_attr( $section['summary']['severity'] ); ?>"<?php echo $default_open ? ' data-sitx-diag-default-open="true"' : ''; ?> aria-labelledby="<?php echo esc_attr( $toggle_id ); ?>">
 			<h2><button type="button" id="<?php echo esc_attr( $toggle_id ); ?>" class="sitx-serverdiag-section__toggle" data-sitx-diag-toggle aria-expanded="false" aria-controls="<?php echo esc_attr( $panel_id ); ?>">
 				<?php echo wp_kses_post( SITEINTELIX_Admin_UI::icon( $section['icon'] ) ); ?>
 				<span class="sitx-serverdiag-section__heading">
@@ -402,6 +493,10 @@ class SITEINTELIX_Server_Diagnostics_Module {
 				<span class="sitx-serverdiag-section__counts">
 					<?php echo esc_html( self::section_count_text( $section['summary'] ) ); ?>
 				</span>
+				<?php /* translators: %d: percentage of diagnostic checks that passed in this category. */ ?>
+				<span class="sitx-serverdiag-category-progress" aria-label="<?php echo esc_attr( sprintf( __( '%d percent passed', 'siteintelix' ), $progress ) ); ?>">
+					<span style="<?php echo esc_attr( '--sitx-diag-progress:' . $progress . '%' ); ?>"></span>
+				</span>
 				<span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
 			</button></h2>
 			<div id="<?php echo esc_attr( $panel_id ); ?>" class="sitx-serverdiag-section__panel" data-sitx-diag-panel aria-labelledby="<?php echo esc_attr( $toggle_id ); ?>" hidden></div>
@@ -411,17 +506,17 @@ class SITEINTELIX_Server_Diagnostics_Module {
 				<table class="widefat striped sitx-serverdiag-fallback-table">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Check', 'siteintelix' ); ?></th>
-							<th><?php esc_html_e( 'Status', 'siteintelix' ); ?></th>
-							<th><?php esc_html_e( 'Value', 'siteintelix' ); ?></th>
-							<th><?php esc_html_e( 'Details', 'siteintelix' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Status', 'siteintelix' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Check', 'siteintelix' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Current', 'siteintelix' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Description', 'siteintelix' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $section['rows'] as $row ) : ?>
 							<tr class="is-<?php echo esc_attr( sanitize_html_class( $row['status'] ) ); ?>">
-								<th scope="row"><?php echo esc_html( $row['label'] ); ?></th>
 								<td><?php echo wp_kses_post( SITEINTELIX_Admin_UI::badge( self::status_label( $row['status'] ), self::status_badge_type( $row['status'] ) ) ); ?></td>
+								<th scope="row"><?php echo esc_html( $row['label'] ); ?></th>
 								<td><code><?php echo esc_html( self::stringify( $row['value'] ) ); ?></code></td>
 								<td><?php echo esc_html( $row['detail'] ); ?></td>
 							</tr>
@@ -516,20 +611,23 @@ class SITEINTELIX_Server_Diagnostics_Module {
 	 * Build full diagnostics report.
 	 *
 	 * @param bool $redacted Whether to redact support output.
+	 * @param bool $refresh  Whether to refresh expensive cached checks.
 	 * @return array<string,mixed>
 	 */
-	private static function get_report( $redacted = false ) {
+	private static function get_report( $redacted = false, $refresh = false ) {
+		self::$cache_metadata = array();
 		$php_server = self::get_php_server_checks( $redacted );
 		$extensions = self::get_extension_checks();
-		$filesystem = self::get_filesystem_checks( $redacted );
-		$network    = self::get_network_checks();
+		$filesystem = self::get_cached_section( 'filesystem', array( __CLASS__, 'get_filesystem_checks' ), $refresh );
+		$network    = self::get_cached_section( 'network', array( __CLASS__, 'get_network_checks' ), $refresh );
 		$wordpress  = self::get_wordpress_checks();
-		$database   = self::get_database_checks( $redacted );
+		$database   = self::get_cached_section( 'database', array( __CLASS__, 'get_database_checks' ), $refresh );
 		$all_rows   = array_merge( $php_server, $extensions, $filesystem, $network, $wordpress, $database );
 
-		return array(
+		$report = array(
 			'generated_at' => current_time( 'mysql' ),
 			'site'         => self::redact_url( home_url( '/' ) ),
+			'cache'        => self::$cache_metadata,
 			'summary'      => self::summarize( $all_rows ),
 			'php_server'   => $php_server,
 			'extensions'   => $extensions,
@@ -538,6 +636,104 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			'wordpress'    => $wordpress,
 			'database'     => $database,
 		);
+
+		return $redacted ? self::redact_report( $report ) : $report;
+	}
+
+	/**
+	 * Return cached rows and only recollect them during an explicit refresh.
+	 *
+	 * Stale values are deliberately retained so a failed refresh never replaces
+	 * useful diagnostics with an empty screen.
+	 *
+	 * @param string   $key       Cache key suffix.
+	 * @param callable $collector Row collector.
+	 * @param bool     $refresh   Whether to recollect now.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function get_cached_section( $key, $collector, $refresh ) {
+		$option_name = self::CACHE_PREFIX . sanitize_key( $key );
+		$cached      = get_option( $option_name, array() );
+		$cached_rows = isset( $cached['rows'] ) && is_array( $cached['rows'] ) ? $cached['rows'] : array();
+		$collected   = isset( $cached['collected_ts'] ) ? absint( $cached['collected_ts'] ) : 0;
+		$is_fresh    = $collected && ( time() - $collected ) < self::CACHE_TTL;
+
+		if ( $refresh ) {
+			try {
+				$rows = call_user_func( $collector, false );
+				if ( ! is_array( $rows ) ) {
+					throw new RuntimeException( 'Invalid diagnostics collector result.' );
+				}
+				$cached = array(
+					'schema'       => 1,
+					'collected_at' => current_time( 'mysql' ),
+					'collected_ts' => time(),
+					'rows'         => $rows,
+					'error'        => '',
+				);
+				update_option( $option_name, $cached, false );
+				$cached_rows = $rows;
+				$collected   = $cached['collected_ts'];
+				$is_fresh    = true;
+			} catch ( Throwable $error ) {
+				$cached['error'] = $error->getMessage();
+				if ( $cached_rows ) {
+					update_option( $option_name, $cached, false );
+				}
+			}
+		}
+
+		self::$cache_metadata[ $key ] = array(
+			'collected_at' => isset( $cached['collected_at'] ) ? (string) $cached['collected_at'] : '',
+			'collected_ts' => $collected,
+			'stale'        => ! $is_fresh,
+			'error'        => isset( $cached['error'] ) ? (string) $cached['error'] : '',
+		);
+
+		if ( $cached_rows ) {
+			return $cached_rows;
+		}
+
+		return array(
+			self::row(
+				__( 'Cached diagnostics', 'siteintelix' ),
+				__( 'Not checked yet', 'siteintelix' ),
+				'warning',
+				__( 'Select Refresh checks to collect this section without delaying the page load.', 'siteintelix' )
+			),
+		);
+	}
+
+	/**
+	 * Describe the state of expensive diagnostics caches.
+	 *
+	 * @param array<string,mixed> $report Report.
+	 * @return string
+	 */
+	private static function cache_status_text( $report ) {
+		$cache = isset( $report['cache'] ) && is_array( $report['cache'] ) ? $report['cache'] : array();
+		$times = array();
+		$stale = false;
+
+		foreach ( $cache as $metadata ) {
+			if ( ! empty( $metadata['collected_ts'] ) ) {
+				$times[] = absint( $metadata['collected_ts'] );
+			}
+			$stale = $stale || ! empty( $metadata['stale'] );
+		}
+
+		if ( ! $times ) {
+			return __( 'Expensive checks have not run yet. Refresh when you need current filesystem, network, and database results.', 'siteintelix' );
+		}
+
+		$age = human_time_diff( min( $times ), time() );
+		if ( $stale ) {
+			/* translators: %s: Human-readable age, for example "8 minutes". */
+			return sprintf( __( 'Showing saved results from %s ago. Refresh for current values.', 'siteintelix' ), $age );
+		}
+
+		/* translators: %s: Human-readable age, for example "2 minutes". */
+		return sprintf( __( 'Expensive checks were refreshed %s ago.', 'siteintelix' ), $age );
 	}
 
 	/**
@@ -688,7 +884,10 @@ class SITEINTELIX_Server_Diagnostics_Module {
 		$mu_plugins     = function_exists( 'get_mu_plugins' ) ? get_mu_plugins() : array();
 		$dropins        = function_exists( 'get_dropins' ) ? get_dropins() : array();
 		$theme          = wp_get_theme();
-		$rest           = self::remote_check( rest_url( '/' ), false );
+		$rest_cache     = get_transient( SITEINTELIX_System_Info::OVERVIEW_REMOTE_HEALTH_TRANSIENT );
+		$rest_available = is_array( $rest_cache ) && array_key_exists( 'available', $rest_cache ) ? (bool) $rest_cache['available'] : null;
+		$rest_value     = null === $rest_available ? __( 'Not checked yet', 'siteintelix' ) : ( $rest_available ? __( 'Available', 'siteintelix' ) : __( 'Unavailable', 'siteintelix' ) );
+		$rest_status    = null === $rest_available ? 'warning' : ( $rest_available ? 'pass' : 'danger' );
 
 		return array(
 			self::row( __( 'WordPress version', 'siteintelix' ), get_bloginfo( 'version' ), version_compare( get_bloginfo( 'version' ), '6.0', '>=' ) ? 'pass' : 'warning', __( 'Modern plugins are generally tested against recent WordPress versions.', 'siteintelix' ) ),
@@ -701,7 +900,7 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			self::row( __( 'Must-use plugin versions', 'siteintelix' ), self::get_mu_plugin_versions( $mu_plugins ), count( $mu_plugins ) ? 'info' : 'neutral', __( 'Must-use plugin names and versions.', 'siteintelix' ) ),
 			self::row( __( 'Drop-ins', 'siteintelix' ), implode( ', ', array_keys( $dropins ) ) ?: __( 'None', 'siteintelix' ), count( $dropins ) ? 'warning' : 'pass', __( 'Drop-ins such as object-cache.php, advanced-cache.php, and db.php can change core behavior.', 'siteintelix' ) ),
 			self::row( __( 'Persistent object cache', 'siteintelix' ), function_exists( 'wp_using_ext_object_cache' ) && wp_using_ext_object_cache() ? __( 'Enabled', 'siteintelix' ) : __( 'Disabled', 'siteintelix' ), function_exists( 'wp_using_ext_object_cache' ) && wp_using_ext_object_cache() ? 'info' : 'neutral', __( 'Persistent object caches can affect transient and cache debugging.', 'siteintelix' ) ),
-			self::row( __( 'REST API', 'siteintelix' ), $rest['value'], $rest['status'], __( 'REST failures can break builders, importers, and admin screens.', 'siteintelix' ) ),
+			self::row( __( 'REST API', 'siteintelix' ), $rest_value, $rest_status, __( 'REST status is checked when diagnostics are refreshed; failures can break builders, importers, and admin screens.', 'siteintelix' ) ),
 			self::row( __( 'WP-Cron', 'siteintelix' ), defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ? __( 'Disabled', 'siteintelix' ) : __( 'Enabled', 'siteintelix' ), defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ? 'warning' : 'pass', __( 'Disabled cron requires a real server cron job.', 'siteintelix' ) ),
 			self::row( 'WP_DEBUG', defined( 'WP_DEBUG' ) && WP_DEBUG ? __( 'Enabled', 'siteintelix' ) : __( 'Disabled', 'siteintelix' ), defined( 'WP_DEBUG' ) && WP_DEBUG ? 'warning' : 'pass', __( 'Debug mode should usually be disabled on production.', 'siteintelix' ) ),
 			self::row( 'WP_DEBUG_LOG', defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ? __( 'Enabled', 'siteintelix' ) : __( 'Disabled', 'siteintelix' ), 'info', __( 'Controls WordPress debug log capture.', 'siteintelix' ) ),
@@ -918,7 +1117,7 @@ class SITEINTELIX_Server_Diagnostics_Module {
 				'timeout'     => 7,
 				'redirection' => 3,
 				'sslverify'   => $sslverify,
-				'user-agent'  => 'SiteIntelix/' . SITEINTELIX_VERSION . '; ' . home_url( '/' ),
+				'user-agent'  => 'SiteIntelix/' . SITEINTELIX_VERSION,
 			)
 		);
 
@@ -1264,5 +1463,21 @@ class SITEINTELIX_Server_Diagnostics_Module {
 			return 'warning';
 		}
 		return 'danger';
+	}
+
+	/**
+	 * Short health label for the compact score card.
+	 *
+	 * @param int $score Score.
+	 * @return string
+	 */
+	private static function score_status_text( $score ) {
+		if ( $score >= 85 ) {
+			return __( 'Healthy', 'siteintelix' );
+		}
+		if ( $score >= 65 ) {
+			return __( 'Needs attention', 'siteintelix' );
+		}
+		return __( 'Action required', 'siteintelix' );
 	}
 }
