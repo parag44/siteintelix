@@ -97,6 +97,7 @@ function siteintelix_boot_early_code_snippets() {
 	if ( ! is_array( $enabled_modules ) || ! in_array( 'code_snippets', array_map( 'sanitize_key', $enabled_modules ), true ) ) {
 		return;
 	}
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-security.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/code-snippets/class-siteintelix-code-snippets-module.php';
 	SITEINTELIX_Code_Snippets_Module::register_early_runtime();
 }

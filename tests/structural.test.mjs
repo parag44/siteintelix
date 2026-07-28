@@ -982,6 +982,12 @@ test('Code Snippets is an independent early-runtime module', async () => {
 	assert.match(main, /class-siteintelix-code-snippets-module\.php/);
 	assert.match(main, /SITEINTELIX_Code_Snippets_Module::init\(\)/);
 	assert.match(main, /SITEINTELIX_Code_Snippets_Module::activate\(\)/);
+	const securityLoad = main.indexOf("require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-security.php';");
+	const earlyRuntime = main.indexOf('siteintelix_boot_early_code_snippets();');
+	assert.ok(
+		securityLoad >= 0 && securityLoad < earlyRuntime,
+		'the security policy must load before the early snippets runtime is registered',
+	);
 	assert.match(modulesPage, /'code_snippets'\s*=>\s*admin_url\(\s*'admin\.php\?page=siteintelix-code-snippets'/);
 });
 
