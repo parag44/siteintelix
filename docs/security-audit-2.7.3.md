@@ -168,9 +168,14 @@ against `origin/2.7.1-stable`.
   `.git`, `.superpowers`, docs, tests, and development artifacts are absent; all
   packaged PHP files lint clean.
 - WordPress CLI reports WordPress 7.0.2.
-- A live `wp plugin check siteintelix` run and browser smoke test could not
-  complete because the Local site's database/web server was stopped. The
-  standalone PluginCheck PHPCS ruleset completed successfully instead.
+- A live non-WP-CLI WordPress bootstrap using Local PHP 8.5.3 and the Local
+  database passed. The security policy, snippets context, and snippets runner
+  loaded successfully, and the context method involved in the reported early
+  bootstrap fatal completed without error.
+- A browser smoke test could not complete because the Local web server was
+  stopped. `wp plugin check siteintelix` was unavailable because this WP-CLI
+  installation does not register the `plugin check` command; the standalone
+  PluginCheck PHPCS ruleset completed successfully instead.
 
 ## Remaining Risks and Manual Review
 
@@ -184,7 +189,7 @@ against `origin/2.7.1-stable`.
    described above; administrators should use least-privilege accounts.
 4. Multisite behavior should receive a final manual smoke test on a real
    multisite installation, especially super-admin module toggles.
-5. Run the WordPress Plugin Checker and browser smoke tests again when the Local
-   database and web server are available.
+5. Run WordPress Plugin Checker after its WP-CLI command is registered, and run
+   the browser smoke tests after the Local web server is started.
 6. Address the remaining WordPress Coding Standards formatting debt in a separate
    no-functional-change cleanup release.
