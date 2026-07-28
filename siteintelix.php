@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       SiteIntelix – Debug Logs, Email Logs & Diagnostics
+ * Plugin Name:       SiteIntelix – WordPress Toolkit
  * Plugin URI:        https://wordpress.org/plugins/siteintelix
- * Description:       Lightweight WordPress diagnostics for debug logs, email logs, server health, PHP configuration, cron, database, and troubleshooting.
- * Version:           2.7.1
+ * Description:       Fast, modular WordPress diagnostics for debug logs, email delivery, cron, database, server health, Safe Mode, SMTP, and maintenance.
+ * Version:           2.7.3
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Parag Das
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /** Plugin version. */
-define( 'SITEINTELIX_VERSION', '2.7.1' );
+define( 'SITEINTELIX_VERSION', '2.7.3' );
 
 /** Absolute path to the plugin directory (trailing slash). */
 define( 'SITEINTELIX_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -63,11 +63,69 @@ define( 'SITEINTELIX_MIN_MEMORY_MB', 128 );
 // ---------------------------------------------------------------------------
 
 /**
+ * Register Email Log capture before other plugin lifecycle callbacks can send.
+ *
+ * The saved option is read directly so the filtered module registry is not
+ * cached before every plugin has loaded.
+ *
+ * @return void
+ */
+function siteintelix_boot_early_email_capture() {
+	$enabled_modules = get_option( SITEINTELIX_MODULES_OPTION, null );
+
+	if ( ! is_array( $enabled_modules ) ) {
+		return;
+	}
+
+	$enabled_modules = array_map( 'sanitize_key', $enabled_modules );
+	if ( ! in_array( 'email_log', $enabled_modules, true ) ) {
+		return;
+	}
+
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/email-log/class-siteintelix-email-log-module.php';
+	SITEINTELIX_Email_Log_Module::register_capture_hooks();
+}
+siteintelix_boot_early_email_capture();
+
+/**
+ * Register active PHP snippets before ordinary plugin lifecycle callbacks.
+ *
+ * @return void
+ */
+function siteintelix_boot_early_code_snippets() {
+	$enabled_modules = get_option( SITEINTELIX_MODULES_OPTION, null );
+	if ( ! is_array( $enabled_modules ) || ! in_array( 'code_snippets', array_map( 'sanitize_key', $enabled_modules ), true ) ) {
+		return;
+	}
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/code-snippets/class-siteintelix-code-snippets-module.php';
+	SITEINTELIX_Code_Snippets_Module::register_early_runtime();
+}
+siteintelix_boot_early_code_snippets();
+
+/**
+ * Determine whether admin-only module classes are needed for this request.
+ *
+ * @return bool
+ */
+function siteintelix_should_load_admin_modules() {
+	if ( is_admin() ) {
+		return true;
+	}
+
+	if ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+		return true;
+	}
+
+	return defined( 'WP_CLI' ) && WP_CLI;
+}
+
+/**
  * Require all class files used by the plugin.
  *
  * Called on plugins_loaded so WordPress core is fully bootstrapped first.
  */
 function siteintelix_load_includes() {
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-files.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-system-info.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-health-check.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-modules.php';
@@ -90,32 +148,47 @@ function siteintelix_load_includes() {
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/smtp/class-siteintelix-smtp-module.php';
 	}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'cron_events' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/cron-events/class-siteintelix-cron-events-module.php';
-	}
+	if ( siteintelix_should_load_admin_modules() ) {
+		if ( SITEINTELIX_Modules::is_enabled( 'cron_events' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/cron-events/class-siteintelix-cron-events-module.php';
+		}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'database_manager' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/database-manager/class-siteintelix-database-manager-module.php';
-	}
+		if ( SITEINTELIX_Modules::is_enabled( 'database_manager' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/database-manager/class-siteintelix-database-manager-module.php';
+		}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'download_manager' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/download-manager/class-siteintelix-download-manager-module.php';
-	}
+		if ( SITEINTELIX_Modules::is_enabled( 'download_manager' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/download-manager/class-siteintelix-download-manager-module.php';
+		}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'transients_manager' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/transients-manager/class-siteintelix-transients-manager-module.php';
-	}
+		if ( SITEINTELIX_Modules::is_enabled( 'transients_manager' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/transients-manager/class-siteintelix-transients-manager-module.php';
+		}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'server_diagnostics' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/server-diagnostics/class-siteintelix-server-diagnostics-module.php';
-	}
+		if ( SITEINTELIX_Modules::is_enabled( 'server_diagnostics' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/server-diagnostics/class-siteintelix-server-diagnostics-module.php';
+		}
 
-	if ( SITEINTELIX_Modules::is_enabled( 'safe_mode_debugger' ) ) {
-		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
+		if ( SITEINTELIX_Modules::is_enabled( 'safe_mode_debugger' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
+		}
 	}
 
 	if ( SITEINTELIX_Modules::is_enabled( 'coming_soon' ) ) {
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/coming-soon/class-siteintelix-coming-soon-module.php';
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'custom_code' ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/custom-code/class-siteintelix-custom-code-module.php';
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'code_snippets' ) && ! class_exists( 'SITEINTELIX_Code_Snippets_Module' ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/code-snippets/class-siteintelix-code-snippets-module.php';
+	}
+
+	$siteintelix_user_switcher_cookie = 'siteintelix_user_switcher_' . get_current_blog_id();
+	if ( SITEINTELIX_Modules::is_enabled( 'user_switcher' ) || ! empty( $_COOKIE[ $siteintelix_user_switcher_cookie ] ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/user-switcher/class-siteintelix-user-switcher-module.php';
 	}
 }
 add_action( 'plugins_loaded', 'siteintelix_load_includes' );
@@ -131,16 +204,6 @@ function siteintelix_run_migrations() {
 	}
 }
 add_action( 'admin_init', 'siteintelix_run_migrations', 1 );
-
-/**
- * Load translations from the plugin languages directory.
- *
- * @return void
- */
-function siteintelix_load_textdomain() {
-	load_plugin_textdomain( 'siteintelix', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-add_action( 'init', 'siteintelix_load_textdomain', 5 );
 
 /**
  * Boot enabled module runtime hooks.
@@ -186,6 +249,20 @@ function siteintelix_boot_enabled_modules() {
 
 	if ( SITEINTELIX_Modules::is_enabled( 'coming_soon' ) && class_exists( 'SITEINTELIX_Coming_Soon_Module' ) ) {
 		SITEINTELIX_Coming_Soon_Module::init();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'user_switcher' ) && class_exists( 'SITEINTELIX_User_Switcher_Module' ) ) {
+		SITEINTELIX_User_Switcher_Module::init();
+	} elseif ( class_exists( 'SITEINTELIX_User_Switcher_Module' ) && SITEINTELIX_User_Switcher_Session_Manager::has_cookie() ) {
+		SITEINTELIX_User_Switcher_Module::init_recovery();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'custom_code' ) && class_exists( 'SITEINTELIX_Custom_Code_Module' ) ) {
+		SITEINTELIX_Custom_Code_Module::init();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'code_snippets' ) && class_exists( 'SITEINTELIX_Code_Snippets_Module' ) ) {
+		SITEINTELIX_Code_Snippets_Module::init();
 	}
 }
 add_action( 'init', 'siteintelix_boot_enabled_modules', 20 );
@@ -239,7 +316,6 @@ function siteintelix_register_admin_menu() {
 			'siteintelix_render_debug_log_page'
 		);
 	}
-
 }
 add_action( 'admin_menu', 'siteintelix_register_admin_menu' );
 
@@ -299,10 +375,13 @@ function siteintelix_register_admin_bar_link( $wp_admin_bar ) {
 		return;
 	}
 
+	$siteintelix_admin_bar_icon  = '<span class="ab-icon dashicons dashicons-chart-area" aria-hidden="true"></span>';
+	$siteintelix_admin_bar_label = '<span class="ab-label">' . esc_html__( 'SiteIntelix', 'siteintelix' ) . '</span>';
+
 	$wp_admin_bar->add_node(
 		array(
 			'id'    => 'siteintelix',
-			'title' => __( 'SiteIntelix', 'siteintelix' ),
+			'title' => $siteintelix_admin_bar_icon . $siteintelix_admin_bar_label,
 			'href'  => admin_url( 'admin.php?page=siteintelix' ),
 			'meta'  => array(
 				'title' => __( 'SiteIntelix log shortcuts', 'siteintelix' ),
@@ -336,28 +415,6 @@ function siteintelix_is_admin_screen() {
 
 	return 0 === strpos( $page, 'siteintelix' );
 }
-
-/**
- * Hide core and third-party admin notices on SiteIntelix screens only.
- *
- * SiteIntelix renders its own notice area inside each page template, so
- * removing the shared WordPress notice hooks keeps the UI focused without
- * affecting the rest of wp-admin.
- *
- * @return void
- */
-function siteintelix_suppress_admin_notices() {
-	if ( ! siteintelix_is_admin_screen() ) {
-		return;
-	}
-
-	remove_all_actions( 'admin_notices' );
-	remove_all_actions( 'all_admin_notices' );
-	remove_all_actions( 'network_admin_notices' );
-	remove_all_actions( 'user_admin_notices' );
-	remove_action( 'admin_notices', 'update_nag', 3 );
-}
-add_action( 'in_admin_header', 'siteintelix_suppress_admin_notices', 0 );
 
 // ---------------------------------------------------------------------------
 // Admin page renderer
@@ -465,12 +522,117 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 	);
 
 	wp_enqueue_script(
-		'siteintelix-admin-script',
-		SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-admin.js',
+		'siteintelix-core',
+		SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-core.js',
 		array(),   // No dependencies — vanilla JS.
 		SITEINTELIX_VERSION,
 		true       // Load in footer.
 	);
+
+	$siteintelix_legacy_script_screen = false !== strpos( (string) $hook_suffix, 'siteintelix-debug-log' ) || false !== strpos( (string) $hook_suffix, 'siteintelix-database-manager' );
+	if ( $siteintelix_legacy_script_screen ) {
+		wp_enqueue_script( 'siteintelix-admin-script', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-admin.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+	}
+
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-modules' ) ) {
+		wp_enqueue_script( 'siteintelix-modules', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-modules.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+		wp_localize_script(
+			'siteintelix-modules',
+			'siteintelixModulesData',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'siteintelix_toggle_module' ),
+				'updated' => __( 'Module updated.', 'siteintelix' ),
+				'failed'  => __( 'Module update failed.', 'siteintelix' ),
+			)
+		);
+	}
+
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-cron-events' ) ) {
+		wp_enqueue_script( 'siteintelix-cron-events', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-cron-events.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+	}
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-transients-manager' ) ) {
+		wp_enqueue_script( 'siteintelix-transients', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-transients.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+	}
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-safe-mode' ) ) {
+		wp_enqueue_script( 'siteintelix-safe-mode', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-safe-mode.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+	}
+
+	if ( 'toplevel_page_siteintelix' === (string) $hook_suffix ) {
+		wp_enqueue_script(
+			'siteintelix-overview',
+			SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-overview.js',
+			array( 'siteintelix-core' ),
+			SITEINTELIX_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'siteintelix-overview',
+			'siteintelixOverviewData',
+			array(
+				'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
+				'moduleToggleNonce'  => wp_create_nonce( 'siteintelix_toggle_module' ),
+				'moduleUpdating'     => __( 'Updating module…', 'siteintelix' ),
+				'moduleUpdated'      => __( 'Module updated.', 'siteintelix' ),
+				'moduleUpdateFailed' => __( 'Module update failed.', 'siteintelix' ),
+				'copied'             => __( 'Redacted report copied.', 'siteintelix' ),
+				'copyFailed'         => __( 'Copy failed. Select and copy the report manually.', 'siteintelix' ),
+				'exported'           => __( 'Redacted report exported.', 'siteintelix' ),
+			)
+		);
+	}
+
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-email-log' ) ) {
+		wp_enqueue_style(
+			'siteintelix-email-log',
+			SITEINTELIX_PLUGIN_URL . 'assets/admin/css/siteintelix-email-log.css',
+			array( 'siteintelix-admin-style' ),
+			SITEINTELIX_VERSION
+		);
+		wp_enqueue_script(
+			'siteintelix-email-log',
+			SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-email-log.js',
+			array( 'siteintelix-core' ),
+			SITEINTELIX_VERSION,
+			true
+		);
+		wp_localize_script(
+			'siteintelix-email-log',
+			'siteintelixEmailLogData',
+			array(
+				'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+				'previewNonce'      => wp_create_nonce( 'siteintelix_email_preview' ),
+				'loading'           => __( 'Loading email preview…', 'siteintelix' ),
+				'loadFailed'        => __( 'Email preview could not be loaded.', 'siteintelix' ),
+				'noSubject'         => __( '(No subject)', 'siteintelix' ),
+				'invalidEmail'      => __( 'Enter a valid email address.', 'siteintelix' ),
+				'confirm'           => __( 'Confirm', 'siteintelix' ),
+				'cancel'            => __( 'Cancel', 'siteintelix' ),
+				'sendEmail'         => __( 'Send Email', 'siteintelix' ),
+				'sendTestTitle'     => __( 'Send test email', 'siteintelix' ),
+				'sendTestHelp'      => __( 'Enter the recipient address for the test message.', 'siteintelix' ),
+				'deleteSelected'    => __( 'Delete the selected email logs?', 'siteintelix' ),
+				'deleteAll'         => __( 'Delete all email logs? This cannot be undone.', 'siteintelix' ),
+				'selectionSingular' => __( '1 email selected', 'siteintelix' ),
+				/* translators: %d: number of selected email log entries. */
+				'selectionPlural'   => __( '%d emails selected', 'siteintelix' ),
+			)
+		);
+	}
+
+	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-settings' ) ) {
+		wp_enqueue_style( 'siteintelix-settings', SITEINTELIX_PLUGIN_URL . 'assets/admin/css/siteintelix-settings.css', array( 'siteintelix-admin-style' ), SITEINTELIX_VERSION );
+		wp_enqueue_script( 'siteintelix-settings', SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-settings.js', array( 'siteintelix-core' ), SITEINTELIX_VERSION, true );
+		wp_localize_script(
+			'siteintelix-settings',
+			'siteintelixSettingsData',
+			array(
+				'chooseLogo' => __( 'Choose Logo', 'siteintelix' ),
+				'useLogo'    => __( 'Use this logo', 'siteintelix' ),
+			)
+		);
+	}
 
 	if ( false !== strpos( (string) $hook_suffix, 'siteintelix-server-diagnostics' ) ) {
 		wp_enqueue_style(
@@ -483,77 +645,55 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 		wp_enqueue_script(
 			'siteintelix-server-diagnostics-script',
 			SITEINTELIX_PLUGIN_URL . 'assets/admin/js/siteintelix-server-diagnostics.js',
-			array(),
+			array( 'wp-i18n' ),
 			SITEINTELIX_VERSION,
 			true
 		);
 
-		// Cover the complete normal diagnostics range while keeping the localized payload bounded.
-		$siteintelix_diagnostics_count_max = 200;
-		$siteintelix_count_strings         = array(
-			'checksShown'     => array(),
-			'showPassed'      => array(),
-			'hidePassed'      => array(),
-			'showInformation' => array(),
-			'hideInformation' => array(),
-			'listTotal'       => array(),
-			'issueCount'      => array(),
-			'warningCount'    => array(),
-			'passedCount'     => array(),
-			'informationCount' => array(),
+		wp_set_script_translations(
+			'siteintelix-server-diagnostics-script',
+			'siteintelix',
+			SITEINTELIX_PLUGIN_DIR . 'languages'
 		);
-		for ( $siteintelix_count = 0; $siteintelix_count <= $siteintelix_diagnostics_count_max; $siteintelix_count++ ) {
-			/* translators: %d: Number of diagnostic checks. */
-			$siteintelix_count_strings['checksShown'][ $siteintelix_count ] = _n( '%d check shown', '%d checks shown', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of passed diagnostic checks. */
-			$siteintelix_count_strings['showPassed'][ $siteintelix_count ] = _n( 'Show %d passed check', 'Show %d passed checks', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of passed diagnostic checks. */
-			$siteintelix_count_strings['hidePassed'][ $siteintelix_count ] = _n( 'Hide %d passed check', 'Hide %d passed checks', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of informational diagnostic checks. */
-			$siteintelix_count_strings['showInformation'][ $siteintelix_count ] = _n( 'Show %d informational check', 'Show %d informational checks', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of informational diagnostic checks. */
-			$siteintelix_count_strings['hideInformation'][ $siteintelix_count ] = _n( 'Hide %d informational check', 'Hide %d informational checks', $siteintelix_count, 'siteintelix' );
-			/* translators: 1: Diagnostics list label, 2: Total number of checks. */
-			$siteintelix_count_strings['listTotal'][ $siteintelix_count ] = _n( '%1$s (%2$d total check)', '%1$s (%2$d total checks)', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of diagnostic issues. */
-			$siteintelix_count_strings['issueCount'][ $siteintelix_count ] = _n( '%d issue', '%d issues', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of diagnostic warnings. */
-			$siteintelix_count_strings['warningCount'][ $siteintelix_count ] = _n( '%d warning', '%d warnings', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of passed diagnostic checks. */
-			$siteintelix_count_strings['passedCount'][ $siteintelix_count ] = _n( '%d passed', '%d passed', $siteintelix_count, 'siteintelix' );
-			/* translators: %d: Number of informational diagnostic checks. */
-			$siteintelix_count_strings['informationCount'][ $siteintelix_count ] = _n( '%d information', '%d information', $siteintelix_count, 'siteintelix' );
-		}
 
 		wp_localize_script(
 			'siteintelix-server-diagnostics-script',
 			'siteintelixDiagnosticsData',
-			array_merge(
-				$siteintelix_count_strings,
-				array(
-					'noResults'          => __( 'No diagnostic checks match the current filters.', 'siteintelix' ),
-					'resetFilters'       => __( 'Reset filters', 'siteintelix' ),
-					'partialLoad'        => __( 'Some sections could not be loaded.', 'siteintelix' ),
-					'sectionLoadError'   => __( 'This diagnostics section could not be displayed.', 'siteintelix' ),
-					'copySuccess'        => __( 'System information copied.', 'siteintelix' ),
-					'copyFailure'        => __( 'System information could not be copied.', 'siteintelix' ),
-					'systemInfoFallback' => __( 'System information is unavailable.', 'siteintelix' ),
-					/* translators: %s: Diagnostics section name. */
-					'expandLabel'        => __( 'Expand %s', 'siteintelix' ),
-					/* translators: %s: Diagnostics section name. */
-					'collapseLabel'      => __( 'Collapse %s', 'siteintelix' ),
-					'problemsListLabel'  => __( 'Checks needing attention', 'siteintelix' ),
-					'informationListLabel' => __( 'Informational checks', 'siteintelix' ),
-					'passedListLabel'    => __( 'Passed checks', 'siteintelix' ),
-					'sectionNoMatches'   => __( 'No checks in this section match the current filters.', 'siteintelix' ),
-					'unnamedCheck'       => __( 'Unnamed check', 'siteintelix' ),
-					'criticalIssue'      => __( 'Critical issue', 'siteintelix' ),
-					'warning'            => __( 'Warning', 'siteintelix' ),
-					'information'        => __( 'Information', 'siteintelix' ),
-					'passed'             => __( 'Passed', 'siteintelix' ),
-					'current'            => __( 'Current', 'siteintelix' ),
-					'recommended'        => __( 'Recommended', 'siteintelix' ),
-				)
+			array(
+				'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
+				'refreshNonce'         => wp_create_nonce( 'siteintelix_refresh_server_diagnostics' ),
+				'refreshing'           => __( 'Refreshing diagnostics…', 'siteintelix' ),
+				'refreshComplete'      => __( 'Diagnostics refreshed.', 'siteintelix' ),
+				'refreshFailed'        => __( 'Refresh failed. The previous results are still available.', 'siteintelix' ),
+				'noResults'            => __( 'No diagnostic checks match the current filters.', 'siteintelix' ),
+				'resetFilters'         => __( 'Reset filters', 'siteintelix' ),
+				'partialLoad'          => __( 'Some sections could not be loaded.', 'siteintelix' ),
+				'sectionLoadError'     => __( 'This diagnostics section could not be displayed.', 'siteintelix' ),
+				'copySuccess'          => __( 'System information copied.', 'siteintelix' ),
+				'copyFailure'          => __( 'System information could not be copied.', 'siteintelix' ),
+				'systemInfoFallback'   => __( 'System information is unavailable.', 'siteintelix' ),
+				/* translators: %s: Diagnostics section name. */
+				'expandLabel'          => __( 'Expand %s', 'siteintelix' ),
+				/* translators: %s: Diagnostics section name. */
+				'collapseLabel'        => __( 'Collapse %s', 'siteintelix' ),
+				'problemsListLabel'    => __( 'Checks needing attention', 'siteintelix' ),
+				'informationListLabel' => __( 'Informational checks', 'siteintelix' ),
+				'passedListLabel'      => __( 'Passed checks', 'siteintelix' ),
+				'sectionNoMatches'     => __( 'No checks in this section match the current filters.', 'siteintelix' ),
+				'unnamedCheck'         => __( 'Unnamed check', 'siteintelix' ),
+				'criticalIssue'        => __( 'Critical issue', 'siteintelix' ),
+				'warning'              => __( 'Warning', 'siteintelix' ),
+				'information'          => __( 'Information', 'siteintelix' ),
+				'passed'               => __( 'Passed', 'siteintelix' ),
+				'current'              => __( 'Current', 'siteintelix' ),
+				'recommended'          => __( 'Recommended', 'siteintelix' ),
+				'details'              => __( 'Details', 'siteintelix' ),
+				'showAllChecks'        => __( 'Show all checks', 'siteintelix' ),
+				'showFewer'            => __( 'Show fewer', 'siteintelix' ),
+				'statusColumn'         => __( 'Status', 'siteintelix' ),
+				'checkColumn'          => __( 'Check', 'siteintelix' ),
+				'descriptionColumn'    => __( 'Description', 'siteintelix' ),
+				'actionColumn'         => __( 'Action', 'siteintelix' ),
 			)
 		);
 	}
@@ -582,22 +722,16 @@ function siteintelix_enqueue_admin_assets( $hook_suffix ) {
 		);
 	}
 
-	// Pass localised strings and nonce to JS.
-	wp_localize_script(
-		'siteintelix-admin-script',
-		'siteintelixData',
-		array(
-			'nonce'             => wp_create_nonce( 'siteintelix_export_nonce' ),
-			'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
-			'moduleToggleNonce' => wp_create_nonce( 'siteintelix_toggle_module' ),
-			'copiedLabel'       => __( 'Copied!', 'siteintelix' ),
-			'errorLabel'        => __( 'Copy failed — please copy manually.', 'siteintelix' ),
-			'moduleUpdating'    => __( 'Updating module…', 'siteintelix' ),
-			'moduleUpdated'     => __( 'Module updated.', 'siteintelix' ),
-			'chooseLogoLabel'   => __( 'Choose Logo', 'siteintelix' ),
-			'useLogoLabel'      => __( 'Use this logo', 'siteintelix' ),
-		)
-	);
+	if ( $siteintelix_legacy_script_screen ) {
+		wp_localize_script(
+			'siteintelix-admin-script',
+			'siteintelixData',
+			array(
+				'copiedLabel' => __( 'Copied!', 'siteintelix' ),
+				'errorLabel'  => __( 'Copy failed — please copy manually.', 'siteintelix' ),
+			)
+		);
+	}
 }
 add_action( 'admin_enqueue_scripts', 'siteintelix_enqueue_admin_assets' );
 
@@ -627,7 +761,7 @@ function siteintelix_toggle_mu_debug_capture() {
 
 	$redirect_url = add_query_arg(
 		array(
-			'page'                      => 'siteintelix-debug-log',
+			'page'                       => 'siteintelix-debug-log',
 			'siteintelix_mu_debug_saved' => '1',
 			'siteintelix_mu_debug_mode'  => (string) $enabled,
 		),
@@ -707,7 +841,13 @@ function siteintelix_save_debug_settings() {
 	if ( $error_msg ) {
 		$redirect_url = add_query_arg( 'siteintelix_settings_error', urlencode( $error_msg ), $redirect_url );
 	} else {
-		$redirect_url = add_query_arg( array( 'siteintelix_settings_saved' => '1', 'tab' => 'debug_log' ), $redirect_url );
+		$redirect_url = add_query_arg(
+			array(
+				'siteintelix_settings_saved' => '1',
+				'tab'                        => 'debug_log',
+			),
+			$redirect_url
+		);
 	}
 	$redirect_url .= '#siteintelix-debug-log-settings';
 
@@ -752,7 +892,13 @@ function siteintelix_fix_debug_conflict() {
 	if ( $error_msg ) {
 		$redirect_url = add_query_arg( 'siteintelix_settings_error', rawurlencode( $error_msg ), $redirect_url );
 	} else {
-		$redirect_url = add_query_arg( array( 'siteintelix_settings_saved' => '1', 'tab' => 'debug_log' ), $redirect_url );
+		$redirect_url = add_query_arg(
+			array(
+				'siteintelix_settings_saved' => '1',
+				'tab'                        => 'debug_log',
+			),
+			$redirect_url
+		);
 	}
 	$redirect_url .= '#siteintelix-debug-log-settings';
 
@@ -774,27 +920,27 @@ add_action( 'admin_post_siteintelix_fix_debug_conflict', 'siteintelix_fix_debug_
 function siteintelix_load_module_class_for_management( $module_id ) {
 	$module_id = sanitize_key( $module_id );
 	$classes   = array(
-		'debug_log' => array(
+		'debug_log'          => array(
 			'class' => 'SITEINTELIX_MU_Debug',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-debug.php',
 		),
-		'email_log' => array(
+		'email_log'          => array(
 			'class' => 'SITEINTELIX_Email_Log_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/email-log/class-siteintelix-email-log-module.php',
 		),
-		'smtp' => array(
+		'smtp'               => array(
 			'class' => 'SITEINTELIX_SMTP_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/smtp/class-siteintelix-smtp-module.php',
 		),
-		'cron_events' => array(
+		'cron_events'        => array(
 			'class' => 'SITEINTELIX_Cron_Events_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/cron-events/class-siteintelix-cron-events-module.php',
 		),
-		'database_manager' => array(
+		'database_manager'   => array(
 			'class' => 'SITEINTELIX_Database_Manager_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/database-manager/class-siteintelix-database-manager-module.php',
 		),
-		'download_manager' => array(
+		'download_manager'   => array(
 			'class' => 'SITEINTELIX_Download_Manager_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/download-manager/class-siteintelix-download-manager-module.php',
 		),
@@ -806,9 +952,21 @@ function siteintelix_load_module_class_for_management( $module_id ) {
 			'class' => 'SITEINTELIX_Safe_Mode_Debugger_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php',
 		),
-		'coming_soon' => array(
+		'coming_soon'        => array(
 			'class' => 'SITEINTELIX_Coming_Soon_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/coming-soon/class-siteintelix-coming-soon-module.php',
+		),
+		'user_switcher'      => array(
+			'class' => 'SITEINTELIX_User_Switcher_Module',
+			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/user-switcher/class-siteintelix-user-switcher-module.php',
+		),
+		'custom_code'        => array(
+			'class' => 'SITEINTELIX_Custom_Code_Module',
+			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/custom-code/class-siteintelix-custom-code-module.php',
+		),
+		'code_snippets'      => array(
+			'class' => 'SITEINTELIX_Code_Snippets_Module',
+			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/code-snippets/class-siteintelix-code-snippets-module.php',
 		),
 	);
 
@@ -858,6 +1016,28 @@ function siteintelix_activate_module_runtime( $module_id ) {
 		}
 	}
 
+	if ( 'user_switcher' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+
+		if ( class_exists( 'SITEINTELIX_User_Switcher_Activator' ) ) {
+			SITEINTELIX_User_Switcher_Activator::activate();
+		}
+	}
+
+	if ( 'custom_code' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_Custom_Code_Module' ) ) {
+			SITEINTELIX_Custom_Code_Module::activate();
+		}
+	}
+
+	if ( 'code_snippets' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_Code_Snippets_Module' ) ) {
+			SITEINTELIX_Code_Snippets_Module::activate();
+		}
+	}
+
 	return true;
 }
 
@@ -884,6 +1064,20 @@ function siteintelix_deactivate_module_runtime( $module_id ) {
 
 		if ( class_exists( 'SITEINTELIX_Safe_Mode_Debugger_Module' ) ) {
 			SITEINTELIX_Safe_Mode_Debugger_Module::deactivate();
+		}
+	}
+
+	if ( 'email_log' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_Email_Log_Module' ) ) {
+			SITEINTELIX_Email_Log_Module::unschedule_retention();
+		}
+	}
+
+	if ( 'user_switcher' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_User_Switcher_Activator' ) ) {
+			SITEINTELIX_User_Switcher_Activator::deactivate();
 		}
 	}
 }
@@ -1000,8 +1194,8 @@ function siteintelix_download_debug_log() {
 	check_admin_referer( 'siteintelix_download_debug_log' );
 
 	// Resolve the shared SiteIntelix log path.
-	$active_method    = get_option( 'siteintelix_debug_method', 'mu' );
-	$log_path         = SITEINTELIX_Debug_Log::get_path_for_mode( $active_method );
+	$active_method     = get_option( 'siteintelix_debug_method', 'mu' );
+	$log_path          = SITEINTELIX_Debug_Log::get_path_for_mode( $active_method );
 	$download_filename = 'siteintelix-debug.log';
 
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
@@ -1110,5 +1304,37 @@ function siteintelix_activate() {
 	if ( class_exists( 'SITEINTELIX_MU_Debug' ) ) {
 		SITEINTELIX_MU_Debug::ensure_mu_plugin_file();
 	}
+
+	if ( in_array( 'email_log', $siteintelix_default_modules, true ) && class_exists( 'SITEINTELIX_Email_Log_Module' ) ) {
+		SITEINTELIX_Email_Log_Module::activate();
+	}
 }
 register_activation_hook( __FILE__, 'siteintelix_activate' );
+
+/** Clear scheduled plugin work on deactivation without deleting user data. */
+function siteintelix_deactivate() {
+	if ( class_exists( 'SITEINTELIX_Email_Log_Module' ) ) {
+		SITEINTELIX_Email_Log_Module::unschedule_retention();
+	}
+
+	update_option( SITEINTELIX_MU_DEBUG_OPTION, 0 );
+
+	$siteintelix_mu_files_class = SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-files.php';
+	if ( ! class_exists( 'SITEINTELIX_MU_Files' ) && file_exists( $siteintelix_mu_files_class ) ) {
+		require_once $siteintelix_mu_files_class;
+	}
+
+	$siteintelix_safe_mode_class = SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
+	if ( ! class_exists( 'SITEINTELIX_Safe_Mode_Debugger_Module' ) && file_exists( $siteintelix_safe_mode_class ) ) {
+		require_once $siteintelix_safe_mode_class;
+	}
+
+	if ( class_exists( 'SITEINTELIX_Safe_Mode_Debugger_Module' ) ) {
+		SITEINTELIX_Safe_Mode_Debugger_Module::deactivate();
+	}
+
+	if ( class_exists( 'SITEINTELIX_MU_Files' ) ) {
+		SITEINTELIX_MU_Files::remove_all();
+	}
+}
+register_deactivation_hook( __FILE__, 'siteintelix_deactivate' );

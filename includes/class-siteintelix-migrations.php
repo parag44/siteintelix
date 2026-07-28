@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SITEINTELIX_Migrations {
 
 	const VERSION_OPTION  = 'siteintelix_migration_version';
-	const CURRENT_VERSION = '2.7.1';
+	const CURRENT_VERSION = '2.7.3.0';
 
 	/**
 	 * Run pending migrations.
@@ -24,6 +24,11 @@ class SITEINTELIX_Migrations {
 	 */
 	public static function run() {
 		if ( version_compare( (string) get_option( self::VERSION_OPTION, '0' ), self::CURRENT_VERSION, '>=' ) ) {
+			return;
+		}
+
+		$cleanup = SITEINTELIX_MU_Files::remove_type( SITEINTELIX_MU_Files::TYPE_SAFETY_GUARD );
+		if ( ! empty( $cleanup['failed'] ) ) {
 			return;
 		}
 
