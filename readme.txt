@@ -1,7 +1,7 @@
 === SiteIntelix – WordPress Toolkit ===
 Contributors:      parag44
 Donate link:       https://parag.bd
-Tags:              debug log, email log, site health, admin tools, toolbox
+Tags:              debug log, email log, diagnostics, code snippets, admin tools
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      7.4
@@ -9,13 +9,13 @@ Stable tag:        2.7.3
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-Modular WordPress support tools for logs, email, cron, database, server health, user switching, SMTP, Safe Mode, and maintenance.
+Modular WordPress tools for diagnostics, logs, SMTP, user switching, custom CSS/JS, PHP snippets, Safe Mode, and maintenance.
 
 == Description ==
 
 **SiteIntelix** is a modular diagnostics and troubleshooting toolkit for WordPress administrators, developers, and support teams.
 
-It brings debug logs, outgoing email history, server checks, cron inspection, database browsing, Safe Mode, SMTP, and maintenance controls into one organized admin menu. Modules load only when needed, and screen-specific assets stay scoped to SiteIntelix pages.
+It brings debug logs, outgoing email history, server checks, cron inspection, database browsing, Safe Mode, SMTP, user switching, custom CSS/JavaScript, PHP snippets, and maintenance controls into one organized admin menu. Modules load only when needed, and screen-specific assets stay scoped to SiteIntelix pages.
 
 = Key Features =
 * 🩺 **Server Diagnostics** — inspect server health, PHP configuration, extensions, filesystem permissions, network access, WordPress, and database limits.
@@ -27,6 +27,8 @@ It brings debug logs, outgoing email history, server checks, cron inspection, da
 * 📦 **Download Manager** — add secure download links for installed plugin and theme ZIP packages.
 * 🛡️ **Safe Mode Debugger** — test plugin and theme conflict scenarios privately without affecting normal visitors.
 * 👥 **User Switcher** — temporarily enter an allowed user account for support without requesting or changing its password, then return securely.
+* 🎨 **Custom CSS & JS** — manage reusable administrator-authored CSS and JavaScript with frontend/admin scope, placement, priority, and inline or generated-file loading.
+* 💻 **Code Snippets** — validate, organize, and run administrator-authored PHP in isolated closures with automatic error deactivation and recovery controls.
 * 🚧 **Maintenance Mode** — show a polished public maintenance page while administrators continue working.
 * 🧰 **Modular Toolbox** — enable or disable each tool from the SiteIntelix Modules screen.
 
@@ -51,14 +53,18 @@ It brings debug logs, outgoing email history, server checks, cron inspection, da
 * Both modes use `wp-content/siteintelix-debug.log` instead of the default `wp-content/debug.log`.
 
 = Security and Privacy =
-* All SiteIntelix admin pages require the `manage_options` capability.
+* SiteIntelix admin pages require the `manage_options` capability. On Multisite, executable-code and network-sensitive tools require a Multisite super administrator.
 * Admin actions use WordPress nonces.
 * Output is escaped with WordPress escaping functions.
 * No external CDN assets or heavy JavaScript frameworks are loaded.
 * Assets are scoped to SiteIntelix admin pages.
-* SiteIntelix does not upload diagnostics, logs, email contents, database contents, or generated reports.
+* SiteIntelix sends no telemetry and does not upload diagnostics, logs, email contents, database contents, snippets, custom code, or generated reports.
 * Server reachability checks may contact WordPress.org endpoints and the site's own loopback or REST URL. They send normal HTTP request metadata, not report contents.
+* SMTP sends outgoing mail through the administrator-configured SMTP provider. Its credential is stored locally in a non-autoloaded WordPress option.
+* Enabled Code Snippets execute locally authored PHP through the module's isolated runner. SiteIntelix does not retrieve or execute remote snippet code.
+* Custom CSS & JS can add administrator-authored executable JavaScript to configured frontend or admin pages.
 * User Switcher uses WordPress-native authentication, signed short-lived state, dedicated capabilities, protected roles, and optional local audit logs.
+* Debug logs, email logs, database values, diagnostic reports, and switching records can contain sensitive information and should be shared only with trusted people.
 
 = Shortcode =
 Use `[siteintelix_panel]` on any page or post to display a compact system information table. The shortcode output is visible only to logged-in administrators.
@@ -82,7 +88,13 @@ After activation, open **SiteIntelix** in the WordPress admin menu.
 == Frequently Asked Questions ==
 
 = Who can access the plugin screens? =
-Only users with the `manage_options` capability can access SiteIntelix admin pages.
+Users need the `manage_options` capability to access SiteIntelix. On Multisite, Code Snippets, Custom CSS & JS, Debug Log configuration, Database Manager, Download Manager, and Safe Mode require a Multisite super administrator. Code modules also require WordPress' `unfiltered_html` capability.
+
+= Does Code Snippets execute PHP? =
+Yes. Enabled administrator-authored PHP runs locally in an isolated closure. Snippets are syntax-checked before saving or activation, controls require capabilities and nonces, and a captured runtime failure deactivates the affected snippet. The executor intentionally uses PHP `eval()` for this local feature and never downloads remote code.
+
+= Where are Custom CSS & JS files stored? =
+Entries are stored in a plugin-owned database table. When external-file loading is selected, generated files use the restricted `wp-content/uploads/siteintelix/custom-code/` directory. SiteIntelix only deletes files that match its managed filename pattern.
 
 = Where does SiteIntelix write debug logs? =
 Both logging modes write to `wp-content/siteintelix-debug.log`.
@@ -106,7 +118,10 @@ SiteIntelix does not collect telemetry or upload diagnostics, logs, email conten
 Add `[siteintelix_panel]` to a page or post. Only administrators can see the output.
 
 = Is the plugin Multisite compatible? =
-Yes. It activates per site and reports information for that individual site.
+Yes. Site-scoped tools can be activated per site. Tools that can execute code, inspect network-wide database data, read installed source packages, write MU files, or change debug configuration require a Multisite super administrator.
+
+= What happens when I delete the plugin? =
+SiteIntelix removes its settings, scheduled events, logs, and only signature-verified SiteIntelix MU bootstrap files. Custom CSS & JS entries, generated assets, and Code Snippets are removed only when their independent uninstall-retention settings are enabled. SiteIntelix never deletes unverified MU files owned by another plugin and does not automatically undo a previously written `wp-config.php` debug block.
 
 == Screenshots ==
 
@@ -162,6 +177,8 @@ Recommended performance, security, accessibility, and admin workflow update for 
 
 == Privacy Policy ==
 
-SiteIntelix does not collect telemetry or upload logs, email contents, database contents, or generated diagnostic reports. Stored logs and settings remain in the WordPress installation and are visible only to authorised administrators.
+SiteIntelix sends no telemetry and does not upload logs, email contents, database contents, snippets, custom code, or generated diagnostic reports. Stored logs, SMTP credentials, settings, snippets, and custom code remain in the WordPress installation and are available only through privileged administration interfaces. Enabled custom JavaScript and PHP snippets execute on the site according to their configured scope.
 
 When an administrator runs or refreshes Server Diagnostics, reachability checks may make HTTP requests to WordPress.org endpoints and to the site's own loopback or REST URL. These requests include normal network metadata such as the site's public IP address and a SiteIntelix version user agent, but they do not include the contents of SiteIntelix reports.
+
+When SMTP is enabled, WordPress sends outgoing email and authentication data to the administrator-selected SMTP provider under that provider's privacy terms. SiteIntelix stores the SMTP credential locally in a non-autoloaded option; it does not transmit the credential anywhere else.

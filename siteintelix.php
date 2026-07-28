@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       SiteIntelix – WordPress Toolkit
  * Plugin URI:        https://wordpress.org/plugins/siteintelix
- * Description:       Fast, modular WordPress diagnostics for debug logs, email delivery, cron, database, server health, Safe Mode, SMTP, and maintenance.
+ * Description:       Modular diagnostics, logs, SMTP, user switching, custom CSS/JS, PHP snippets, Safe Mode, and maintenance tools.
  * Version:           2.7.3
  * Requires at least: 5.8
  * Requires PHP:      7.4
@@ -350,7 +350,7 @@ function siteintelix_register_admin_bar_link( $wp_admin_bar ) {
 
 	$log_links = array();
 
-	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
+	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() ) {
 		$log_links[] = array(
 			'id'    => 'siteintelix-debug-log',
 			'title' => __( 'Debug Log', 'siteintelix' ),

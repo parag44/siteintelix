@@ -75,6 +75,24 @@ test('download and export responses prevent MIME sniffing', async () => {
 	}
 });
 
+test('uninstall removes current settings and only ownership-verified persistent files', async () => {
+	const uninstall = await read('uninstall.php');
+
+	for (const option of [
+		'siteintelix_smtp_settings',
+		'siteintelix_coming_soon_settings',
+		'siteintelix_server_diagnostics_cache_filesystem',
+		'siteintelix_server_diagnostics_cache_network',
+		'siteintelix_server_diagnostics_cache_database',
+	]) {
+		assert.match(uninstall, new RegExp(`['"]${option}['"]`), `uninstall must remove ${option}`);
+	}
+
+	assert.match(uninstall, /delete_metadata\(\s*'user',\s*0,\s*'siteintelix_safe_mode_state'/);
+	assert.match(uninstall, /delete_metadata\(\s*'user',\s*0,\s*'siteintelix_safe_mode_log'/);
+	assert.match(uninstall, /SITEINTELIX_MU_Files::remove_all\(\)/);
+});
+
 test('2.7.3 release metadata, directory description, and privacy disclosure stay aligned', async () => {
 	const [main, migrations, readme] = await Promise.all([
 		read('siteintelix.php'),
@@ -90,6 +108,14 @@ test('2.7.3 release metadata, directory description, and privacy disclosure stay
 	assert.match(readme, /== Changelog ==\s+\n\s*= 2\.7\.3 — 2026-07-28 =/);
 	assert.match(readme, /== Upgrade Notice ==\s+\n\s*= 2\.7\.3 =/);
 	assert.ok(shortDescription.length > 0 && shortDescription.length <= 150, 'WordPress.org short description must be 1–150 characters');
+	assert.match(readme, /^Tags:\s+debug log, email log, diagnostics, code snippets, admin tools$/m);
+	assert.match(readme, /Custom CSS & JS/);
+	assert.match(readme, /Code Snippets/);
+	assert.match(readme, /User Switcher/);
+	assert.match(readme, /administrator-authored PHP/i);
+	assert.match(readme, /SMTP provider/i);
+	assert.match(readme, /no telemetry/i);
+	assert.match(readme, /multisite super administrator/i);
 	assert.match(readme, /WordPress\.org endpoints/);
 	assert.doesNotMatch(readme, /No data is sent to any third-party service/);
 	assert.doesNotMatch(main, /load_plugin_textdomain\s*\(/);

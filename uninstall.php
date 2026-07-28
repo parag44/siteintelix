@@ -38,6 +38,11 @@ $siteintelix_options = array(
 	'siteintelix_previous_debug_method',
 	'siteintelix_email_log_settings',
 	'siteintelix_email_log_schema_version',
+	'siteintelix_smtp_settings',
+	'siteintelix_coming_soon_settings',
+	'siteintelix_server_diagnostics_cache_filesystem',
+	'siteintelix_server_diagnostics_cache_network',
+	'siteintelix_server_diagnostics_cache_database',
 	'siteintelix_error_ui_settings',
 	'siteintelix_error_ui_dropins_version',
 	'siteintelix_migration_version',
@@ -65,6 +70,10 @@ foreach ( (array) $siteintelix_user_switcher_managed_roles as $siteintelix_user_
 foreach ( $siteintelix_options as $siteintelix_option ) {
 	delete_option( $siteintelix_option );
 }
+
+delete_metadata( 'user', 0, 'siteintelix_safe_mode_state', '', true );
+delete_metadata( 'user', 0, 'siteintelix_safe_mode_log', '', true );
+delete_transient( 'siteintelix_overview_remote_health' );
 
 wp_clear_scheduled_hook( 'siteintelix_email_log_retention' );
 wp_clear_scheduled_hook( 'siteintelix_user_switcher_retention' );
@@ -110,7 +119,11 @@ if ( $siteintelix_delete_custom_css_js ) {
 	if ( is_dir( $siteintelix_custom_code_dir ) ) {
 		$siteintelix_custom_code_files = glob( $siteintelix_custom_code_dir . '/*' );
 		foreach ( (array) $siteintelix_custom_code_files as $siteintelix_custom_code_file ) {
-			if ( is_file( $siteintelix_custom_code_file ) ) {
+			if (
+				is_file( $siteintelix_custom_code_file )
+				&& ! is_link( $siteintelix_custom_code_file )
+				&& 1 === preg_match( '/^site-[1-9][0-9]*-entry-[1-9][0-9]*\.(?:css|js)$/', basename( $siteintelix_custom_code_file ) )
+			) {
 				wp_delete_file( $siteintelix_custom_code_file );
 			}
 		}
