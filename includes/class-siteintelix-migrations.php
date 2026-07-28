@@ -32,8 +32,43 @@ class SITEINTELIX_Migrations {
 			return;
 		}
 
+		if ( ! self::disable_smtp_autoload() ) {
+			return;
+		}
+
 		self::remove_retired_error_ui();
 		update_option( self::VERSION_OPTION, self::CURRENT_VERSION, false );
+	}
+
+	/**
+	 * Keep stored SMTP credentials out of the all-options cache.
+	 *
+	 * @return bool
+	 */
+	private static function disable_smtp_autoload() {
+		if ( null === get_option( 'siteintelix_smtp_settings', null ) ) {
+			return true;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration of a fixed core option row.
+		$updated = $wpdb->update(
+			$wpdb->options,
+			array( 'autoload' => 'no' ),
+			array( 'option_name' => 'siteintelix_smtp_settings' ),
+			array( '%s' ),
+			array( '%s' )
+		);
+
+		if ( false === $updated ) {
+			return false;
+		}
+
+		wp_cache_delete( 'siteintelix_smtp_settings', 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+
+		return true;
 	}
 
 	/**

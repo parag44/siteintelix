@@ -64,14 +64,15 @@ class SITEINTELIX_MU_Debug {
 			);
 		}
 
-		$legacy_files = array(
-			trailingslashit( WPMU_PLUGIN_DIR ) . 'my-debug-capture.php',
-			trailingslashit( WPMU_PLUGIN_DIR ) . 'siteintelix-debug.php',
-		);
-		foreach ( $legacy_files as $legacy_file ) {
-			if ( $wp_filesystem->exists( $legacy_file ) ) {
-				$wp_filesystem->delete( $legacy_file, false, 'f' );
+		if ( ! class_exists( 'SITEINTELIX_MU_Files' ) ) {
+			$manager = SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-files.php';
+			if ( file_exists( $manager ) ) {
+				require_once $manager;
 			}
+		}
+
+		if ( class_exists( 'SITEINTELIX_MU_Files' ) ) {
+			SITEINTELIX_MU_Files::remove_type( SITEINTELIX_MU_Files::TYPE_LEGACY_DEBUG );
 		}
 
 		$path     = trailingslashit( WPMU_PLUGIN_DIR ) . SITEINTELIX_MU_DEBUG_FILENAME;
@@ -104,22 +105,26 @@ class SITEINTELIX_MU_Debug {
 	 * @return true|WP_Error
 	 */
 	public static function remove_mu_plugin_file() {
-		global $wp_filesystem;
-
-		if ( ! function_exists( 'WP_Filesystem' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/file.php';
+		if ( ! class_exists( 'SITEINTELIX_MU_Files' ) ) {
+			$manager = SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-files.php';
+			if ( file_exists( $manager ) ) {
+				require_once $manager;
+			}
 		}
 
-		if ( ! WP_Filesystem() || ! $wp_filesystem ) {
+		if ( ! class_exists( 'SITEINTELIX_MU_Files' ) ) {
 			return new WP_Error(
 				'siteintelix_mu_debug_fs',
-				__( 'SiteIntelix could not initialize the filesystem API for MU debug cleanup.', 'siteintelix' )
+				__( 'SiteIntelix could not load the MU bootstrap cleanup manager.', 'siteintelix' )
 			);
 		}
 
-		$path = trailingslashit( WPMU_PLUGIN_DIR ) . SITEINTELIX_MU_DEBUG_FILENAME;
-		if ( $wp_filesystem->exists( $path ) ) {
-			$wp_filesystem->delete( $path, false, 'f' );
+		$result = SITEINTELIX_MU_Files::remove_type( SITEINTELIX_MU_Files::TYPE_DEBUG );
+		if ( ! empty( $result['failed'] ) ) {
+			return new WP_Error(
+				'siteintelix_mu_debug_delete',
+				__( 'SiteIntelix could not remove one or more verified MU debug bootstrap files.', 'siteintelix' )
+			);
 		}
 
 		return true;
@@ -160,8 +165,16 @@ class SITEINTELIX_MU_Debug {
 	 * @return string
 	 */
 	private static function get_mu_plugin_contents() {
-		return <<<'PHP'
-<?php
+		$header = "<?php\n"
+			. "/**\n"
+			. " * Plugin Name: SiteIntelix Debug Capture\n"
+			. " * Description: Captures PHP errors before normal plugins load and writes them to the private SiteIntelix debug log.\n"
+			. " * Version: " . SITEINTELIX_VERSION . "\n"
+			. " * Author: Parag Das\n"
+			. " */\n";
+
+		return $header . <<<'PHP'
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }

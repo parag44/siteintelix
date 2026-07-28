@@ -37,7 +37,7 @@ class SITEINTELIX_SMTP_Module {
 	 */
 	public static function activate() {
 		if ( false === get_option( self::SETTINGS_OPTION, false ) ) {
-			add_option( self::SETTINGS_OPTION, self::get_default_settings() );
+			add_option( self::SETTINGS_OPTION, self::get_default_settings(), '', false );
 		}
 	}
 
@@ -71,7 +71,7 @@ class SITEINTELIX_SMTP_Module {
 
 		$settings = self::get_settings();
 		?>
-		<section class="sitx-settings-panel-tab <?php echo 'smtp' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-smtp-settings" data-siteintelix-settings-panel="smtp">
+		<section class="sitx-settings-panel-tab <?php echo 'smtp' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-smtp-settings" role="tabpanel" aria-labelledby="siteintelix-settings-tab-smtp" data-siteintelix-settings-panel="smtp" <?php echo 'smtp' === $active_tab ? '' : 'hidden'; ?>>
 			<div class="sitx-settings-content-grid">
 				<div class="sitx-settings-main">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="sitx-tab-form">
@@ -163,7 +163,7 @@ class SITEINTELIX_SMTP_Module {
 			'encryption'   => isset( $_POST['encryption'] ) ? sanitize_key( wp_unslash( $_POST['encryption'] ) ) : 'tls',
 			'auth'         => isset( $_POST['auth'] ) ? 1 : 0,
 			'username'     => isset( $_POST['username'] ) ? sanitize_text_field( wp_unslash( $_POST['username'] ) ) : '',
-			'password'     => '' !== $password ? sanitize_text_field( $password ) : $current['password'],
+			'password'     => '' !== $password ? self::sanitize_password( $password ) : $current['password'],
 			'from_email'   => isset( $_POST['from_email'] ) ? sanitize_email( wp_unslash( $_POST['from_email'] ) ) : '',
 			'from_name'    => isset( $_POST['from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['from_name'] ) ) : '',
 			'timeout'      => isset( $_POST['timeout'] ) ? min( 120, max( 5, absint( wp_unslash( $_POST['timeout'] ) ) ) ) : 15,
@@ -173,7 +173,7 @@ class SITEINTELIX_SMTP_Module {
 			$settings['encryption'] = 'tls';
 		}
 
-		update_option( self::SETTINGS_OPTION, $settings );
+		update_option( self::SETTINGS_OPTION, $settings, false );
 
 		$verification = self::verify_connection( $settings );
 		set_transient(
@@ -331,6 +331,20 @@ class SITEINTELIX_SMTP_Module {
 			'from_name'    => wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
 			'timeout'      => 15,
 		);
+	}
+
+	/**
+	 * Validate an SMTP password without destroying valid special characters.
+	 *
+	 * @param mixed $password Submitted password.
+	 * @return string
+	 */
+	public static function sanitize_password( $password ) {
+		if ( ! is_scalar( $password ) ) {
+			return '';
+		}
+
+		return substr( str_replace( "\0", '', (string) $password ), 0, 1024 );
 	}
 
 	/**

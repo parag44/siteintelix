@@ -731,8 +731,8 @@ class SITEINTELIX_Transients_Manager_Module {
 			LIMIT %d
 		";
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL identifiers are built from get_sources() internal allow-list; values use placeholders.
 		$prepared = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL identifiers are built from get_sources() internal allow-list; values use placeholders.
 			$sql,
 			$source['type'],
 			strlen( $source['value_prefix'] ) + 1,
@@ -794,16 +794,15 @@ class SITEINTELIX_Transients_Manager_Module {
 			WHERE {$where}
 		";
 
-		return absint(
-			$wpdb->get_var(
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query identifiers come from get_sources() internal allow-list.
-					$wpdb->prepare(
-					$sql,
-					$source['timeout_prefix'],
-					strlen( $source['value_prefix'] ) + 1
-				)
-			)
+		$prepared = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query identifiers come from get_sources() internal allow-list; values use placeholders.
+			$sql,
+			$source['timeout_prefix'],
+			strlen( $source['value_prefix'] ) + 1
 		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Query identifiers are allow-listed and values are prepared above.
+		return absint( $wpdb->get_var( $prepared ) );
 	}
 
 	/**
@@ -907,16 +906,16 @@ class SITEINTELIX_Transients_Manager_Module {
 			WHERE {$where}
 		";
 
-		$row = $wpdb->get_row(
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query identifiers come from get_sources() internal allow-list.
-				$wpdb->prepare(
-				$sql,
-				time(),
-				$source['timeout_prefix'],
-				strlen( $source['value_prefix'] ) + 1
-			),
-			ARRAY_A
+		$prepared = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query identifiers come from get_sources() internal allow-list; values use placeholders.
+			$sql,
+			time(),
+			$source['timeout_prefix'],
+			strlen( $source['value_prefix'] ) + 1
 		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Query identifiers are allow-listed and values are prepared above.
+		$row = $wpdb->get_row( $prepared, ARRAY_A );
 
 		return array(
 			'total'   => absint( $row['total'] ?? 0 ),
@@ -1034,9 +1033,23 @@ class SITEINTELIX_Transients_Manager_Module {
 		return array(
 			'name'    => $name,
 			'type'    => $type,
-			'value'   => maybe_unserialize( $value ),
+			'value'   => self::safe_unserialize_for_preview( $value ),
 			'timeout' => absint( $timeout ),
 		);
+	}
+
+	/**
+	 * Decode a stored value without instantiating serialized classes.
+	 *
+	 * @param mixed $value Stored option value.
+	 * @return mixed
+	 */
+	private static function safe_unserialize_for_preview( $value ) {
+		if ( ! is_serialized( $value ) ) {
+			return $value;
+		}
+
+		return unserialize( trim( $value ), array( 'allowed_classes' => false ) );
 	}
 
 	/**
