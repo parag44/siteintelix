@@ -70,6 +70,10 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 		if ( is_user_logged_in() ) {
 			self::stop_for_user( get_current_user_id(), 'stopped' );
 		}
+
+		if ( class_exists( 'SITEINTELIX_MU_Files' ) ) {
+			SITEINTELIX_MU_Files::remove_type( SITEINTELIX_MU_Files::TYPE_SAFE_MODE );
+		}
 	}
 
 	/**
@@ -78,7 +82,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function maybe_ensure_mu_plugin() {
-		if ( current_user_can( 'manage_options' ) ) {
+		if ( SITEINTELIX_Security::can_manage_global_tools() ) {
 			self::ensure_mu_plugin_file();
 		}
 	}
@@ -89,6 +93,10 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function register_menu() {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
+			return;
+		}
+
 		add_submenu_page(
 			'siteintelix',
 			__( 'Safe Mode Debugger', 'siteintelix' ),
@@ -105,7 +113,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function render_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to use Safe Mode.', 'siteintelix' ) );
 		}
 
@@ -118,7 +126,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function handle_start() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to start Safe Mode.', 'siteintelix' ) );
 		}
 
@@ -193,7 +201,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function handle_stop() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to stop Safe Mode.', 'siteintelix' ) );
 		}
 
@@ -210,7 +218,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 	 * @return void
 	 */
 	public static function handle_reset() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to reset Safe Mode.', 'siteintelix' ) );
 		}
 
@@ -234,7 +242,7 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 
 		self::$active_state = false;
 
-		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+		if ( ! is_user_logged_in() || ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			return false;
 		}
 
@@ -736,7 +744,16 @@ class SITEINTELIX_Safe_Mode_Debugger_Module {
 		$siteintelix_basename = var_export( (string) $siteintelix_basename, true );
 
 		return "<?php\n"
-			. "/**\n * SiteIntelix Safe Mode bootstrap.\n *\n * @package SiteIntelix\n */\n\n"
+			. "/**\n"
+			. " * Plugin Name: SiteIntelix Safe Mode\n"
+			. " * Description: Applies private, session-based plugin and theme isolation before normal plugins load.\n"
+			. " * Version: " . SITEINTELIX_VERSION . "\n"
+			. " * Author: Parag Das\n"
+			. " *\n"
+			. " * SiteIntelix Safe Mode bootstrap.\n"
+			. " *\n"
+			. " * @package SiteIntelix\n"
+			. " */\n\n"
 			. "if ( ! defined( 'ABSPATH' ) ) {\n\texit;\n}\n\n"
 			. "if ( ! function_exists( 'siteintelix_safe_mode_hash_token' ) ) {\n\tfunction siteintelix_safe_mode_hash_token( \$token ) {\n\t\t\$salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'siteintelix-safe-mode' );\n\t\treturn hash_hmac( 'sha256', (string) \$token, (string) \$salt );\n\t}\n}\n\n"
 			. "if ( ! function_exists( 'siteintelix_safe_mode_state' ) ) {\n\tfunction siteintelix_safe_mode_state() {\n\t\tif ( empty( \$_COOKIE['siteintelix_safe_mode'] ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\t\$cookie = sanitize_text_field( wp_unslash( \$_COOKIE['siteintelix_safe_mode'] ) );\n\t\t\$parts  = explode( ':', \$cookie, 2 );\n\t\tif ( 2 !== count( \$parts ) || ! absint( \$parts[0] ) || '' === \$parts[1] ) {\n\t\t\treturn false;\n\t\t}\n\n\t\t\$user_id = absint( \$parts[0] );\n\t\t\$token   = rawurldecode( \$parts[1] );\n\t\t\$state   = get_user_meta( \$user_id, 'siteintelix_safe_mode_state', true );\n\t\tif ( ! is_array( \$state ) || empty( \$state['enabled'] ) || empty( \$state['token_hash'] ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( empty( \$state['expires_at'] ) || time() > absint( \$state['expires_at'] ) ) {\n\t\t\t\$state['enabled'] = false;\n\t\t\t\$state['stopped_at'] = time();\n\t\t\tupdate_user_meta( \$user_id, 'siteintelix_safe_mode_state', \$state );\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( empty( \$state['user_id'] ) || absint( \$state['user_id'] ) !== \$user_id ) {\n\t\t\treturn false;\n\t\t}\n\n\t\tif ( ! hash_equals( (string) \$state['token_hash'], siteintelix_safe_mode_hash_token( \$token ) ) ) {\n\t\t\treturn false;\n\t\t}\n\n\t\treturn \$state;\n\t}\n}\n\n"

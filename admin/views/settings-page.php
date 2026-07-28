@@ -16,7 +16,10 @@ $siteintelix_all_modules     = SITEINTELIX_Modules::get_all();
 $siteintelix_tabs            = array();
 
 foreach ( $siteintelix_enabled_modules as $siteintelix_module_id ) {
-	if ( isset( $siteintelix_all_modules[ $siteintelix_module_id ]['settings'] ) ) {
+	if (
+		SITEINTELIX_Security::can_manage_module( $siteintelix_module_id )
+		&& isset( $siteintelix_all_modules[ $siteintelix_module_id ]['settings'] )
+	) {
 		$siteintelix_tabs[ $siteintelix_module_id ] = $siteintelix_all_modules[ $siteintelix_module_id ];
 	}
 }
@@ -29,11 +32,12 @@ if ( $siteintelix_requested_tab && isset( $siteintelix_tabs[ $siteintelix_reques
 	$siteintelix_active_tab = $siteintelix_requested_tab;
 }
 
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only redirect and verification status flags.
 $siteintelix_settings_saved = isset( $_GET['siteintelix_settings_saved'] );
 $siteintelix_settings_error = isset( $_GET['siteintelix_settings_error'] ) ? sanitize_text_field( wp_unslash( $_GET['siteintelix_settings_error'] ) ) : '';
 $siteintelix_smtp_status    = isset( $_GET['siteintelix_smtp_status'] ) ? sanitize_key( wp_unslash( $_GET['siteintelix_smtp_status'] ) ) : '';
-$siteintelix_smtp_message   = '';
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
+$siteintelix_smtp_message = '';
 
 if ( $siteintelix_smtp_status ) {
 	$siteintelix_smtp_message = get_transient( 'siteintelix_smtp_verify_notice_' . get_current_user_id() );
@@ -41,11 +45,17 @@ if ( $siteintelix_smtp_status ) {
 	$siteintelix_smtp_message = is_string( $siteintelix_smtp_message ) ? $siteintelix_smtp_message : '';
 }
 
-if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
+if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() ) {
 	$siteintelix_debug_source    = SITEINTELIX_Debug_Source::detect();
 	$siteintelix_debug_method    = SITEINTELIX_Debug_Source::get_method();
 	$siteintelix_external_dbg    = SITEINTELIX_Debug_Source::has_external_wp_debug();
-	$siteintelix_fix_url         = add_query_arg( array( 'action' => 'siteintelix_fix_debug_conflict', '_wpnonce' => wp_create_nonce( 'siteintelix_fix_debug_conflict' ) ), $siteintelix_form_url );
+	$siteintelix_fix_url         = add_query_arg(
+		array(
+			'action'   => 'siteintelix_fix_debug_conflict',
+			'_wpnonce' => wp_create_nonce( 'siteintelix_fix_debug_conflict' ),
+		),
+		$siteintelix_form_url
+	);
 	$siteintelix_logs_per_page   = min( 500, max( 10, (int) get_option( SITEINTELIX_LOGS_PER_PAGE_OPTION, 25 ) ) );
 	$siteintelix_debug_ui        = get_option( SITEINTELIX_DEBUG_UI_OPTION, 'modern' );
 	$siteintelix_debug_ui        = 'terminal_dark' === $siteintelix_debug_ui ? 'terminal_light' : $siteintelix_debug_ui;
@@ -109,7 +119,7 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
 				</div>
 			<?php endif; ?>
 
-			<?php if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && $siteintelix_external_dbg ) : ?>
+			<?php if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() && $siteintelix_external_dbg ) : ?>
 				<div class="sitx-alert sitx-alert--warning">
 					<div class="sitx-alert__icon"><span class="dashicons dashicons-warning"></span></div>
 					<div class="sitx-alert__content">
@@ -134,7 +144,7 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
 				<div class="sitx-settings-topbar">
 					<div class="sitx-settings-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Module settings', 'siteintelix' ); ?>">
 						<?php foreach ( $siteintelix_tabs as $siteintelix_tab_id => $siteintelix_tab ) : ?>
-							<button type="button" class="sitx-settings-tab <?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'is-active' : ''; ?>" role="tab" aria-selected="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'true' : 'false'; ?>" data-siteintelix-settings-tab="<?php echo esc_attr( $siteintelix_tab_id ); ?>">
+							<button type="button" id="siteintelix-settings-tab-<?php echo esc_attr( $siteintelix_tab_id ); ?>" class="sitx-settings-tab <?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'is-active' : ''; ?>" role="tab" aria-controls="siteintelix-<?php echo esc_attr( str_replace( '_', '-', $siteintelix_tab_id ) ); ?>-settings" aria-selected="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'true' : 'false'; ?>" tabindex="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? '0' : '-1'; ?>" data-siteintelix-settings-tab="<?php echo esc_attr( $siteintelix_tab_id ); ?>">
 								<span class="sitx-settings-tab__icon sitx-module-card__icon--<?php echo esc_attr( sanitize_key( (string) $siteintelix_tab['color'] ) ); ?>">
 									<span class="dashicons <?php echo esc_attr( (string) $siteintelix_tab['icon'] ); ?>" aria-hidden="true"></span>
 								</span>
@@ -143,16 +153,18 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
 						<?php endforeach; ?>
 					</div>
 
-					<label class="sitx-settings-search">
+						<label class="sitx-settings-search">
 						<span class="dashicons dashicons-search" aria-hidden="true"></span>
 						<span class="screen-reader-text"><?php esc_html_e( 'Search module settings', 'siteintelix' ); ?></span>
 						<input type="search" placeholder="<?php esc_attr_e( 'Search module settings...', 'siteintelix' ); ?>" aria-label="<?php esc_attr_e( 'Search module settings', 'siteintelix' ); ?>" data-siteintelix-settings-search>
-					</label>
+						</label>
+						<button type="button" class="si-button si-button--secondary" data-siteintelix-settings-clear hidden><?php esc_html_e( 'Clear search', 'siteintelix' ); ?></button>
+						<p class="screen-reader-text" data-siteintelix-settings-results aria-live="polite"></p>
 				</div>
 
 				<div class="sitx-settings-panels">
-					<?php if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) : ?>
-						<section class="sitx-settings-panel-tab <?php echo 'debug_log' === $siteintelix_active_tab ? 'is-active' : ''; ?>" id="siteintelix-debug-log-settings" data-siteintelix-settings-panel="debug_log">
+					<?php if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() ) : ?>
+							<section class="sitx-settings-panel-tab <?php echo 'debug_log' === $siteintelix_active_tab ? 'is-active' : ''; ?>" id="siteintelix-debug-log-settings" role="tabpanel" aria-labelledby="siteintelix-settings-tab-debug_log" data-siteintelix-settings-panel="debug_log" <?php echo 'debug_log' === $siteintelix_active_tab ? '' : 'hidden'; ?>>
 							<form method="post" action="<?php echo esc_url( $siteintelix_form_url ); ?>" class="sitx-tab-form" id="siteintelix-debug-settings-form">
 								<?php wp_nonce_field( 'siteintelix_save_debug_settings' ); ?>
 								<input type="hidden" name="action" value="siteintelix_save_debug_settings">

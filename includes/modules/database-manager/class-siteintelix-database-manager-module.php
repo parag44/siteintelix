@@ -22,7 +22,7 @@ class SITEINTELIX_Database_Manager_Module {
 	 * @return void
 	 */
 	public static function init() {
-		if ( is_admin() ) {
+		if ( is_admin() && SITEINTELIX_Security::can_manage_global_tools() ) {
 			add_action( 'admin_menu', array( __CLASS__, 'register_menu' ), 36 );
 			add_action( 'admin_post_siteintelix_db_update_row', array( __CLASS__, 'handle_update_row' ) );
 			add_action( 'admin_post_siteintelix_db_delete_row', array( __CLASS__, 'handle_delete_row' ) );
@@ -35,6 +35,10 @@ class SITEINTELIX_Database_Manager_Module {
 	 * @return void
 	 */
 	public static function register_menu() {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
+			return;
+		}
+
 		add_submenu_page(
 			'siteintelix',
 			__( 'Database Manager', 'siteintelix' ),
@@ -51,7 +55,7 @@ class SITEINTELIX_Database_Manager_Module {
 	 * @return void
 	 */
 	public static function render_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to manage the database.', 'siteintelix' ) );
 		}
 
@@ -142,53 +146,272 @@ class SITEINTELIX_Database_Manager_Module {
 		$total_records = array_sum( wp_list_pluck( $tables, 'rows' ) );
 		$total_data    = array_sum( wp_list_pluck( $tables, 'data_length' ) );
 		$total_index   = array_sum( wp_list_pluck( $tables, 'index_length' ) );
+		$initial_state = self::get_dashboard_state( count( $tables ) );
+		$prepared      = self::prepare_dashboard_tables( $tables, $initial_state );
+		$state         = array_merge(
+			$initial_state,
+			array(
+				'page'        => $prepared['page'],
+				'total_pages' => $prepared['total_pages'],
+			)
+		);
+		$start         = $prepared['total'] > 0 ? ( ( $state['page'] - 1 ) * $state['per_page'] ) + 1 : 0;
+		$end           = min( $prepared['total'], $state['page'] * $state['per_page'] );
+		$dashboard_url = admin_url( 'admin.php?page=siteintelix-database-manager&view=dashboard' );
+		$base_args     = array(
+			'page'        => 'siteintelix-database-manager',
+			'view'        => 'dashboard',
+			'db_search'   => $state['search'],
+			'db_orderby'  => $state['orderby'],
+			'db_order'    => $state['order'],
+			'db_per_page' => $state['per_page'],
+		);
+		$pagination_base = str_replace(
+			'999999999',
+			'%#%',
+			add_query_arg( array_merge( $base_args, array( 'db_page' => 999999999 ) ), admin_url( 'admin.php' ) )
+		);
 		?>
 		<div class="sitx-db-stats">
-			<div class="si-card sitx-db-stat-card">
-				<span><?php esc_html_e( 'Total Tables', 'siteintelix' ); ?></span>
-				<strong><?php echo esc_html( number_format_i18n( count( $tables ) ) ); ?></strong>
+			<div class="si-card sitx-db-stat-card sitx-db-stat-card--tables">
+				<span class="sitx-db-stat-icon"><span class="dashicons dashicons-database" aria-hidden="true"></span></span>
+				<div class="sitx-db-stat-copy">
+					<span><?php esc_html_e( 'Total Tables', 'siteintelix' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( count( $tables ) ) ); ?></strong>
+					<small><?php esc_html_e( 'Database overview', 'siteintelix' ); ?></small>
+				</div>
 			</div>
-			<div class="si-card sitx-db-stat-card">
-				<span><?php esc_html_e( 'Total Records', 'siteintelix' ); ?></span>
-				<strong><?php echo esc_html( number_format_i18n( absint( $total_records ) ) ); ?></strong>
+			<div class="si-card sitx-db-stat-card sitx-db-stat-card--records">
+				<span class="sitx-db-stat-icon"><span class="dashicons dashicons-media-document" aria-hidden="true"></span></span>
+				<div class="sitx-db-stat-copy">
+					<span><?php esc_html_e( 'Total Records', 'siteintelix' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( absint( $total_records ) ) ); ?></strong>
+					<small><?php esc_html_e( 'Across all tables', 'siteintelix' ); ?></small>
+				</div>
 			</div>
-			<div class="si-card sitx-db-stat-card">
-				<span><?php esc_html_e( 'Data Usage', 'siteintelix' ); ?></span>
-				<strong><?php echo esc_html( self::bytes_to_mb( absint( $total_data ) ) ); ?> MB</strong>
+			<div class="si-card sitx-db-stat-card sitx-db-stat-card--data">
+				<span class="sitx-db-stat-icon"><span class="dashicons dashicons-archive" aria-hidden="true"></span></span>
+				<div class="sitx-db-stat-copy">
+					<span><?php esc_html_e( 'Data Usage', 'siteintelix' ); ?></span>
+					<strong><?php echo esc_html( self::bytes_to_mb( absint( $total_data ) ) ); ?> MB</strong>
+					<small><?php esc_html_e( 'Stored table data', 'siteintelix' ); ?></small>
+				</div>
 			</div>
-			<div class="si-card sitx-db-stat-card">
-				<span><?php esc_html_e( 'Index Usage', 'siteintelix' ); ?></span>
-				<strong><?php echo esc_html( self::bytes_to_mb( absint( $total_index ) ) ); ?> MB</strong>
+			<div class="si-card sitx-db-stat-card sitx-db-stat-card--index">
+				<span class="sitx-db-stat-icon"><span class="dashicons dashicons-chart-pie" aria-hidden="true"></span></span>
+				<div class="sitx-db-stat-copy">
+					<span><?php esc_html_e( 'Index Usage', 'siteintelix' ); ?></span>
+					<strong><?php echo esc_html( self::bytes_to_mb( absint( $total_index ) ) ); ?> MB</strong>
+					<small><?php esc_html_e( 'Database indexes', 'siteintelix' ); ?></small>
+				</div>
 			</div>
 		</div>
-		<div class="sitx-db-table-wrap si-table-wrap">
+
+		<section class="sitx-db-dashboard-card si-card" aria-labelledby="sitx-db-dashboard-table-title">
+			<div class="sitx-db-dashboard-toolbar">
+				<div class="sitx-db-dashboard-heading">
+					<h2 id="sitx-db-dashboard-table-title"><?php esc_html_e( 'Database Tables', 'siteintelix' ); ?></h2>
+					<span class="dashicons dashicons-info-outline" aria-hidden="true" title="<?php esc_attr_e( 'Current table metadata reported by the database server.', 'siteintelix' ); ?>"></span>
+				</div>
+				<form method="get" class="sitx-db-dashboard-filter">
+					<input type="hidden" name="page" value="siteintelix-database-manager">
+					<input type="hidden" name="view" value="dashboard">
+					<label class="sitx-db-dashboard-search">
+						<span class="screen-reader-text"><?php esc_html_e( 'Search database tables', 'siteintelix' ); ?></span>
+						<span class="dashicons dashicons-search" aria-hidden="true"></span>
+						<input type="search" name="db_search" value="<?php echo esc_attr( $state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search tables...', 'siteintelix' ); ?>">
+					</label>
+					<label>
+						<span class="screen-reader-text"><?php esc_html_e( 'Sort database tables by', 'siteintelix' ); ?></span>
+						<select name="db_orderby">
+							<option value="rows" <?php selected( $state['orderby'], 'rows' ); ?>><?php esc_html_e( 'Records', 'siteintelix' ); ?></option>
+							<option value="name" <?php selected( $state['orderby'], 'name' ); ?>><?php esc_html_e( 'Table name', 'siteintelix' ); ?></option>
+							<option value="data" <?php selected( $state['orderby'], 'data' ); ?>><?php esc_html_e( 'Data usage', 'siteintelix' ); ?></option>
+							<option value="index" <?php selected( $state['orderby'], 'index' ); ?>><?php esc_html_e( 'Index usage', 'siteintelix' ); ?></option>
+						</select>
+					</label>
+					<label>
+						<span class="screen-reader-text"><?php esc_html_e( 'Sort direction', 'siteintelix' ); ?></span>
+						<select name="db_order">
+							<option value="desc" <?php selected( $state['order'], 'desc' ); ?>><?php esc_html_e( 'Descending', 'siteintelix' ); ?></option>
+							<option value="asc" <?php selected( $state['order'], 'asc' ); ?>><?php esc_html_e( 'Ascending', 'siteintelix' ); ?></option>
+						</select>
+					</label>
+					<input type="hidden" name="db_per_page" value="<?php echo esc_attr( (string) $state['per_page'] ); ?>">
+					<button type="submit" class="si-button si-button--secondary sitx-db-dashboard-submit">
+						<span class="dashicons dashicons-filter" aria-hidden="true"></span>
+						<span class="screen-reader-text"><?php esc_html_e( 'Apply database table filters', 'siteintelix' ); ?></span>
+					</button>
+				</form>
+			</div>
+
+			<div class="sitx-db-table-wrap si-table-wrap">
 			<table class="widefat striped sitx-db-table si-table">
-				<thead><tr><th><?php esc_html_e( 'No.', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Table', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Records', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Data Usage (MB)', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Index Usage (MB)', 'siteintelix' ); ?></th></tr></thead>
+				<thead><tr><th><?php esc_html_e( 'No.', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Table', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Records', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Data Usage (MB)', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Index Usage (MB)', 'siteintelix' ); ?></th><th><?php esc_html_e( 'Actions', 'siteintelix' ); ?></th></tr></thead>
 				<tbody>
-					<?php if ( empty( $tables ) ) : ?>
+					<?php if ( empty( $prepared['items'] ) ) : ?>
 						<tr>
-							<td colspan="5">
+							<td colspan="6">
 								<div class="si-empty-state">
-									<h2><?php esc_html_e( 'No database tables found.', 'siteintelix' ); ?></h2>
-									<p><?php esc_html_e( 'SiteIntelix could not find database tables for this connection.', 'siteintelix' ); ?></p>
+									<?php if ( '' !== $state['search'] ) : ?>
+										<h2><?php esc_html_e( 'No tables match your search.', 'siteintelix' ); ?></h2>
+										<p><?php esc_html_e( 'Try another table name or clear the current search.', 'siteintelix' ); ?></p>
+										<a class="si-button si-button--secondary" href="<?php echo esc_url( $dashboard_url ); ?>"><?php esc_html_e( 'Clear filters', 'siteintelix' ); ?></a>
+									<?php else : ?>
+										<h2><?php esc_html_e( 'No database tables found.', 'siteintelix' ); ?></h2>
+										<p><?php esc_html_e( 'SiteIntelix could not find database tables for this connection.', 'siteintelix' ); ?></p>
+									<?php endif; ?>
 								</div>
 							</td>
 						</tr>
 					<?php else : ?>
-						<?php $index = 1; foreach ( $tables as $table ) : ?>
+						<?php $index = $start; foreach ( $prepared['items'] as $table ) : ?>
 							<tr>
 								<td class="si-cell-number"><?php echo esc_html( (string) $index ); ?></td>
-								<td><a href="<?php echo esc_url( admin_url( 'admin.php?page=siteintelix-database-manager&view=tables&table=' . rawurlencode( $table['name'] ) ) ); ?>"><?php echo esc_html( $table['name'] ); ?></a></td>
+								<td><a href="<?php echo esc_url( self::get_table_url( $table['name'] ) ); ?>"><?php echo esc_html( $table['name'] ); ?></a></td>
 								<td class="si-cell-number"><?php echo esc_html( number_format_i18n( absint( $table['rows'] ) ) ); ?></td>
 								<td class="si-cell-number"><?php echo esc_html( self::bytes_to_mb( absint( $table['data_length'] ) ) ); ?></td>
 								<td class="si-cell-number"><?php echo esc_html( self::bytes_to_mb( absint( $table['index_length'] ) ) ); ?></td>
+								<td class="sitx-db-dashboard-action-cell">
+									<details class="sitx-db-dashboard-actions">
+										<summary aria-label="<?php echo esc_attr( sprintf(
+											/* translators: %s: database table name. */
+											__( 'Actions for %s', 'siteintelix' ),
+											$table['name']
+										) ); ?>"><span class="dashicons dashicons-ellipsis" aria-hidden="true"></span></summary>
+										<div><a href="<?php echo esc_url( self::get_table_url( $table['name'] ) ); ?>"><?php esc_html_e( 'Browse rows', 'siteintelix' ); ?></a></div>
+									</details>
+								</td>
 							</tr>
 						<?php $index++; endforeach; ?>
 					<?php endif; ?>
 				</tbody>
 			</table>
-		</div>
+			</div>
+
+			<div class="sitx-db-dashboard-footer">
+				<form method="get" class="sitx-db-dashboard-page-size">
+					<input type="hidden" name="page" value="siteintelix-database-manager">
+					<input type="hidden" name="view" value="dashboard">
+					<input type="hidden" name="db_search" value="<?php echo esc_attr( $state['search'] ); ?>">
+					<input type="hidden" name="db_orderby" value="<?php echo esc_attr( $state['orderby'] ); ?>">
+					<input type="hidden" name="db_order" value="<?php echo esc_attr( $state['order'] ); ?>">
+					<input type="hidden" name="db_page" value="1">
+					<label>
+						<?php esc_html_e( 'Show', 'siteintelix' ); ?>
+						<select name="db_per_page" onchange="this.form.submit()">
+							<?php foreach ( array( 15, 30, 50 ) as $per_page_option ) : ?>
+								<option value="<?php echo esc_attr( (string) $per_page_option ); ?>" <?php selected( $state['per_page'], $per_page_option ); ?>><?php echo esc_html( (string) $per_page_option ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<?php esc_html_e( 'entries', 'siteintelix' ); ?>
+					</label>
+					<noscript><button type="submit" class="si-button si-button--secondary"><?php esc_html_e( 'Apply', 'siteintelix' ); ?></button></noscript>
+				</form>
+				<div class="sitx-db-dashboard-pagination">
+					<span><?php echo esc_html( sprintf(
+						/* translators: 1: first table number, 2: last table number, 3: total matching tables. */
+						__( '%1$d-%2$d of %3$d tables', 'siteintelix' ),
+						$start,
+						$end,
+						$prepared['total']
+					) ); ?></span>
+					<?php
+					echo wp_kses_post(
+						paginate_links(
+							array(
+								'base'      => $pagination_base,
+								'format'    => '',
+								'current'   => $state['page'],
+								'total'     => $state['total_pages'],
+								'prev_text' => __( 'Previous', 'siteintelix' ),
+								'next_text' => __( 'Next', 'siteintelix' ),
+								'type'      => 'plain',
+							)
+						)
+					);
+					?>
+				</div>
+			</div>
+		</section>
 		<?php
+	}
+
+	/**
+	 * Normalize the Database Manager dashboard controls.
+	 *
+	 * @param int $total_items Total table count.
+	 * @return array<string,mixed>
+	 */
+	private static function get_dashboard_state( $total_items ) {
+		$allowed_per_page = array( 15, 30, 50 );
+		$allowed_orderby  = array( 'name', 'rows', 'data', 'index' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only dashboard filter.
+		$search = isset( $_GET['db_search'] ) ? sanitize_text_field( wp_unslash( $_GET['db_search'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only dashboard sorting.
+		$orderby = isset( $_GET['db_orderby'] ) ? sanitize_key( wp_unslash( $_GET['db_orderby'] ) ) : 'rows';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only dashboard sorting.
+		$order = isset( $_GET['db_order'] ) ? sanitize_key( wp_unslash( $_GET['db_order'] ) ) : 'desc';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only dashboard page size.
+		$per_page = isset( $_GET['db_per_page'] ) ? absint( wp_unslash( $_GET['db_per_page'] ) ) : 15;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only dashboard pagination.
+		$page = isset( $_GET['db_page'] ) ? max( 1, absint( wp_unslash( $_GET['db_page'] ) ) ) : 1;
+
+		$orderby     = in_array( $orderby, $allowed_orderby, true ) ? $orderby : 'rows';
+		$order       = in_array( $order, array( 'asc', 'desc' ), true ) ? $order : 'desc';
+		$per_page    = in_array( $per_page, $allowed_per_page, true ) ? min( 50, $per_page ) : 15;
+		$total_pages = max( 1, (int) ceil( max( 0, (int) $total_items ) / $per_page ) );
+		$page        = min( $page, $total_pages );
+
+		return compact( 'search', 'orderby', 'order', 'per_page', 'page', 'total_pages' );
+	}
+
+	/**
+	 * Filter, sort, and slice table metadata for the dashboard.
+	 *
+	 * @param array<string,array<string,mixed>> $tables Table metadata.
+	 * @param array<string,mixed>                $state  Normalized dashboard state.
+	 * @return array<string,mixed>
+	 */
+	private static function prepare_dashboard_tables( $tables, $state ) {
+		$filtered = array_values(
+			array_filter(
+				$tables,
+				static function ( $table ) use ( $state ) {
+					return '' === $state['search'] || false !== stripos( (string) $table['name'], $state['search'] );
+				}
+			)
+		);
+
+		$key_map = array(
+			'name'  => 'name',
+			'rows'  => 'rows',
+			'data'  => 'data_length',
+			'index' => 'index_length',
+		);
+		$key     = $key_map[ $state['orderby'] ];
+		$sort_by = $state['order'];
+		usort(
+			$filtered,
+			static function ( $left, $right ) use ( $key, $sort_by ) {
+				$result = 'name' === $key
+					? strnatcasecmp( (string) $left[ $key ], (string) $right[ $key ] )
+					: ( (int) $left[ $key ] <=> (int) $right[ $key ] );
+				return 'asc' === $sort_by ? $result : -$result;
+			}
+		);
+
+		$total       = count( $filtered );
+		$total_pages = max( 1, (int) ceil( $total / $state['per_page'] ) );
+		$page        = min( $state['page'], $total_pages );
+		$offset      = ( $page - 1 ) * $state['per_page'];
+
+		return array(
+			'items'       => array_slice( $filtered, $offset, $state['per_page'] ),
+			'total'       => $total,
+			'total_pages' => $total_pages,
+			'page'        => $page,
+		);
 	}
 
 	/**
@@ -414,7 +637,7 @@ class SITEINTELIX_Database_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_update_row() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to update database rows.', 'siteintelix' ) );
 		}
 
@@ -461,7 +684,7 @@ class SITEINTELIX_Database_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_delete_row() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to delete database rows.', 'siteintelix' ) );
 		}
 
@@ -537,7 +760,7 @@ class SITEINTELIX_Database_Manager_Module {
 			return array();
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table identifier is whitelisted before query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table identifier is whitelisted before query.
 		return (array) $wpdb->get_results( 'DESCRIBE ' . self::identifier( $table ), ARRAY_A );
 	}
 
@@ -559,7 +782,7 @@ class SITEINTELIX_Database_Manager_Module {
 				$sql = $wpdb->prepare( $sql, $where['args'] );
 			}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table/columns are whitelisted before query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table/columns are whitelisted before query.
 		return (int) $wpdb->get_var( $sql );
 	}
 
@@ -579,7 +802,7 @@ class SITEINTELIX_Database_Manager_Module {
 		$sql    = 'SELECT * FROM ' . self::identifier( $table ) . $where['sql'] . ' LIMIT %d OFFSET %d';
 		$args   = array_merge( $where['args'], array( self::PER_PAGE, $offset ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table/columns are whitelisted before query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table/columns are whitelisted before query.
 		return (array) $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
 	}
 
@@ -595,7 +818,7 @@ class SITEINTELIX_Database_Manager_Module {
 		global $wpdb;
 		$sql = 'SELECT * FROM ' . self::identifier( $table ) . ' WHERE ' . self::identifier( $primary_key ) . ' = %s LIMIT 1';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table/column identifiers are whitelisted before query.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table/column identifiers are whitelisted before query.
 		$row = $wpdb->get_row( $wpdb->prepare( $sql, $value ), ARRAY_A );
 		return is_array( $row ) ? $row : null;
 	}

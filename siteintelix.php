@@ -125,6 +125,7 @@ function siteintelix_should_load_admin_modules() {
  * Called on plugins_loaded so WordPress core is fully bootstrapped first.
  */
 function siteintelix_load_includes() {
+	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-security.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-files.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-system-info.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-health-check.php';
@@ -132,7 +133,7 @@ function siteintelix_load_includes() {
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-admin-ui.php';
 	require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-migrations.php';
 
-	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
+	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() ) {
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-debug-log.php';
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-editor-links.php';
 		require_once SITEINTELIX_PLUGIN_DIR . 'includes/class-siteintelix-mu-debug.php';
@@ -306,7 +307,7 @@ function siteintelix_register_admin_menu() {
 		'siteintelix_render_modules_page'
 	);
 
-	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) ) {
+	if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can_manage_global_tools() ) {
 		add_submenu_page(
 			'siteintelix',
 			__( 'Debug Log', 'siteintelix' ),
@@ -437,7 +438,7 @@ function siteintelix_render_admin_page() {
  * Render the debug log viewer page.
  */
 function siteintelix_render_debug_log_page() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have sufficient permissions to access this page.', 'siteintelix' ) );
 	}
 
@@ -741,7 +742,7 @@ add_action( 'admin_enqueue_scripts', 'siteintelix_enqueue_admin_assets' );
  * @return void
  */
 function siteintelix_toggle_mu_debug_capture() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have permission to change debug capture settings.', 'siteintelix' ) );
 	}
 
@@ -783,7 +784,7 @@ add_action( 'admin_post_siteintelix_toggle_mu_debug', 'siteintelix_toggle_mu_deb
  * @return void
  */
 function siteintelix_save_debug_settings() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have permission to change debug settings.', 'siteintelix' ) );
 	}
 
@@ -862,7 +863,7 @@ add_action( 'admin_post_siteintelix_save_debug_settings', 'siteintelix_save_debu
  * @return void
  */
 function siteintelix_fix_debug_conflict() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have permission to fix debug settings.', 'siteintelix' ) );
 	}
 
@@ -1088,7 +1089,7 @@ function siteintelix_deactivate_module_runtime( $module_id ) {
  * @return void
  */
 function siteintelix_ajax_toggle_module() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage() ) {
 		wp_send_json_error(
 			array( 'message' => __( 'You do not have permission to change SiteIntelix modules.', 'siteintelix' ) ),
 			403
@@ -1099,6 +1100,14 @@ function siteintelix_ajax_toggle_module() {
 
 	$module_id = isset( $_POST['module'] ) ? sanitize_key( wp_unslash( $_POST['module'] ) ) : '';
 	$enabled   = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
+
+	if ( ! SITEINTELIX_Security::can_manage_module( $module_id ) ) {
+		wp_send_json_error(
+			array( 'message' => __( 'You do not have permission to manage this module.', 'siteintelix' ) ),
+			403
+		);
+	}
+
 	$result    = SITEINTELIX_Modules::set_enabled( $module_id, $enabled );
 
 	if ( is_wp_error( $result ) ) {
@@ -1138,7 +1147,7 @@ add_action( 'wp_ajax_siteintelix_toggle_module', 'siteintelix_ajax_toggle_module
  * @return void
  */
 function siteintelix_clear_debug_log() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have permission to clear debug logs.', 'siteintelix' ) );
 	}
 
@@ -1183,7 +1192,7 @@ add_action( 'admin_post_siteintelix_clear_debug_log', 'siteintelix_clear_debug_l
  * @return void
  */
 function siteintelix_download_debug_log() {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 		wp_die( esc_html__( 'You do not have permission to download debug logs.', 'siteintelix' ) );
 	}
 

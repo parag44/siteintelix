@@ -1,0 +1,1 @@
+(function(){'use strict';var field=document.getElementById('sitx-snippet-code');if(field&&window.wp&&wp.codeEditor&&window.siteintelixSnippets&&siteintelixSnippets.editorSettings){wp.codeEditor.initialize(field,siteintelixSnippets.editorSettings);}}());

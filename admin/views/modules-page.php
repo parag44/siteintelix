@@ -10,9 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$siteintelix_modules       = SITEINTELIX_Modules::get_all();
-$siteintelix_enabled       = SITEINTELIX_Modules::get_enabled();
-$siteintelix_active_count  = count( $siteintelix_enabled );
+$siteintelix_modules      = SITEINTELIX_Modules::get_all();
+$siteintelix_enabled      = SITEINTELIX_Modules::get_enabled();
+$siteintelix_active_count = count( $siteintelix_enabled );
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect status flag.
 $siteintelix_modules_saved = isset( $_GET['siteintelix_modules_saved'] );
 
@@ -27,17 +27,18 @@ foreach ( $siteintelix_modules as $siteintelix_module ) {
 	}
 }
 
-/**
- * Render a module card.
- *
- * @param array<string,mixed> $module     Module definition.
- * @param bool                $is_enabled Whether the module is enabled.
- * @return void
- */
 if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
+	/**
+	 * Render a module card.
+	 *
+	 * @param array<string,mixed> $module     Module definition.
+	 * @param bool                $is_enabled Whether the module is enabled.
+	 * @return void
+	 */
 	function siteintelix_render_module_card( $module, $is_enabled ) {
 		$module_id    = sanitize_key( $module['id'] );
 		$is_available = ! empty( $module['available'] );
+		$can_manage   = SITEINTELIX_Security::can_manage_module( $module_id );
 		$color        = isset( $module['color'] ) ? sanitize_key( $module['color'] ) : 'blue';
 		?>
 		<article class="sitx-module-card si-module-card si-card <?php echo $is_enabled ? 'is-active' : ''; ?> <?php echo ! $is_available ? 'is-disabled' : ''; ?>" data-siteintelix-module-card data-module-id="<?php echo esc_attr( $module_id ); ?>" data-module-title="<?php echo esc_attr( strtolower( (string) $module['title'] ) ); ?>" data-module-description="<?php echo esc_attr( strtolower( (string) $module['description'] ) ); ?>">
@@ -63,31 +64,47 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 
 			<div class="sitx-module-card__footer">
 				<?php
-				$module_links = array(
-					'debug_log'        => admin_url( 'admin.php?page=siteintelix-debug-log' ),
-					'email_log'        => admin_url( 'admin.php?page=siteintelix-email-log' ),
-					'cron_events'      => admin_url( 'admin.php?page=siteintelix-cron-events' ),
-					'database_manager' => admin_url( 'admin.php?page=siteintelix-database-manager' ),
+				$module_links   = array(
+					'debug_log'          => admin_url( 'admin.php?page=siteintelix-debug-log' ),
+					'email_log'          => admin_url( 'admin.php?page=siteintelix-email-log' ),
+					'cron_events'        => admin_url( 'admin.php?page=siteintelix-cron-events' ),
+					'database_manager'   => admin_url( 'admin.php?page=siteintelix-database-manager' ),
 					'safe_mode_debugger' => admin_url( 'admin.php?page=siteintelix-safe-mode' ),
+					'custom_code'        => admin_url( 'admin.php?page=siteintelix-custom-code' ),
+					'code_snippets'      => admin_url( 'admin.php?page=siteintelix-code-snippets' ),
 				);
 				$settings_links = array(
-					'debug_log'   => 'siteintelix-debug-log-settings',
-					'email_log'   => 'siteintelix-email-log-settings',
-					'smtp'        => 'siteintelix-smtp-settings',
-					'coming_soon' => 'siteintelix-coming-soon-settings',
+					'debug_log'     => 'siteintelix-debug-log-settings',
+					'email_log'     => 'siteintelix-email-log-settings',
+					'smtp'          => 'siteintelix-smtp-settings',
+					'coming_soon'   => 'siteintelix-coming-soon-settings',
+					'user_switcher' => 'siteintelix-user-switcher-settings',
+					'custom_code'   => 'siteintelix-custom-code-settings',
+					'code_snippets' => 'siteintelix-code-snippets-settings',
 				);
-				if ( $is_enabled && isset( $module_links[ $module_id ] ) ) :
+				if ( $can_manage && $is_enabled && isset( $module_links[ $module_id ] ) ) :
 					?>
 					<a class="si-button si-button--ghost si-button--small" href="<?php echo esc_url( $module_links[ $module_id ] ); ?>"><?php esc_html_e( 'Open', 'siteintelix' ); ?></a>
 				<?php endif; ?>
-				<?php if ( $is_enabled && ! empty( $module['settings'] ) && isset( $settings_links[ $module_id ] ) ) : ?>
-					<a class="si-button si-button--ghost si-button--small" href="<?php echo esc_url( add_query_arg( array( 'page' => 'siteintelix-settings', 'tab' => $module_id ), admin_url( 'admin.php' ) ) . '#' . $settings_links[ $module_id ] ); ?>"><?php esc_html_e( 'Settings', 'siteintelix' ); ?></a>
+				<?php if ( $can_manage && $is_enabled && ! empty( $module['settings'] ) && isset( $settings_links[ $module_id ] ) ) : ?>
+					<?php
+					$module_settings_url = add_query_arg(
+						array(
+							'page' => 'siteintelix-settings',
+							'tab'  => $module_id,
+						),
+						admin_url( 'admin.php' )
+					) . '#' . $settings_links[ $module_id ];
+					?>
+					<a class="si-button si-button--ghost si-button--small" href="<?php echo esc_url( $module_settings_url ); ?>"><?php esc_html_e( 'Settings', 'siteintelix' ); ?></a>
 				<?php endif; ?>
-				<?php if ( $is_available ) : ?>
+				<?php if ( $is_available && $can_manage ) : ?>
 					<label class="sitx-toggle sitx-toggle--module" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: module title. */ __( 'Toggle %s module', 'siteintelix' ), (string) $module['title'] ) ); ?>">
 						<input type="checkbox" value="<?php echo esc_attr( $module_id ); ?>" data-siteintelix-module-toggle <?php checked( $is_enabled ); ?>>
 						<span class="sitx-toggle__slider"></span>
 					</label>
+				<?php elseif ( $is_available ) : ?>
+					<span class="sitx-module-card__soon"><?php esc_html_e( 'Restricted', 'siteintelix' ); ?></span>
 				<?php else : ?>
 					<span class="sitx-module-card__soon"><?php esc_html_e( 'Coming soon', 'siteintelix' ); ?></span>
 				<?php endif; ?>
@@ -107,12 +124,12 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 			'description' => __( 'Turn tools on or off and build the admin toolbox your site needs.', 'siteintelix' ),
 			'badges'      => array(
 				'<span class="siteintelix-version-pill">v' . esc_html( SITEINTELIX_VERSION ) . '</span>',
-					SITEINTELIX_Admin_UI::badge(
-						sprintf(
-							/* translators: %d: active module count. */
-							esc_html( _n( '%d Active Module', '%d Active Modules', $siteintelix_active_count, 'siteintelix' ) ),
-							absint( $siteintelix_active_count )
-						),
+				SITEINTELIX_Admin_UI::badge(
+					sprintf(
+						/* translators: %d: active module count. */
+						esc_html( _n( '%d Active Module', '%d Active Modules', $siteintelix_active_count, 'siteintelix' ) ),
+						absint( $siteintelix_active_count )
+					),
 					'info',
 					'dashicons-admin-plugins'
 				),

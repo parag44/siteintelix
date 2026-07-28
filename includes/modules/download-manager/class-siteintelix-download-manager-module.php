@@ -20,7 +20,7 @@ class SITEINTELIX_Download_Manager_Module {
 	 * @return void
 	 */
 	public static function init() {
-		if ( ! is_admin() ) {
+		if ( ! is_admin() || ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			return;
 		}
 
@@ -42,7 +42,7 @@ class SITEINTELIX_Download_Manager_Module {
 	public static function add_plugin_download_link( $actions, $plugin_file, $plugin_data, $context ) {
 		unset( $plugin_data, $context );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			return $actions;
 		}
 
@@ -66,7 +66,7 @@ class SITEINTELIX_Download_Manager_Module {
 	public static function add_theme_download_link( $actions, $theme, $context ) {
 		unset( $context );
 
-		if ( ! current_user_can( 'manage_options' ) || ! $theme instanceof WP_Theme ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() || ! $theme instanceof WP_Theme ) {
 			return $actions;
 		}
 
@@ -86,7 +86,7 @@ class SITEINTELIX_Download_Manager_Module {
 	 * @return void
 	 */
 	public static function render_theme_grid_script() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			return;
 		}
 
@@ -144,7 +144,7 @@ class SITEINTELIX_Download_Manager_Module {
 	 * @return void
 	 */
 	public static function handle_download() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! SITEINTELIX_Security::can_manage_global_tools() ) {
 			wp_die( esc_html__( 'You do not have permission to download packages.', 'siteintelix' ) );
 		}
 
