@@ -1362,7 +1362,7 @@
 /* ============================================================
    Maintenance Mode Settings
    ============================================================ */
-.sitx-maintenance-logo-picker {
+.sitx-maintenance-media-picker {
 	align-items: flex-start;
 	display: grid;
 	gap: var(--si-space-4);
@@ -1370,7 +1370,7 @@
 	width: 100%;
 }
 
-.sitx-maintenance-logo-preview {
+.sitx-maintenance-media-preview {
 	align-items: center;
 	background: var(--si-surface-muted);
 	border: 1px dashed var(--si-border-strong);
@@ -1383,7 +1383,13 @@
 	width: 120px;
 }
 
-.sitx-maintenance-logo-preview img {
+.sitx-maintenance-media-preview--artwork {
+	aspect-ratio: 16 / 9;
+	height: auto;
+	width: min(320px, 100%);
+}
+
+.sitx-maintenance-media-preview img {
 	display: block;
 	height: 100%;
 	object-fit: contain;
@@ -1391,31 +1397,31 @@
 	width: 100%;
 }
 
-.sitx-maintenance-logo-preview .dashicons {
+.sitx-maintenance-media-preview .dashicons {
 	font-size: 30px;
 	height: 30px;
 	width: 30px;
 }
 
-.sitx-maintenance-logo-controls {
+.sitx-maintenance-media-controls {
 	display: flex;
 	flex-direction: column;
 	gap: var(--si-space-3);
 	min-width: 0;
 }
 
-.sitx-maintenance-logo-controls input[type="url"] {
+.sitx-maintenance-media-controls input[type="url"] {
 	width: 100%;
 }
 
-.sitx-maintenance-logo-actions {
+.sitx-maintenance-media-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--si-space-2);
 }
 
 @media (max-width: 782px) {
-	.sitx-maintenance-logo-picker {
+	.sitx-maintenance-media-picker {
 		grid-template-columns: 1fr;
 	}
 }

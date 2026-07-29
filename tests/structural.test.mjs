@@ -140,6 +140,27 @@ test('network-sensitive transient operations use the central global-tools policy
 	);
 });
 
+test('Maintenance artwork is Media Library-only with responsive SVG fallback', async () => {
+	const [module, settingsJs, css, main] = await Promise.all([
+		read('includes/modules/coming-soon/class-siteintelix-coming-soon-module.php'),
+		read('assets/admin/js/siteintelix-settings.js'),
+		read('assets/admin/css/siteintelix-admin.css'),
+		read('siteintelix.php'),
+	]);
+
+	assert.match(module, /name="artwork_id"/);
+	assert.match(module, /wp_attachment_is_image/);
+	assert.match(module, /wp_get_attachment_image\([\s\S]*?\$artwork_id[\s\S]*?'large'/);
+	assert.match(module, /sitx-maintenance__art--custom/);
+	assert.match(module, /<svg class="sitx-maintenance__art"/);
+	assert.doesNotMatch(module, /name="artwork_url"/);
+	assert.match(settingsJs, /library:\s*\{\s*type:\s*'image'\s*\}/);
+	assert.match(settingsJs, /multiple:\s*false/);
+	assert.match(css, /\.sitx-maintenance-media-preview--artwork/);
+	assert.match(module, /sitx-maintenance__art--custom\{[^}]*max-width:min\(520px,100%\)/);
+	assert.match(main, /siteintelix-settings[\s\S]*wp_enqueue_media\(\)/);
+});
+
 test('WordPress.org readme documents the nine approved release screenshots in order', async () => {
 	const readme = await read('readme.txt');
 	const screenshots = readme

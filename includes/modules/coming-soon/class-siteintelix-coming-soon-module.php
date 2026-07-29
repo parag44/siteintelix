@@ -273,11 +273,12 @@ class SITEINTELIX_Coming_Soon_Module {
 				.sitx-maintenance__accent{color:var(--sitx-blue)}
 				.sitx-maintenance__message{color:var(--sitx-muted);font-size:clamp(17px,2.4vw,21px);line-height:1.6;margin:0 auto 28px;max-width:560px}
 				.sitx-maintenance__art{display:block;height:auto;margin:0 auto 30px;max-width:min(260px,68vw);width:100%}
+				.sitx-maintenance__art--custom{border-radius:12px;max-height:360px;max-width:min(520px,100%);object-fit:contain}
 				.sitx-maintenance__thanks{align-items:center;color:var(--sitx-muted);display:inline-flex;font-size:15px;gap:9px;line-height:1.45;margin:0}
 				.sitx-maintenance__thanks svg{color:var(--sitx-blue);height:19px;width:19px}
 				@keyframes sitxFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 				@media (prefers-reduced-motion:reduce){.sitx-maintenance{animation:none}}
-				@media (max-width:560px){body{padding:16px}.sitx-maintenance{border-radius:20px;padding:32px 20px}.sitx-maintenance__logo{margin-bottom:24px;max-height:62px}.sitx-maintenance__badge{font-size:12px;margin-bottom:22px;padding:8px 14px}.sitx-maintenance h1{font-size:clamp(38px,12vw,48px)}.sitx-maintenance__message{font-size:16px;margin-bottom:24px}.sitx-maintenance__art{margin-bottom:24px;max-width:220px}}
+				@media (max-width:560px){body{padding:16px}.sitx-maintenance{border-radius:20px;padding:32px 20px}.sitx-maintenance__logo{margin-bottom:24px;max-height:62px}.sitx-maintenance__badge{font-size:12px;margin-bottom:22px;padding:8px 14px}.sitx-maintenance h1{font-size:clamp(38px,12vw,48px)}.sitx-maintenance__message{font-size:16px;margin-bottom:24px}.sitx-maintenance__art{margin-bottom:24px;max-width:220px}.sitx-maintenance__art--custom{max-height:300px;max-width:100%}}
 			</style>
 		</head>
 		<body>
