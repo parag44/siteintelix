@@ -50,7 +50,7 @@ class SITEINTELIX_File_Manager_Storage {
 			return self::error( 'unsafe_storage', __( 'File Manager storage could not be initialized safely.', 'siteintelix' ) );
 		}
 
-		foreach ( array( '', 'backups', 'trash', 'meta', 'audit' ) as $area ) {
+		foreach ( array( '', 'backups', 'trash', 'meta', 'audit', 'tmp' ) as $area ) {
 			$directory = self::path( $area );
 			if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
 				return self::error( 'storage_create_failed', __( 'File Manager storage could not be created.', 'siteintelix' ) );
@@ -64,6 +64,36 @@ class SITEINTELIX_File_Manager_Storage {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Remove expired generated ZIP archives from private temporary storage.
+	 *
+	 * @param int $maximum_age Maximum age in seconds.
+	 * @return void
+	 */
+	public static function cleanup_temporary_archives( $maximum_age = 3600 ) {
+		$directory = self::path( 'tmp' );
+		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
+			return;
+		}
+		$cutoff = time() - max( 60, (int) $maximum_age );
+		try {
+			foreach ( new DirectoryIterator( $directory ) as $item ) {
+				if (
+					$item->isDot()
+					|| $item->isLink()
+					|| ! $item->isFile()
+					|| 1 !== preg_match( '/^archive-[a-f0-9]{32}\.zip$/', $item->getFilename() )
+					|| $item->getMTime() >= $cutoff
+				) {
+					continue;
+				}
+				wp_delete_file( $item->getPathname() );
+			}
+		} catch ( UnexpectedValueException $exception ) {
+			return;
+		}
 	}
 
 	/**

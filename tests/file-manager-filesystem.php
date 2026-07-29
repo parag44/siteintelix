@@ -18,6 +18,7 @@ file_put_contents( $siteintelix_test_root . '/wp-content/uploads/beta.log', "log
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/.secret', 'hidden' );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/binary.bin', "a\0b" );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/large.txt', str_repeat( 'x', 128 ) );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/php.ini', 'secret' );
 file_put_contents( $siteintelix_test_root . '/index.php', '<?php' );
 file_put_contents( $siteintelix_test_root . '/wp-config.php', "<?php define( 'DB_PASSWORD', 'visible-secret' );" );
 
@@ -115,7 +116,7 @@ function siteintelix_test_assert( $condition, $message ) {
 }
 
 $base = dirname( __DIR__ ) . '/includes/modules/file-manager/';
-foreach ( array( 'settings', 'security', 'redactor', 'filesystem' ) as $class ) {
+foreach ( array( 'settings', 'security', 'storage', 'redactor', 'filesystem' ) as $class ) {
 	$file = $base . 'class-siteintelix-file-manager-' . $class . '.php';
 	siteintelix_test_assert( file_exists( $file ), "{$class} class exists" );
 	require_once $file;
@@ -152,6 +153,9 @@ siteintelix_test_assert( true === $root_items['wp-config.php']['read_only'], 'wp
 
 $search = $filesystem->list_directory( 'wp-content/uploads', array( 'search' => 'beta', 'per_page' => 50 ) );
 siteintelix_test_assert( 1 === count( $search['items'] ) && 'beta.log' === $search['items'][0]['name'], 'search is limited to current-directory filenames' );
+$protected_archive = $filesystem->list_directory( 'wp-content/uploads', array( 'search' => 'php.ini', 'per_page' => 50 ) );
+siteintelix_test_assert( 1 === count( $protected_archive['items'] ), 'protected server configuration remains visible' );
+siteintelix_test_assert( ! in_array( 'archive', $protected_archive['items'][0]['actions'], true ), 'protected server configuration cannot be archived' );
 
 $preview = $filesystem->preview( 'wp-content/uploads/alpha.txt' );
 siteintelix_test_assert( true === $preview['previewable'], 'approved text is previewable' );

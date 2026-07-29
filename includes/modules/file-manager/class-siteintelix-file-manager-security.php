@@ -254,6 +254,41 @@ class SITEINTELIX_File_Manager_Security {
 	}
 
 	/**
+	 * Return whether a path is contained by a root using a segment boundary.
+	 *
+	 * @param string $root Root path.
+	 * @param string $path Candidate path.
+	 * @return bool
+	 */
+	public function contains_path( $root, $path ) {
+		return $this->contains( $root, $path );
+	}
+
+	/**
+	 * Authorize one source for ZIP archive inclusion.
+	 *
+	 * @param string $path Relative or canonical absolute path.
+	 * @return string|WP_Error
+	 */
+	public function archive_source( $path ) {
+		$absolute = $this->authorize_path( $path, 'archive' );
+		if ( is_wp_error( $absolute ) ) {
+			return $absolute;
+		}
+		$basename = strtolower( basename( $absolute ) );
+		if ( in_array( $basename, array( 'wp-config.php', '.htpasswd', '.user.ini', 'php.ini', 'web.config' ), true ) ) {
+			return $this->error( 'archive_source_protected', __( 'A protected item cannot be added to an archive.', 'siteintelix' ) );
+		}
+		$private_path = SITEINTELIX_File_Manager_Storage::path();
+		$private      = realpath( $private_path );
+		$private      = wp_normalize_path( false === $private ? $private_path : $private );
+		if ( $this->contains( $private, $absolute ) ) {
+			return $this->error( 'archive_source_protected', __( 'Private File Manager storage cannot be archived.', 'siteintelix' ) );
+		}
+		return $absolute;
+	}
+
+	/**
 	 * Validate and decode raw path input.
 	 *
 	 * @param mixed $path Path.

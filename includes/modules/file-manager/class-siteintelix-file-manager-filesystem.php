@@ -486,7 +486,10 @@ class SITEINTELIX_File_Manager_Filesystem {
 			: array( 'view' => 'preview', 'details' => 'details', 'download' => 'download', 'archive' => 'archive' );
 
 		foreach ( $checks as $action => $operation ) {
-			if ( ! is_wp_error( $this->security->authorize_path( $absolute, $operation ) ) ) {
+			$authorized = 'archive' === $operation
+				? $this->security->archive_source( $absolute )
+				: $this->security->authorize_path( $absolute, $operation );
+			if ( ! is_wp_error( $authorized ) ) {
 				$actions[] = $action;
 			}
 		}

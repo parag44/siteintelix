@@ -68,6 +68,9 @@ function untrailingslashit( $path ) {
 function wp_mkdir_p( $path ) {
 	return is_dir( $path ) || mkdir( $path, 0755, true );
 }
+function wp_delete_file( $path ) {
+	return unlink( $path );
+}
 function wp_json_encode( $value ) {
 	return json_encode( $value, JSON_UNESCAPED_SLASHES );
 }
@@ -129,10 +132,22 @@ SITEINTELIX_File_Manager_Storage::release_lock( $nested_lock );
 siteintelix_test_assert( is_resource( $first_lock ), 'nested release preserves the outer mutation lock' );
 SITEINTELIX_File_Manager_Storage::release_lock( $first_lock );
 siteintelix_test_assert( ! is_resource( $first_lock ), 'outer release closes the mutation lock handle' );
-foreach ( array( 'backups', 'trash', 'meta', 'audit' ) as $area ) {
+foreach ( array( 'backups', 'trash', 'meta', 'audit', 'tmp' ) as $area ) {
 	siteintelix_test_assert( is_dir( SITEINTELIX_File_Manager_Storage::path( $area ) ), "{$area} directory exists" );
 	siteintelix_test_assert( is_file( SITEINTELIX_File_Manager_Storage::path( $area . '/index.php' ) ), "{$area} has an index guard" );
 }
+
+$temporary_directory = SITEINTELIX_File_Manager_Storage::path( 'tmp' );
+siteintelix_test_assert( is_dir( $temporary_directory ), 'private temporary directory is created' );
+siteintelix_test_assert( ! is_link( $temporary_directory ), 'private temporary directory is not a symlink' );
+$stale_archive = $temporary_directory . '/archive-' . str_repeat( 'a', 32 ) . '.zip';
+file_put_contents( $stale_archive, 'stale' );
+touch( $stale_archive, time() - 7200 );
+$fresh_archive = $temporary_directory . '/archive-' . str_repeat( 'b', 32 ) . '.zip';
+file_put_contents( $fresh_archive, 'fresh' );
+SITEINTELIX_File_Manager_Storage::cleanup_temporary_archives( 3600 );
+siteintelix_test_assert( ! file_exists( $stale_archive ), 'stale temporary archive is removed' );
+siteintelix_test_assert( file_exists( $fresh_archive ), 'fresh temporary archive is retained' );
 
 $metadata = array(
 	'original_path' => 'wp-content/uploads/note.txt',
