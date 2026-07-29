@@ -119,6 +119,15 @@ test('client rendering uses safe DOM assignment and accessible modal behavior', 
 	assert.match(source, /document\.createElement\(\s*'img'\s*\)/);
 	assert.match(source, /permanently_delete_item'[\s\S]*confirmation:\s*values\.confirmation/);
 	assert.match(source, /preventDefault\(\)/);
+	assert.match(source, /data-fm-context-menu/);
+	assert.match(source, /event\.key\s*===\s*'F10'\s*&&\s*event\.shiftKey/);
+	assert.match(source, /event\.key\s*===\s*'ContextMenu'/);
+	assert.match(source, /setAttribute\(\s*'aria-selected'/);
+	assert.match(source, /addEventListener\(\s*'dblclick'/);
+	assert.match(source, /addEventListener\(\s*'contextmenu'/);
+	assert.match(source, /data-fm-row-menu/);
+	assert.match(source, /detailsRequestId/);
+	assert.doesNotMatch(source, /data-fm-details-actions/);
 });
 
 test('client posts only fixed localized actions with operation-specific nonces', async () => {

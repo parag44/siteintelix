@@ -182,6 +182,9 @@
 			editorInstance: null,
 			restoreFocus: null,
 			pendingNavigation: null,
+			contextOrigin: null,
+			contextItem: null,
+			detailsRequestId: 0,
 		};
 
 		function select(selector, scope) {
@@ -356,6 +359,7 @@
 		}
 
 		function visit(path, addHistory) {
+			closeContextMenu(false);
 			guardDirty(function () {
 				state.path = String(path || '');
 				state.page = 1;
@@ -365,6 +369,14 @@
 				}
 				loadDirectory();
 			});
+		}
+
+		function fileIcon(item, large) {
+			var category = fileCategory(item);
+			var icon = node('span', 'sitx-fm-file-icon sitx-fm-file-icon--' + category + (large ? ' is-large' : ''));
+			icon.setAttribute('aria-hidden', 'true');
+			icon.appendChild(node('span', 'sitx-fm-file-icon__label', category === 'folder' ? '' : category.slice(0, 3).toUpperCase()));
+			return icon;
 		}
 
 		function renderBreadcrumbs(breadcrumbs) {
@@ -399,27 +411,6 @@
 			});
 		}
 
-		function actionButton(action, item) {
-			var labels = {
-				open: 'Open',
-				view: 'Preview',
-				details: 'Details',
-				edit: 'Edit',
-				download: 'Download',
-				rename: 'Rename',
-				trash: 'Trash',
-			};
-			if (action === 'download') {
-				var link = node('a', 'si-button si-button--secondary', labels[action]);
-				link.href = downloadUrl(item.path);
-				return link;
-			}
-			return button(labels[action] || action, function (event) {
-				event.stopPropagation();
-				handleItemAction(action, item, event.currentTarget);
-			});
-		}
-
 		function renderItems(result) {
 			var status = select('[data-fm-state]');
 			var table = select('[data-fm-table]');
@@ -437,35 +428,51 @@
 				result.items.forEach(function (item) {
 					var row = node('tr');
 					row.tabIndex = 0;
+					row.setAttribute('aria-selected', 'false');
+					row.dataset.fmItemPath = item.path;
 					row.addEventListener('click', function () {
 						selectItem(item, row);
 					});
+					row.addEventListener('dblclick', function (event) {
+						event.preventDefault();
+						runPrimaryAction(item, row);
+					});
+					row.addEventListener('contextmenu', function (event) {
+						event.preventDefault();
+						openContextMenu(item, row, row, { x: event.clientX, y: event.clientY });
+					});
 					row.addEventListener('keydown', function (event) {
 						if (event.key === 'Enter') {
-							selectItem(item, row);
+							event.preventDefault();
+							runPrimaryAction(item, row);
+						} else if ((event.key === 'F10' && event.shiftKey) || event.key === 'ContextMenu') {
+							event.preventDefault();
+							openContextMenu(item, row, row);
 						}
 					});
-					var nameCell = node('td');
-					var nameButton = button(item.name, function (event) {
-						event.stopPropagation();
-						if (item.type === 'directory') {
-							visit(item.path, true);
-						} else {
-							showDetails(item);
-						}
-					}, 'sitx-fm-name');
-					nameCell.appendChild(nameButton);
+					var nameCell = node('td', 'sitx-fm-name-cell');
+					var nameWrap = node('span', 'sitx-fm-name');
+					nameWrap.appendChild(fileIcon(item, false));
+					nameWrap.appendChild(node('span', 'sitx-fm-name__label', item.name));
+					nameCell.appendChild(nameWrap);
 					row.appendChild(nameCell);
 					row.appendChild(node('td', '', item.type === 'directory' ? 'Folder' : (item.extension || 'File')));
 					row.appendChild(node('td', '', item.size_label || '—'));
 					row.appendChild(node('td', '', formatDate(item.modified)));
 					row.appendChild(node('td', '', item.permissions || '—'));
 					row.appendChild(node('td', '', item.writable ? 'Yes' : 'No'));
-					var actionsCell = node('td', 'sitx-fm-row-actions');
-					(item.actions || []).forEach(function (action) {
-						actionsCell.appendChild(actionButton(action, item));
-					});
-					row.appendChild(actionsCell);
+					var menuCell = node('td', 'sitx-fm-table__menu-cell');
+					var menuButton = button('', function (event) {
+						event.stopPropagation();
+						openContextMenu(item, row, event.currentTarget);
+					}, 'sitx-fm-row-menu');
+					menuButton.setAttribute('data-fm-row-menu', '');
+					menuButton.setAttribute('aria-label', 'Actions for ' + item.name);
+					var menuIcon = node('span', 'dashicons dashicons-ellipsis');
+					menuIcon.setAttribute('aria-hidden', 'true');
+					menuButton.appendChild(menuIcon);
+					menuCell.appendChild(menuButton);
+					row.appendChild(menuCell);
 					body.appendChild(row);
 				});
 			}
@@ -487,6 +494,9 @@
 		}
 
 		function loadDirectory() {
+			closeContextMenu(false);
+			state.selected = null;
+			state.detailsRequestId += 1;
 			setBrowserStatus((data.i18n && data.i18n.loading) || 'Loading files…', false);
 			request('list_directory', {
 				path: state.path,
@@ -511,6 +521,7 @@
 			state.selected = item;
 			selectAll('[data-fm-table] tbody tr').forEach(function (entry) {
 				entry.classList.toggle('is-selected', entry === row);
+				entry.setAttribute('aria-selected', entry === row ? 'true' : 'false');
 			});
 			showDetails(item);
 		}
@@ -521,14 +532,15 @@
 		}
 
 		function showDetails(item) {
+			var requestId = ++state.detailsRequestId;
 			var empty = select('[data-fm-details-empty]');
 			var content = select('[data-fm-details-content]');
 			var name = select('[data-fm-details-name]');
 			var preview = select('[data-fm-preview]');
 			var imagePreview = select('[data-fm-image-preview]');
 			var metadata = select('[data-fm-metadata]');
-			var actions = select('[data-fm-details-actions]');
-			if (!content || !metadata || !actions) {
+			var icon = select('[data-fm-details-icon]');
+			if (!content || !metadata || !icon) {
 				return;
 			}
 			if (empty) {
@@ -541,8 +553,12 @@
 			imagePreview.hidden = true;
 			clear(imagePreview);
 			clear(metadata);
-			clear(actions);
+			clear(icon);
+			icon.appendChild(fileIcon(item, true));
 			request('get_details', { path: item.path, hashes: '1' }).then(function (details) {
+				if (requestId !== state.detailsRequestId || !state.selected || state.selected.path !== item.path) {
+					return;
+				}
 				addMetadata(metadata, 'Path', details.path);
 				if (details.absolute_path) {
 					addMetadata(metadata, 'Absolute path', details.absolute_path);
@@ -560,10 +576,16 @@
 					addMetadata(metadata, 'SHA-256', details.sha256);
 				}
 			}).catch(function (error) {
+				if (requestId !== state.detailsRequestId || !state.selected || state.selected.path !== item.path) {
+					return;
+				}
 				addMetadata(metadata, 'Error', errorMessage(error));
 			});
 			if (item.type === 'file') {
 				request('get_file', { path: item.path }).then(function (result) {
+					if (requestId !== state.detailsRequestId || !state.selected || state.selected.path !== item.path) {
+						return;
+					}
 					if (!result.previewable) {
 						preview.textContent = 'Preview unavailable: ' + String(result.reason || 'unsupported') + '.';
 					} else if (result.kind === 'text') {
@@ -578,23 +600,142 @@
 						imagePreview.appendChild(image);
 					}
 				}).catch(function (error) {
+					if (requestId !== state.detailsRequestId || !state.selected || state.selected.path !== item.path) {
+						return;
+					}
 					preview.textContent = errorMessage(error);
 				});
 			} else {
 				preview.textContent = 'Folder';
 			}
-			(item.actions || []).forEach(function (action) {
-				if (action !== 'details' && action !== 'open' && action !== 'view') {
-					actions.appendChild(actionButton(action, item));
+		}
+
+		function closeContextMenu(restoreFocus) {
+			var menu = select('[data-fm-context-menu]');
+			if (!menu || menu.hidden) {
+				return;
+			}
+			menu.hidden = true;
+			clear(menu);
+			if (restoreFocus && state.contextOrigin && typeof state.contextOrigin.focus === 'function') {
+				state.contextOrigin.focus();
+			}
+			state.contextOrigin = null;
+			state.contextItem = null;
+		}
+
+		function runPrimaryAction(item, row) {
+			var action = primaryAction(item);
+			if (!action) {
+				return;
+			}
+			if (action === 'view' || action === 'details') {
+				selectItem(item, row);
+				return;
+			}
+			handleItemAction(action, item, row);
+		}
+
+		function contextMenuItems() {
+			var menu = select('[data-fm-context-menu]');
+			return menu ? selectAll('[role="menuitem"]', menu) : [];
+		}
+
+		function moveContextFocus(key) {
+			var items = contextMenuItems();
+			if (!items.length) {
+				return;
+			}
+			var current = Math.max(0, items.indexOf(document.activeElement));
+			var next = current;
+			if (key === 'ArrowDown') {
+				next = (current + 1) % items.length;
+			} else if (key === 'ArrowUp') {
+				next = (current - 1 + items.length) % items.length;
+			} else if (key === 'Home') {
+				next = 0;
+			} else if (key === 'End') {
+				next = items.length - 1;
+			}
+			items[next].focus();
+		}
+
+		function contextMenuItem(action, item, origin) {
+			var element = action.id === 'download'
+				? node('a', 'sitx-fm-context-menu__item')
+				: node('button', 'sitx-fm-context-menu__item');
+			if (action.id === 'download') {
+				element.href = downloadUrl(item.path);
+				element.addEventListener('click', function () {
+					closeContextMenu(false);
+				});
+			} else {
+				element.type = 'button';
+				element.addEventListener('click', function () {
+					closeContextMenu(false);
+					handleItemAction(action.id, item, origin);
+				});
+			}
+			element.setAttribute('role', 'menuitem');
+			element.tabIndex = -1;
+			if (action.destructive) {
+				element.classList.add('is-destructive');
+			}
+			var actionIcon = node('span', 'sitx-fm-context-menu__icon dashicons ' + action.icon);
+			actionIcon.setAttribute('aria-hidden', 'true');
+			element.appendChild(actionIcon);
+			element.appendChild(node('span', '', action.label));
+			return element;
+		}
+
+		function openContextMenu(item, row, origin, coordinates) {
+			var menu = select('[data-fm-context-menu]');
+			var actions = contextActions(item);
+			if (!menu || !actions.length) {
+				return;
+			}
+			closeContextMenu(false);
+			selectItem(item, row);
+			state.contextItem = item;
+			state.contextOrigin = origin;
+			clear(menu);
+			actions.forEach(function (action) {
+				if (action.destructive && menu.childNodes.length) {
+					var separator = node('span', 'sitx-fm-context-menu__separator');
+					separator.setAttribute('role', 'separator');
+					menu.appendChild(separator);
 				}
+				menu.appendChild(contextMenuItem(action, item, origin));
 			});
+			menu.hidden = false;
+			var rect = menu.getBoundingClientRect();
+			var originRect = origin.getBoundingClientRect();
+			var point = coordinates || {
+				x: originRect.right,
+				y: originRect.bottom,
+			};
+			var position = clampMenuPosition(
+				point,
+				{ width: rect.width, height: rect.height },
+				{ width: global.innerWidth, height: global.innerHeight, padding: 8 }
+			);
+			menu.style.left = position.left + 'px';
+			menu.style.top = position.top + 'px';
+			var first = contextMenuItems()[0];
+			if (first) {
+				first.focus();
+			}
 		}
 
 		function handleItemAction(action, item, trigger) {
 			if (action === 'open') {
 				visit(item.path, true);
 			} else if (action === 'view' || action === 'details') {
-				showDetails(item);
+				if (!state.selected || state.selected.path !== item.path) {
+					state.selected = item;
+					showDetails(item);
+				}
+				select('[data-fm-details-panel]').classList.add('is-open');
 			} else if (action === 'edit') {
 				openEditor(item.path);
 			} else if (action === 'rename') {
@@ -978,6 +1119,29 @@
 		}
 
 		function bindBrowser() {
+			var menu = select('[data-fm-context-menu]');
+			menu.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') {
+					event.preventDefault();
+					closeContextMenu(true);
+				} else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(event.key) !== -1) {
+					event.preventDefault();
+					moveContextFocus(event.key);
+				}
+			});
+			document.addEventListener('pointerdown', function (event) {
+				var target = event.target;
+				var rowMenu = target && typeof target.closest === 'function' ? target.closest('[data-fm-row-menu]') : null;
+				if (!menu.hidden && !menu.contains(target) && !rowMenu) {
+					closeContextMenu(false);
+				}
+			});
+			global.addEventListener('resize', function () {
+				closeContextMenu(false);
+			});
+			global.addEventListener('scroll', function () {
+				closeContextMenu(false);
+			}, true);
 			select('[data-fm-back]').addEventListener('click', function () {
 				guardDirty(function () {
 					state.path = state.history.back();
