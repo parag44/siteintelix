@@ -119,6 +119,7 @@ class SITEINTELIX_File_Manager_Admin {
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'downloadUrl'    => admin_url( 'admin-post.php' ),
 				'downloadNonce'  => wp_create_nonce( 'siteintelix_fm_download_file' ),
+				'archiveNonce'   => wp_create_nonce( 'siteintelix_fm_download_archive' ),
 				'backupDownloadNonce' => wp_create_nonce( 'siteintelix_fm_download_backup' ),
 				'previewNonce'   => wp_create_nonce( 'siteintelix_fm_preview_image' ),
 				'nonces'         => $nonces,
@@ -128,11 +129,15 @@ class SITEINTELIX_File_Manager_Admin {
 					'preview' => (int) $settings['preview_max_bytes'],
 					'edit'    => (int) $settings['edit_max_bytes'],
 					'upload'  => (int) $settings['upload_max_bytes'],
+					'archiveSelection' => 100,
+					'archiveEntries'   => 5000,
+					'archiveBytes'     => 250 * MB_IN_BYTES,
 				),
 				'features'       => array(
 					'editing' => ! empty( $settings['editing_enabled'] ) && ! ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ),
 					'uploads' => ! empty( $settings['uploads_enabled'] ) && ! ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ),
 					'overwrite' => ! empty( $settings['allow_overwrite'] ),
+					'archiveAvailable' => SITEINTELIX_File_Manager_Archive::available(),
 				),
 				'i18n'           => array(
 					'loading'          => __( 'Loading files…', 'siteintelix' ),
@@ -143,6 +148,12 @@ class SITEINTELIX_File_Manager_Admin {
 					'operationFailed'  => __( 'The operation could not be completed.', 'siteintelix' ),
 					'unsavedChanges'   => __( 'You have unsaved changes. Discard them?', 'siteintelix' ),
 					'confirmPermanent' => __( 'Type the item name to permanently delete it.', 'siteintelix' ),
+					'archiveUnavailable' => __( 'ZIP archive support is unavailable on this server.', 'siteintelix' ),
+					'archiveSelectionLimit' => __( 'Select no more than 100 items.', 'siteintelix' ),
+					'archiveStarted'   => __( 'ZIP download started.', 'siteintelix' ),
+					'selectedSingular' => __( '1 item selected', 'siteintelix' ),
+					'selectedPlural'   => __( '%d items selected', 'siteintelix' ),
+					'readOnly'         => __( 'Read-only', 'siteintelix' ),
 				),
 			)
 		);

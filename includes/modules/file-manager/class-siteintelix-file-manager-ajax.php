@@ -36,6 +36,7 @@ class SITEINTELIX_File_Manager_Ajax {
 		add_action( 'wp_ajax_siteintelix_fm_list_backups', array( __CLASS__, 'list_backups' ) );
 		add_action( 'wp_ajax_siteintelix_fm_restore_backup', array( __CLASS__, 'restore_backup' ) );
 		add_action( 'admin_post_siteintelix_fm_download_file', array( __CLASS__, 'download_file' ) );
+		add_action( 'admin_post_siteintelix_fm_download_archive', array( __CLASS__, 'download_archive' ) );
 		add_action( 'admin_post_siteintelix_fm_download_backup', array( __CLASS__, 'download_backup' ) );
 		add_action( 'admin_post_siteintelix_fm_preview_image', array( __CLASS__, 'preview_image' ) );
 		add_action( 'admin_post_siteintelix_save_file_manager_settings', array( __CLASS__, 'save_settings' ) );
@@ -268,6 +269,52 @@ class SITEINTELIX_File_Manager_Ajax {
 		if ( is_wp_error( $result ) ) {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
+		exit;
+	}
+
+	/**
+	 * Build and stream one authenticated bounded ZIP download.
+	 *
+	 * @return void
+	 */
+	public static function download_archive() {
+		if (
+			! is_user_logged_in()
+			|| ! SITEINTELIX_File_Manager_Security::current_user_can_manage()
+			|| ! SITEINTELIX_Modules::is_enabled( 'file_manager' )
+		) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'siteintelix' ) );
+		}
+		check_admin_referer( 'siteintelix_fm_download_archive' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() verified this request.
+		$current = isset( $_POST['current_path'] ) && is_string( $_POST['current_path'] ) ? wp_unslash( $_POST['current_path'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() verified this request.
+		$raw_paths = isset( $_POST['paths'] ) && is_array( $_POST['paths'] ) ? array_slice( wp_unslash( $_POST['paths'] ), 0, 101 ) : array();
+		$paths     = array_values( array_filter( $raw_paths, 'is_string' ) );
+		$service   = new SITEINTELIX_File_Manager_Archive();
+		$result    = $service->create( $current, $paths );
+		if ( is_wp_error( $result ) ) {
+			SITEINTELIX_File_Manager_Audit::record( 'archive_download', $current, 'failure', $result->get_error_code() );
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+
+		$streamed = null;
+		try {
+			$streamed = $service->stream( $result );
+		} finally {
+			$cleanup = $service->delete( $result['path'] );
+			if ( is_wp_error( $cleanup ) ) {
+				error_log( 'SiteIntelix File Manager archive cleanup failed: ' . $cleanup->get_error_code() );
+			}
+		}
+		if ( is_wp_error( $streamed ) ) {
+			SITEINTELIX_File_Manager_Audit::record( 'archive_download', $current, 'failure', $streamed->get_error_code() );
+			if ( ! headers_sent() ) {
+				wp_die( esc_html( $streamed->get_error_message() ) );
+			}
+			exit;
+		}
+		SITEINTELIX_File_Manager_Audit::record( 'archive_download', $current, 'success', 'entries:' . (int) $result['entries'] . ';omitted:' . (int) $result['omitted'] );
 		exit;
 	}
 

@@ -45,6 +45,22 @@ if ( false === strpos( $source, "self::authorize( 'siteintelix_fm_list_tree' )" 
 	fwrite( STDERR, "FAIL: tree handler must use an operation-specific nonce\n" );
 	exit( 1 );
 }
+if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_archive' ) ) {
+	fwrite( STDERR, "FAIL: archive download handler is not registered\n" );
+	exit( 1 );
+}
+if ( false === strpos( $source, "check_admin_referer( 'siteintelix_fm_download_archive' )" ) ) {
+	fwrite( STDERR, "FAIL: archive download must use an operation-specific nonce\n" );
+	exit( 1 );
+}
+if ( false === strpos( $source, "SITEINTELIX_Modules::is_enabled( 'file_manager' )" ) ) {
+	fwrite( STDERR, "FAIL: archive download must require the enabled module\n" );
+	exit( 1 );
+}
+if ( false === strpos( $source, 'array_slice' ) ) {
+	fwrite( STDERR, "FAIL: archive request input must be bounded before service use\n" );
+	exit( 1 );
+}
 if ( false !== strpos( $source, 'wp_ajax_nopriv_' ) ) {
 	fwrite( STDERR, "FAIL: unauthenticated handlers are forbidden\n" );
 	exit( 1 );

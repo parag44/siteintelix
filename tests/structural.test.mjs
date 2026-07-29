@@ -60,6 +60,30 @@ test('File Manager folder tree stays lazy and non-recursive', async () => {
 	assert.doesNotMatch(tree, /RecursiveDirectoryIterator/);
 });
 
+test('File Manager exposes bounded authenticated ZIP downloads', async () => {
+	const [module, admin, ajax, archive] = await Promise.all([
+		read('includes/modules/file-manager/class-siteintelix-file-manager-module.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-admin.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-ajax.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-archive.php'),
+	]);
+	assert.match(module, /class-siteintelix-file-manager-archive\.php[\s\S]*class-siteintelix-file-manager-ajax\.php/);
+	assert.match(module, /cleanup_temporary_archives\(\)/);
+	assert.match(admin, /archiveNonce/);
+	assert.match(admin, /archiveAvailable/);
+	assert.match(admin, /'archiveSelection'\s*=>\s*100/);
+	assert.match(admin, /'archiveEntries'\s*=>\s*5000/);
+	assert.match(admin, /'archiveBytes'\s*=>\s*250\s*\*\s*MB_IN_BYTES/);
+	assert.match(ajax, /function download_archive\(\)/);
+	assert.match(ajax, /finally/);
+	assert.match(ajax, /Audit::record\(\s*'archive_download'/);
+	assert.match(archive, /Content-Type: application\/zip/);
+	assert.match(archive, /Content-Disposition: attachment/);
+	assert.match(archive, /X-Content-Type-Options: nosniff/);
+	assert.match(archive, /fread\(\s*\$handle,\s*65536\s*\)/);
+	assert.doesNotMatch(archive, /file_get_contents\(/);
+});
+
 test('File Manager admin UI is accessible and its assets are screen-scoped', async () => {
 	const required = [
 		'includes/modules/file-manager/class-siteintelix-file-manager-admin.php',
