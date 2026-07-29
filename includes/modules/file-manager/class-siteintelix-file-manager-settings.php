@@ -42,7 +42,7 @@ class SITEINTELIX_File_Manager_Settings {
 			'editing_enabled'            => 1,
 			'editable_extensions'        => array( 'txt', 'log', 'md', 'css', 'js', 'json', 'html', 'htm', 'xml', 'yml', 'yaml', 'ini', 'conf', 'csv' ),
 			'uploads_enabled'             => 1,
-			'upload_extensions'          => array( 'txt', 'log', 'md', 'css', 'js', 'json', 'html', 'htm', 'xml', 'yml', 'yaml', 'ini', 'conf', 'csv', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf', 'zip' ),
+			'upload_extensions'          => array( 'txt', 'log', 'md', 'json', 'xml', 'yml', 'yaml', 'csv', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf' ),
 			'allow_archive_uploads'       => 0,
 			'allow_overwrite'             => 0,
 			'backup_retention_days'       => 30,

@@ -267,6 +267,103 @@ class SITEINTELIX_File_Manager_Filesystem {
 	}
 
 	/**
+	 * Create an authorized directory.
+	 *
+	 * @param string $parent Relative parent.
+	 * @param string $name Directory name.
+	 * @return array<string,string>|WP_Error
+	 */
+	public function create_directory( $parent, $name ) {
+		$destination = $this->security->resolve_destination( $parent, $name, 'create' );
+		if ( is_wp_error( $destination ) ) {
+			return $destination;
+		}
+		if ( ! wp_mkdir_p( $destination ) || ! is_dir( $destination ) ) {
+			return $this->error( 'create_failed', __( 'The folder could not be created.', 'siteintelix' ) );
+		}
+		$relative = $this->security->relative_path( $destination );
+		do_action( 'siteintelix_file_manager_after_operation', 'create_directory', is_wp_error( $relative ) ? '' : $relative, 'success' );
+		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+	}
+
+	/**
+	 * Create an authorized non-PHP text file.
+	 *
+	 * @param string $parent Relative parent.
+	 * @param string $name Filename.
+	 * @param string $content Initial content.
+	 * @return array<string,string>|WP_Error
+	 */
+	public function create_file( $parent, $name, $content = '' ) {
+		$extension = strtolower( pathinfo( (string) $name, PATHINFO_EXTENSION ) );
+		$settings  = SITEINTELIX_File_Manager_Settings::get();
+		if ( 'php' === $extension || ! in_array( $extension, (array) $settings['editable_extensions'], true ) ) {
+			return $this->error( 'invalid_extension', __( 'This file type cannot be created in Safe Mode.', 'siteintelix' ) );
+		}
+		if ( strlen( $content ) > (int) $settings['edit_max_bytes'] || false !== strpos( $content, "\0" ) ) {
+			return $this->error( 'file_too_large', __( 'The new file content exceeds the permitted size.', 'siteintelix' ) );
+		}
+		$destination = $this->security->resolve_destination( $parent, $name, 'create' );
+		if ( is_wp_error( $destination ) ) {
+			return $destination;
+		}
+		$handle = fopen( $destination, 'x+b' );
+		if ( false === $handle ) {
+			return $this->error( 'create_failed', __( 'The file could not be created.', 'siteintelix' ) );
+		}
+		$length  = strlen( $content );
+		$written = 0;
+		while ( $written < $length ) {
+			$chunk = fwrite( $handle, substr( $content, $written ) );
+			if ( false === $chunk || 0 === $chunk ) {
+				fclose( $handle );
+				unlink( $destination );
+				return $this->error( 'create_failed', __( 'The file could not be created.', 'siteintelix' ) );
+			}
+			$written += $chunk;
+		}
+		fflush( $handle );
+		fclose( $handle );
+		chmod( $destination, 0644 );
+		$relative = $this->security->relative_path( $destination );
+		do_action( 'siteintelix_file_manager_after_operation', 'create_file', is_wp_error( $relative ) ? '' : $relative, 'success' );
+		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+	}
+
+	/**
+	 * Rename an item inside its current parent.
+	 *
+	 * @param string $path Relative source.
+	 * @param string $new_name New basename.
+	 * @return array<string,string>|WP_Error
+	 */
+	public function rename_item( $path, $new_name ) {
+		$source = $this->security->authorize_path( $path, 'rename' );
+		if ( is_wp_error( $source ) ) {
+			return $source;
+		}
+		$old_extension = is_file( $source ) ? strtolower( pathinfo( $source, PATHINFO_EXTENSION ) ) : '';
+		$new_extension = is_file( $source ) ? strtolower( pathinfo( (string) $new_name, PATHINFO_EXTENSION ) ) : '';
+		if ( $old_extension !== $new_extension ) {
+			return $this->error( 'extension_change_blocked', __( 'File extensions cannot be changed during rename in Safe Mode.', 'siteintelix' ) );
+		}
+		$parent_relative = $this->security->relative_path( dirname( $source ) );
+		if ( is_wp_error( $parent_relative ) ) {
+			return $parent_relative;
+		}
+		$destination = $this->security->resolve_destination( $parent_relative, $new_name, 'rename' );
+		if ( is_wp_error( $destination ) ) {
+			return $destination;
+		}
+		if ( ! rename( $source, $destination ) ) {
+			return $this->error( 'rename_failed', __( 'The file or directory could not be renamed.', 'siteintelix' ) );
+		}
+		$relative = $this->security->relative_path( $destination );
+		do_action( 'siteintelix_file_manager_after_operation', 'rename', is_wp_error( $relative ) ? '' : $relative, 'success' );
+		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+	}
+
+	/**
 	 * Build root-bounded breadcrumbs.
 	 *
 	 * @param string $directory Canonical directory.

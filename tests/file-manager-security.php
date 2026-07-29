@@ -10,12 +10,14 @@ mkdir( $siteintelix_test_root . '/wp-admin', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-includes', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/uploads/nested', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/plugins/siteintelix', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/plugins/active-one', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/themes/active', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/mu-plugins', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/languages', 0777, true );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/photo.jpg', 'image' );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/nested/note.txt', 'note' );
 file_put_contents( $siteintelix_test_root . '/wp-content/plugins/siteintelix/siteintelix.php', '<?php' );
+file_put_contents( $siteintelix_test_root . '/wp-content/plugins/active-one/main.php', '<?php' );
 file_put_contents( $siteintelix_test_root . '/wp-content/themes/active/style.css', 'body{}' );
 file_put_contents( $siteintelix_test_root . '/wp-config.php', '<?php' );
 
@@ -28,7 +30,9 @@ define( 'KB_IN_BYTES', 1024 );
 define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
 define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
 
-$siteintelix_test_options   = array();
+$siteintelix_test_options   = array(
+	'active_plugins' => array( 'active-one/main.php' ),
+);
 $siteintelix_test_multisite = false;
 $siteintelix_test_caps      = array( 'manage_options' => true );
 $siteintelix_test_filters   = array();
@@ -161,6 +165,7 @@ siteintelix_test_assert( is_wp_error( $security->authorize_path( 'php://filter/r
 siteintelix_test_assert( is_wp_error( $security->authorize_path( '/var/www/external.txt', 'read' ) ), 'external absolute path is blocked' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-admin', 'write' ) ), 'core write is blocked' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/siteintelix/siteintelix.php', 'write' ) ), 'SiteIntelix is immutable' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/active-one/main.php', 'write' ) ), 'active plugins are immutable' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/themes/active/style.css', 'write' ) ), 'active theme is immutable' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-config.php', 'read' ) ), 'wp-config preview is disabled' );
 siteintelix_test_assert( ! is_wp_error( $security->resolve_destination( 'wp-content/uploads', 'safe.txt', 'create' ) ), 'safe destination is accepted' );

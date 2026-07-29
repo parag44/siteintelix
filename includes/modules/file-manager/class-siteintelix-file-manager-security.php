@@ -204,6 +204,18 @@ class SITEINTELIX_File_Manager_Security {
 			get_stylesheet_directory(),
 			WPMU_PLUGIN_DIR,
 		);
+		$active_plugins = (array) get_option( 'active_plugins', array() );
+		if ( is_multisite() && function_exists( 'get_site_option' ) ) {
+			$active_plugins = array_merge( $active_plugins, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+		}
+		foreach ( $active_plugins as $plugin_file ) {
+			$plugin_file = ltrim( wp_normalize_path( (string) $plugin_file ), '/' );
+			if ( '' === $plugin_file || preg_match( '#(^|/)\.\.(/|$)#', $plugin_file ) ) {
+				continue;
+			}
+			$plugin_directory = dirname( $plugin_file );
+			$paths[] = '.' === $plugin_directory ? WP_PLUGIN_DIR . '/' . $plugin_file : WP_PLUGIN_DIR . '/' . $plugin_directory;
+		}
 
 		$normalized = array();
 		foreach ( $paths as $path ) {
