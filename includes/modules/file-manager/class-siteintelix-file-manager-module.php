@@ -15,6 +15,7 @@ require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-sec
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-storage.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-redactor.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-audit.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-filesystem.php';
 
 /**
  * Coordinates the enabled File Manager services.

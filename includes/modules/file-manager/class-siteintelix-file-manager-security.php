@@ -353,7 +353,7 @@ class SITEINTELIX_File_Manager_Security {
 		$wp_config_path = ABSPATH . 'wp-config.php';
 		$wp_config      = untrailingslashit( wp_normalize_path( realpath( $wp_config_path ) ?: $wp_config_path ) );
 		if ( $path === $wp_config ) {
-			return true;
+			return ! ( 'preview' === $operation && apply_filters( 'siteintelix_file_manager_allow_wp_config_preview', false ) );
 		}
 		if ( ! $this->is_write_operation( $operation ) ) {
 			return false;
