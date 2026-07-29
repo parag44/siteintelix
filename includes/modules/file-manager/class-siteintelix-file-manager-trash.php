@@ -55,7 +55,7 @@ class SITEINTELIX_File_Manager_Trash {
 			return $this->error( 'trash_failed', __( 'This item could not be moved to trash.', 'siteintelix' ) );
 		}
 		$payload = SITEINTELIX_File_Manager_Storage::path( 'trash/' . $id );
-		$lock    = SITEINTELIX_File_Manager_Storage::acquire_lock( 'trash:' . dirname( $source ) );
+		$lock    = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
 		if ( is_wp_error( $lock ) ) {
 			return $lock;
 		}
@@ -176,7 +176,7 @@ class SITEINTELIX_File_Manager_Trash {
 		if ( file_exists( $destination ) || is_link( $destination ) ) {
 			return $this->error( 'restore_collision', __( 'An item already exists at the original location.', 'siteintelix' ) );
 		}
-		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'restore:' . dirname( $destination ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
 		if ( is_wp_error( $lock ) ) {
 			return $lock;
 		}

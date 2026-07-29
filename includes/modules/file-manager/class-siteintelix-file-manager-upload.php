@@ -100,7 +100,7 @@ class SITEINTELIX_File_Manager_Upload {
 				return $target;
 			}
 		}
-		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'upload:' . $target );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
 		if ( is_wp_error( $lock ) ) {
 			return $lock;
 		}

@@ -85,7 +85,7 @@ class SITEINTELIX_File_Manager_Editor {
 		if ( strlen( $content ) > (int) $settings['edit_max_bytes'] ) {
 			return $this->error( 'file_too_large', __( 'This file is too large to edit in the browser.', 'siteintelix' ) );
 		}
-		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'edit:' . $file );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
 		if ( is_wp_error( $lock ) ) {
 			return $lock;
 		}
@@ -142,7 +142,7 @@ class SITEINTELIX_File_Manager_Editor {
 		if ( ! is_file( $source ) || is_link( $source ) || ! is_readable( $source ) ) {
 			return $this->error( 'invalid_source', __( 'The replacement file is invalid.', 'siteintelix' ) );
 		}
-		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'replace:' . $file );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
 		if ( is_wp_error( $lock ) ) {
 			return $lock;
 		}
