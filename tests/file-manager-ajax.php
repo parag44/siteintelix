@@ -49,7 +49,7 @@ if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_archive' ) )
 	fwrite( STDERR, "FAIL: archive download handler is not registered\n" );
 	exit( 1 );
 }
-if ( false === strpos( $source, "check_admin_referer( 'siteintelix_fm_download_archive' )" ) ) {
+if ( false === strpos( $source, "check_admin_referer( 'siteintelix_fm_download_archive', 'nonce' )" ) ) {
 	fwrite( STDERR, "FAIL: archive download must use an operation-specific nonce\n" );
 	exit( 1 );
 }

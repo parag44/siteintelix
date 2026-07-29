@@ -285,7 +285,7 @@ class SITEINTELIX_File_Manager_Ajax {
 		) {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'siteintelix' ) );
 		}
-		check_admin_referer( 'siteintelix_fm_download_archive' );
+		check_admin_referer( 'siteintelix_fm_download_archive', 'nonce' );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() verified this request.
 		$current = isset( $_POST['current_path'] ) && is_string( $_POST['current_path'] ) ? wp_unslash( $_POST['current_path'] ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() verified this request.
