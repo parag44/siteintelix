@@ -204,6 +204,9 @@ class SITEINTELIX_File_Manager_Security {
 			get_stylesheet_directory(),
 			WPMU_PLUGIN_DIR,
 		);
+		if ( function_exists( 'get_template_directory' ) ) {
+			$paths[] = get_template_directory();
+		}
 		$active_plugins = (array) get_option( 'active_plugins', array() );
 		if ( is_multisite() && function_exists( 'get_site_option' ) ) {
 			$active_plugins = array_merge( $active_plugins, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
@@ -367,13 +370,48 @@ class SITEINTELIX_File_Manager_Security {
 		if ( $path === $wp_config ) {
 			return ! ( 'preview' === $operation && apply_filters( 'siteintelix_file_manager_allow_wp_config_preview', false ) );
 		}
+		if ( $this->is_write_operation( $operation ) && in_array( strtolower( basename( $path ) ), array( '.htaccess', '.htpasswd', '.user.ini', 'php.ini', 'web.config' ), true ) ) {
+			return true;
+		}
+		if ( $this->is_write_operation( $operation ) && 'php' === strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) ) {
+			return true;
+		}
+		if ( in_array( $operation, array( 'rename', 'trash' ), true ) && is_dir( $path ) && $this->directory_contains_php( $path ) ) {
+			return true;
+		}
 		if ( ! $this->is_write_operation( $operation ) ) {
 			return false;
 		}
 		foreach ( $this->protected_paths() as $protected ) {
-			if ( $this->contains( $protected, $path ) ) {
+			if ( $this->contains( $protected, $path ) || ( in_array( $operation, array( 'rename', 'trash' ), true ) && is_dir( $path ) && $this->contains( $path, $protected ) ) ) {
 				return true;
 			}
+		}
+		return false;
+	}
+
+	/**
+	 * Fail closed when a renamed or trashed directory contains PHP.
+	 *
+	 * @param string $directory Directory.
+	 * @return bool
+	 */
+	private function directory_contains_php( $directory ) {
+		$scanned = 0;
+		try {
+			$iterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS )
+			);
+			foreach ( $iterator as $item ) {
+				if ( ++$scanned > 5000 || is_link( $item->getPathname() ) ) {
+					return true;
+				}
+				if ( $item->isFile() && 'php' === strtolower( $item->getExtension() ) ) {
+					return true;
+				}
+			}
+		} catch ( UnexpectedValueException $exception ) {
+			return true;
 		}
 		return false;
 	}

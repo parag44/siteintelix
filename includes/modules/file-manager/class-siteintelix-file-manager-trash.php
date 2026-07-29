@@ -55,29 +55,41 @@ class SITEINTELIX_File_Manager_Trash {
 			return $this->error( 'trash_failed', __( 'This item could not be moved to trash.', 'siteintelix' ) );
 		}
 		$payload = SITEINTELIX_File_Manager_Storage::path( 'trash/' . $id );
-		if ( file_exists( $payload ) || is_link( $payload ) || ! rename( $source, $payload ) ) {
-			return $this->error( 'trash_failed', __( 'This item could not be moved to trash.', 'siteintelix' ) );
+		$lock    = SITEINTELIX_File_Manager_Storage::acquire_lock( 'trash:' . dirname( $source ) );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$relative = $this->security->relative_path( $source );
-		$metadata = array(
-			'original_path' => is_wp_error( $relative ) ? '' : $relative,
-			'created_at'    => gmdate( 'c' ),
-			'user_id'       => (int) get_current_user_id(),
-			'operation'     => 'trash',
-			'size'          => $is_directory ? 0 : max( 0, (int) filesize( $payload ) ),
-			'sha256'        => $is_directory ? '' : hash_file( 'sha256', $payload ),
-			'type'          => $is_directory ? 'directory' : 'file',
-		);
-		$written = SITEINTELIX_File_Manager_Storage::write_metadata( 'trash', $id, $metadata );
-		if ( is_wp_error( $written ) ) {
-			if ( ! file_exists( $source ) ) {
-				rename( $payload, $source );
+		try {
+			$source = $this->security->authorize_path( $path, 'trash' );
+			if ( is_wp_error( $source ) ) {
+				return $source;
 			}
-			return $written;
+			if ( file_exists( $payload ) || is_link( $payload ) || ! rename( $source, $payload ) ) {
+				return $this->error( 'trash_failed', __( 'This item could not be moved to trash.', 'siteintelix' ) );
+			}
+			$relative = $this->security->relative_path( $source );
+			$metadata = array(
+				'original_path' => is_wp_error( $relative ) ? '' : $relative,
+				'created_at'    => gmdate( 'c' ),
+				'user_id'       => (int) get_current_user_id(),
+				'operation'     => 'trash',
+				'size'          => $is_directory ? 0 : max( 0, (int) filesize( $payload ) ),
+				'sha256'        => $is_directory ? '' : hash_file( 'sha256', $payload ),
+				'type'          => $is_directory ? 'directory' : 'file',
+			);
+			$written = SITEINTELIX_File_Manager_Storage::write_metadata( 'trash', $id, $metadata );
+			if ( is_wp_error( $written ) ) {
+				if ( ! file_exists( $source ) ) {
+					rename( $payload, $source );
+				}
+				return $written;
+			}
+			$metadata['id'] = $id;
+			do_action( 'siteintelix_file_manager_item_trashed', $metadata['original_path'], (int) get_current_user_id() );
+			return $metadata;
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		$metadata['id'] = $id;
-		do_action( 'siteintelix_file_manager_item_trashed', $metadata['original_path'], (int) get_current_user_id() );
-		return $metadata;
 	}
 
 	/**
@@ -114,7 +126,8 @@ class SITEINTELIX_File_Manager_Trash {
 		if ( empty( $settings['trash_auto_cleanup'] ) ) {
 			return 0;
 		}
-		$retention     = max( 1, (int) $settings['trash_retention_days'] ) * DAY_IN_SECONDS;
+		$day           = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : 86400;
+		$retention     = max( 1, (int) $settings['trash_retention_days'] ) * $day;
 		$storage_limit = max( MB_IN_BYTES, (int) $settings['trash_max_storage_bytes'] );
 		$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
 		$cutoff        = time() - $retention;
@@ -129,7 +142,7 @@ class SITEINTELIX_File_Manager_Trash {
 			$over_storage = $kept_bytes + $size > $storage_limit;
 
 			if ( $removed < $delete_limit && ( $expired || $over_storage ) ) {
-				$deleted = $this->permanently_delete( $entry['id'] );
+				$deleted = $this->delete_entry( $entry['id'], $entry );
 				if ( ! is_wp_error( $deleted ) ) {
 					++$removed;
 					continue;
@@ -163,28 +176,56 @@ class SITEINTELIX_File_Manager_Trash {
 		if ( file_exists( $destination ) || is_link( $destination ) ) {
 			return $this->error( 'restore_collision', __( 'An item already exists at the original location.', 'siteintelix' ) );
 		}
-		if ( ! is_dir( dirname( $destination ) ) || ! is_writable( dirname( $destination ) ) || ! rename( $payload, $destination ) ) {
-			return $this->error( 'restore_failed', __( 'This item could not be restored.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'restore:' . dirname( $destination ) );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$deleted = SITEINTELIX_File_Manager_Storage::delete_metadata( 'trash', $id );
-		if ( is_wp_error( $deleted ) ) {
-			return $deleted;
+		try {
+			$destination = $this->security->authorize_path( $metadata['original_path'], 'restore', false );
+			if ( is_wp_error( $destination ) ) {
+				return $destination;
+			}
+			if ( file_exists( $destination ) || is_link( $destination ) || ! is_dir( dirname( $destination ) ) || ! is_writable( dirname( $destination ) ) || ! rename( $payload, $destination ) ) {
+				return $this->error( 'restore_failed', __( 'This item could not be restored.', 'siteintelix' ) );
+			}
+			$deleted = SITEINTELIX_File_Manager_Storage::delete_metadata( 'trash', $id );
+			if ( is_wp_error( $deleted ) ) {
+				return $deleted;
+			}
+			do_action( 'siteintelix_file_manager_after_operation', 'restore', $metadata['original_path'], 'success' );
+			return array( 'path' => $metadata['original_path'] );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		do_action( 'siteintelix_file_manager_after_operation', 'restore', $metadata['original_path'], 'success' );
-		return array( 'path' => $metadata['original_path'] );
 	}
 
 	/**
 	 * Permanently delete one private trash entry.
 	 *
-	 * @param string $id Trash identifier.
+	 * @param string $id           Trash identifier.
+	 * @param string $confirmation Exact original basename typed by the user.
 	 * @return true|WP_Error
 	 */
-	public function permanently_delete( $id ) {
+	public function permanently_delete( $id, $confirmation ) {
 		$metadata = SITEINTELIX_File_Manager_Storage::read_metadata( 'trash', $id );
 		if ( is_wp_error( $metadata ) ) {
 			return $metadata;
 		}
+		$expected = basename( (string) $metadata['original_path'] );
+		if ( '' === $expected || ! hash_equals( $expected, (string) $confirmation ) ) {
+			return $this->error( 'confirmation_failed', __( 'The typed item name does not match.', 'siteintelix' ) );
+		}
+		return $this->delete_entry( $id, $metadata );
+	}
+
+	/**
+	 * Delete a validated private trash entry.
+	 *
+	 * @param string              $id       Trash identifier.
+	 * @param array<string,mixed> $metadata Validated trash metadata.
+	 * @return true|WP_Error
+	 */
+	private function delete_entry( $id, $metadata ) {
 		$deleted = SITEINTELIX_File_Manager_Storage::delete_owned_tree( 'trash', $id );
 		if ( is_wp_error( $deleted ) ) {
 			return $deleted;

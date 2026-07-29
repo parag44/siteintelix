@@ -148,8 +148,13 @@ siteintelix_test_assert( false === $large['previewable'] && 'too_large' === $lar
 
 $details = $filesystem->details( 'wp-content/uploads/alpha.txt', false );
 siteintelix_test_assert( ! isset( $details['md5'] ), 'hashes are not calculated by default' );
+siteintelix_test_assert( ! isset( $details['absolute_path'] ), 'absolute paths are hidden by default' );
 $hashed = $filesystem->details( 'wp-content/uploads/alpha.txt', true );
 siteintelix_test_assert( hash_file( 'sha256', $siteintelix_test_root . '/wp-content/uploads/alpha.txt' ) === $hashed['sha256'], 'SHA-256 is calculated on demand' );
+$siteintelix_test_options['siteintelix_file_manager_settings'] = array( 'allow_absolute_paths' => 1 );
+$absolute_details = $filesystem->details( 'wp-content/uploads/alpha.txt', false );
+siteintelix_test_assert( wp_normalize_path( realpath( $siteintelix_test_root . '/wp-content/uploads/alpha.txt' ) ) === $absolute_details['absolute_path'], 'absolute paths are shown only when enabled' );
+$siteintelix_test_options = array();
 
 $siteintelix_test_filters['siteintelix_file_manager_allow_wp_config_preview'] = static function () {
 	return true;

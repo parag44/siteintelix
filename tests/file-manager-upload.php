@@ -111,6 +111,9 @@ function wp_check_filetype_and_ext( $tmp, $name ) {
 function wp_mkdir_p( $path ) {
 	return is_dir( $path ) || mkdir( $path, 0755, true );
 }
+function wp_json_encode( $value ) {
+	return json_encode( $value );
+}
 function siteintelix_test_assert( $condition, $message ) {
 	if ( ! $condition ) {
 		fwrite( STDERR, "FAIL: {$message}\n" );
@@ -119,7 +122,7 @@ function siteintelix_test_assert( $condition, $message ) {
 }
 
 $base = dirname( __DIR__ ) . '/includes/modules/file-manager/';
-foreach ( array( 'settings', 'security', 'filesystem', 'upload' ) as $class ) {
+foreach ( array( 'settings', 'security', 'storage', 'backups', 'filesystem', 'upload' ) as $class ) {
 	$file = $base . 'class-siteintelix-file-manager-' . $class . '.php';
 	siteintelix_test_assert( file_exists( $file ), "{$class} class exists" );
 	require_once $file;
@@ -147,7 +150,18 @@ $valid = $upload->store(
 );
 siteintelix_test_assert( ! is_wp_error( $valid ) && is_file( $siteintelix_test_root . '/wp-content/uploads/photo.jpg' ), 'valid image upload succeeds' );
 
-foreach ( array( 'shell.php', 'shell.php.jpg', '../escape.jpg' ) as $name ) {
+$collision_tmp = tempnam( sys_get_temp_dir(), 'sitx-upload-' );
+file_put_contents( $collision_tmp, 'new-photo' );
+$collision_file = array( 'name' => 'photo.jpg', 'tmp_name' => $collision_tmp, 'size' => 9, 'error' => UPLOAD_ERR_OK );
+siteintelix_test_assert( is_wp_error( $upload->store( $collision_file, 'wp-content/uploads' ) ), 'upload collision is blocked by default' );
+$siteintelix_test_options['siteintelix_file_manager_settings'] = array( 'allow_overwrite' => 1 );
+siteintelix_test_assert( is_wp_error( $upload->store( $collision_file, 'wp-content/uploads' ) ), 'overwrite setting still requires an explicit request' );
+$overwritten = $upload->store( $collision_file, 'wp-content/uploads', true );
+siteintelix_test_assert( ! is_wp_error( $overwritten ) && 'new-photo' === file_get_contents( $siteintelix_test_root . '/wp-content/uploads/photo.jpg' ), 'explicit enabled overwrite succeeds' );
+siteintelix_test_assert( count( ( new SITEINTELIX_File_Manager_Backups( $security ) )->for_path( 'wp-content/uploads/photo.jpg' ) ) >= 1, 'overwrite creates a verified safety backup' );
+$siteintelix_test_options = array();
+
+foreach ( array( 'shell.php', 'shell.php.jpg', '../escape.jpg', 'photo.test.jpg', 'PHOTO.TEST.JPG', 'photo.jpg.', 'photo。jpg' ) as $name ) {
 	$tmp = tempnam( sys_get_temp_dir(), 'sitx-upload-' );
 	file_put_contents( $tmp, 'payload' );
 	$result = $upload->store( array( 'name' => $name, 'tmp_name' => $tmp, 'size' => 7, 'error' => UPLOAD_ERR_OK ), 'wp-content/uploads' );

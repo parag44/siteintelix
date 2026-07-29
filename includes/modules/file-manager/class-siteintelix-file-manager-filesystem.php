@@ -216,6 +216,9 @@ class SITEINTELIX_File_Manager_Filesystem {
 			'readable'    => is_readable( $absolute ),
 			'writable'    => is_writable( $absolute ) && ! is_wp_error( $this->security->authorize_path( $absolute, 'write' ) ),
 		);
+		if ( ! empty( SITEINTELIX_File_Manager_Settings::get()['allow_absolute_paths'] ) ) {
+			$details['absolute_path'] = wp_normalize_path( $absolute );
+		}
 		if ( $include_hashes && $is_file ) {
 			$maximum = (int) apply_filters( 'siteintelix_file_manager_hash_max_bytes', 50 * MB_IN_BYTES );
 			if ( $details['size'] <= $maximum ) {
@@ -399,12 +402,28 @@ class SITEINTELIX_File_Manager_Filesystem {
 		if ( is_wp_error( $destination ) ) {
 			return $destination;
 		}
-		if ( ! rename( $source, $destination ) ) {
-			return $this->error( 'rename_failed', __( 'The file or directory could not be renamed.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'rename:' . dirname( $source ) );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$relative = $this->security->relative_path( $destination );
-		do_action( 'siteintelix_file_manager_after_operation', 'rename', is_wp_error( $relative ) ? '' : $relative, 'success' );
-		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+		try {
+			$source = $this->security->authorize_path( $path, 'rename' );
+			if ( is_wp_error( $source ) ) {
+				return $source;
+			}
+			$destination = $this->security->resolve_destination( $parent_relative, $new_name, 'rename' );
+			if ( is_wp_error( $destination ) ) {
+				return $destination;
+			}
+			if ( ! rename( $source, $destination ) ) {
+				return $this->error( 'rename_failed', __( 'The file or directory could not be renamed.', 'siteintelix' ) );
+			}
+			$relative = $this->security->relative_path( $destination );
+			do_action( 'siteintelix_file_manager_after_operation', 'rename', is_wp_error( $relative ) ? '' : $relative, 'success' );
+			return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
+		}
 	}
 
 	/**
@@ -436,8 +455,10 @@ class SITEINTELIX_File_Manager_Filesystem {
 	 */
 	private function actions( $absolute, $directory ) {
 		$actions = $directory ? array( 'open', 'details' ) : array( 'view', 'details', 'download' );
-		if ( ! is_wp_error( $this->security->authorize_path( $absolute, 'write' ) ) ) {
+		if ( ! is_wp_error( $this->security->authorize_path( $absolute, 'rename' ) ) ) {
 			$actions[] = 'rename';
+		}
+		if ( ! is_wp_error( $this->security->authorize_path( $absolute, 'trash' ) ) ) {
 			$actions[] = 'trash';
 		}
 		if ( ! $directory && in_array( strtolower( pathinfo( $absolute, PATHINFO_EXTENSION ) ), SITEINTELIX_File_Manager_Settings::get()['editable_extensions'], true ) && ! is_wp_error( $this->security->authorize_path( $absolute, 'edit' ) ) ) {

@@ -78,7 +78,11 @@ class SITEINTELIX_File_Manager_Admin {
 			return;
 		}
 
-		$editor_settings = wp_enqueue_code_editor( array( 'type' => 'text/plain' ) );
+		$editor_settings = array();
+		if ( 'browser' === self::requested_manager_tab() ) {
+			$enqueued_editor = wp_enqueue_code_editor( array( 'type' => 'text/plain' ) );
+			$editor_settings = is_array( $enqueued_editor ) ? $enqueued_editor : array();
+		}
 		wp_enqueue_script(
 			'siteintelix-file-manager',
 			SITEINTELIX_PLUGIN_URL . 'includes/modules/file-manager/assets/file-manager.js',
@@ -114,10 +118,11 @@ class SITEINTELIX_File_Manager_Admin {
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'downloadUrl'    => admin_url( 'admin-post.php' ),
 				'downloadNonce'  => wp_create_nonce( 'siteintelix_fm_download_file' ),
+				'backupDownloadNonce' => wp_create_nonce( 'siteintelix_fm_download_backup' ),
 				'previewNonce'   => wp_create_nonce( 'siteintelix_fm_preview_image' ),
 				'nonces'         => $nonces,
 				'startPath'      => (string) $settings['start_directory'],
-				'editorSettings' => is_array( $editor_settings ) ? $editor_settings : array(),
+				'editorSettings' => $editor_settings,
 				'limits'         => array(
 					'preview' => (int) $settings['preview_max_bytes'],
 					'edit'    => (int) $settings['edit_max_bytes'],
@@ -126,6 +131,7 @@ class SITEINTELIX_File_Manager_Admin {
 				'features'       => array(
 					'editing' => ! empty( $settings['editing_enabled'] ) && ! ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ),
 					'uploads' => ! empty( $settings['uploads_enabled'] ) && ! ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ),
+					'overwrite' => ! empty( $settings['allow_overwrite'] ),
 				),
 				'i18n'           => array(
 					'loading'          => __( 'Loading files…', 'siteintelix' ),
@@ -168,5 +174,16 @@ class SITEINTELIX_File_Manager_Admin {
 	private static function requested_settings_tab() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab selection.
 		return isset( $_GET['tab'] ) && 'file_manager' === sanitize_key( wp_unslash( $_GET['tab'] ) );
+	}
+
+	/**
+	 * Return the requested File Manager tab.
+	 *
+	 * @return string
+	 */
+	private static function requested_manager_tab() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab selection.
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'browser';
+		return in_array( $tab, array( 'browser', 'backups', 'trash', 'settings' ), true ) ? $tab : 'browser';
 	}
 }

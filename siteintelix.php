@@ -175,9 +175,11 @@ function siteintelix_load_includes() {
 			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
 		}
 
-		if ( SITEINTELIX_Modules::is_enabled( 'file_manager' ) ) {
-			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/file-manager/class-siteintelix-file-manager-module.php';
-		}
+	}
+
+	$siteintelix_is_cron = function_exists( 'wp_doing_cron' ) && wp_doing_cron();
+	if ( SITEINTELIX_Modules::is_enabled( 'file_manager' ) && ( siteintelix_should_load_admin_modules() || $siteintelix_is_cron ) ) {
+		require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/file-manager/class-siteintelix-file-manager-module.php';
 	}
 
 	if ( SITEINTELIX_Modules::is_enabled( 'coming_soon' ) ) {

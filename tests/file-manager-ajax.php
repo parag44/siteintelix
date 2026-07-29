@@ -52,8 +52,16 @@ if ( ! preg_match( '/function authorize\([\s\S]*is_user_logged_in\(\)[\s\S]*curr
 	fwrite( STDERR, "FAIL: request guard order is incomplete\n" );
 	exit( 1 );
 }
-if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_file' ) || false === strpos( $source, 'admin_post_siteintelix_fm_preview_image' ) || false === strpos( $source, 'admin_post_siteintelix_save_file_manager_settings' ) ) {
-	fwrite( STDERR, "FAIL: download, image preview, or settings handler is missing\n" );
+if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_file' ) || false === strpos( $source, 'admin_post_siteintelix_fm_download_backup' ) || false === strpos( $source, 'admin_post_siteintelix_fm_preview_image' ) || false === strpos( $source, 'admin_post_siteintelix_save_file_manager_settings' ) ) {
+	fwrite( STDERR, "FAIL: file/backup download, image preview, or settings handler is missing\n" );
+	exit( 1 );
+}
+if ( ! preg_match( '/function get_file\(\)[\s\S]*audit_result\(\s*\'view\'/', $source ) || ! preg_match( '/function download_file\(\)[\s\S]*Audit::record\(\s*\'download\'/', $source ) ) {
+	fwrite( STDERR, "FAIL: view and download audit controls are not connected\n" );
+	exit( 1 );
+}
+if ( ! preg_match( '/function permanently_delete_item\(\)[\s\S]*post_text\(\s*\'confirmation\'\s*\)[\s\S]*permanently_delete\(/', $source ) ) {
+	fwrite( STDERR, "FAIL: permanent deletion does not verify the typed confirmation server-side\n" );
 	exit( 1 );
 }
 

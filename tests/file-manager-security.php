@@ -11,14 +11,21 @@ mkdir( $siteintelix_test_root . '/wp-includes', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/uploads/nested', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/plugins/siteintelix', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/plugins/active-one', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/plugins/inactive-one', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/themes/active', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/themes/parent-active', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/mu-plugins', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/languages', 0777, true );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/photo.jpg', 'image' );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/nested/note.txt', 'note' );
 file_put_contents( $siteintelix_test_root . '/wp-content/plugins/siteintelix/siteintelix.php', '<?php' );
 file_put_contents( $siteintelix_test_root . '/wp-content/plugins/active-one/main.php', '<?php' );
+file_put_contents( $siteintelix_test_root . '/wp-content/plugins/inactive-one/main.php', '<?php' );
 file_put_contents( $siteintelix_test_root . '/wp-content/themes/active/style.css', 'body{}' );
+file_put_contents( $siteintelix_test_root . '/wp-content/themes/parent-active/style.css', 'body{}' );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/.user.ini', 'auto_prepend_file=x' );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/php.ini', 'auto_prepend_file=x' );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/web.config', '<configuration />' );
 file_put_contents( $siteintelix_test_root . '/wp-config.php', '<?php' );
 
 define( 'ABSPATH', $siteintelix_test_root . '/' );
@@ -126,6 +133,9 @@ function get_theme_root() {
 function get_stylesheet_directory() {
 	return WP_CONTENT_DIR . '/themes/active';
 }
+function get_template_directory() {
+	return WP_CONTENT_DIR . '/themes/parent-active';
+}
 
 function is_multisite() {
 	global $siteintelix_test_multisite;
@@ -166,7 +176,16 @@ siteintelix_test_assert( is_wp_error( $security->authorize_path( '/var/www/exter
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-admin', 'write' ) ), 'core write is blocked' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/siteintelix/siteintelix.php', 'write' ) ), 'SiteIntelix is immutable' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/active-one/main.php', 'write' ) ), 'active plugins are immutable' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/inactive-one/main.php', 'trash' ) ), 'inactive PHP files remain view-only' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins/inactive-one', 'trash' ) ), 'directories containing PHP remain view-only' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/themes/active/style.css', 'write' ) ), 'active theme is immutable' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/themes/parent-active/style.css', 'write' ) ), 'active parent theme is immutable' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/uploads/.user.ini', 'write' ) ), '.user.ini is immutable in every directory' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/uploads/php.ini', 'write' ) ), 'php.ini is immutable in every directory' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/uploads/web.config', 'write' ) ), 'web.config is immutable in every directory' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/plugins', 'rename' ) ), 'a parent of protected plugins cannot be renamed' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content/themes', 'trash' ) ), 'a parent of the active theme cannot be trashed' );
+siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-content', 'trash' ) ), 'a parent of immutable paths cannot be trashed' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( 'wp-config.php', 'read' ) ), 'wp-config preview is disabled' );
 siteintelix_test_assert( ! is_wp_error( $security->resolve_destination( 'wp-content/uploads', 'safe.txt', 'create' ) ), 'safe destination is accepted' );
 siteintelix_test_assert( is_wp_error( $security->resolve_destination( 'wp-content/uploads', '../bad.txt', 'create' ) ), 'destination traversal is blocked' );

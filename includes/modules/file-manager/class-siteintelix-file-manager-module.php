@@ -13,15 +13,18 @@ $siteintelix_file_manager_dir = __DIR__ . '/';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-settings.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-security.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-storage.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-redactor.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-audit.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-filesystem.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-backups.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-editor.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-upload.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-trash.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-ajax.php';
-require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-admin.php';
+$siteintelix_file_manager_is_cron = function_exists( 'wp_doing_cron' ) && wp_doing_cron();
+if ( ! $siteintelix_file_manager_is_cron ) {
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-redactor.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-audit.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-filesystem.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-editor.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-upload.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-ajax.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-admin.php';
+}
 
 /**
  * Coordinates the enabled File Manager services.
@@ -83,7 +86,8 @@ class SITEINTELIX_File_Manager_Module {
 	 */
 	private static function schedule_cleanup() {
 		if ( ! wp_next_scheduled( 'siteintelix_file_manager_cleanup' ) ) {
-			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'siteintelix_file_manager_cleanup' );
+			$hour = defined( 'HOUR_IN_SECONDS' ) ? HOUR_IN_SECONDS : 3600;
+			wp_schedule_event( time() + $hour, 'daily', 'siteintelix_file_manager_cleanup' );
 		}
 	}
 

@@ -74,6 +74,7 @@ class SITEINTELIX_File_Manager_Backups {
 			return $written;
 		}
 		$metadata['id'] = $id;
+		$this->cleanup( $id );
 		do_action( 'siteintelix_file_manager_after_operation', 'backup', $metadata['original_path'], 'success' );
 		return $metadata;
 	}
@@ -135,11 +136,13 @@ class SITEINTELIX_File_Manager_Backups {
 	/**
 	 * Remove a bounded number of expired or over-quota backups.
 	 *
+	 * @param string $preserve_id Newly created backup that must survive this pass.
 	 * @return int Number of removed backups.
 	 */
-	public function cleanup() {
+	public function cleanup( $preserve_id = '' ) {
 		$settings      = SITEINTELIX_File_Manager_Settings::get();
-		$retention     = max( 1, (int) $settings['backup_retention_days'] ) * DAY_IN_SECONDS;
+		$day           = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : 86400;
+		$retention     = max( 1, (int) $settings['backup_retention_days'] ) * $day;
 		$per_file      = max( 1, (int) $settings['backup_max_per_file'] );
 		$storage_limit = max( MB_IN_BYTES, (int) $settings['backup_max_storage_bytes'] );
 		$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
@@ -158,7 +161,7 @@ class SITEINTELIX_File_Manager_Backups {
 			$over_per_file = $path_counts[ $path ] > $per_file;
 			$over_storage  = $kept_bytes + $size > $storage_limit;
 
-			if ( $removed < $delete_limit && ( $expired || $over_per_file || $over_storage ) ) {
+			if ( $backup['id'] !== $preserve_id && $removed < $delete_limit && ( $expired || $over_per_file || $over_storage ) ) {
 				$deleted = SITEINTELIX_File_Manager_Storage::delete_owned_tree( 'backups', $backup['id'] );
 				if ( ! is_wp_error( $deleted ) ) {
 					$metadata_deleted = SITEINTELIX_File_Manager_Storage::delete_metadata( 'backups', $backup['id'] );
@@ -191,6 +194,47 @@ class SITEINTELIX_File_Manager_Backups {
 			return $this->error( 'invalid_backup', __( 'This backup is invalid and cannot be restored.', 'siteintelix' ) );
 		}
 		return $editor->replace_from_file( $metadata['original_path'], $payload, 'backup_restore' );
+	}
+
+	/**
+	 * Stream one verified private backup.
+	 *
+	 * @param string $id Backup ID.
+	 * @return true|WP_Error
+	 */
+	public function stream( $id ) {
+		$metadata = SITEINTELIX_File_Manager_Storage::read_metadata( 'backups', $id );
+		if ( is_wp_error( $metadata ) ) {
+			return $metadata;
+		}
+		$payload = SITEINTELIX_File_Manager_Storage::path( 'backups/' . $id );
+		if ( ! is_file( $payload ) || is_link( $payload ) || ! is_readable( $payload ) || (int) filesize( $payload ) !== (int) $metadata['size'] || ! hash_equals( (string) $metadata['sha256'], hash_file( 'sha256', $payload ) ) ) {
+			return $this->error( 'invalid_backup', __( 'This backup is invalid and cannot be downloaded.', 'siteintelix' ) );
+		}
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+		$name = str_replace( array( "\r", "\n", '"' ), '', basename( (string) $metadata['original_path'] ) );
+		header( 'Content-Type: application/octet-stream' );
+		header( 'Content-Disposition: attachment; filename="' . $name . '"' );
+		header( 'Content-Length: ' . (string) filesize( $payload ) );
+		header( 'Cache-Control: no-store, private' );
+		header( 'X-Content-Type-Options: nosniff' );
+		$handle = fopen( $payload, 'rb' );
+		if ( false === $handle ) {
+			return $this->error( 'invalid_backup', __( 'This backup could not be downloaded.', 'siteintelix' ) );
+		}
+		while ( ! feof( $handle ) ) {
+			$chunk = fread( $handle, 65536 );
+			if ( false === $chunk ) {
+				fclose( $handle );
+				return $this->error( 'download_failed', __( 'The backup download could not be completed.', 'siteintelix' ) );
+			}
+			echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Authenticated verified backup stream.
+			flush();
+		}
+		fclose( $handle );
+		return true;
 	}
 
 	/**

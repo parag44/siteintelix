@@ -85,29 +85,45 @@ class SITEINTELIX_File_Manager_Editor {
 		if ( strlen( $content ) > (int) $settings['edit_max_bytes'] ) {
 			return $this->error( 'file_too_large', __( 'This file is too large to edit in the browser.', 'siteintelix' ) );
 		}
-		clearstatcache( true, $file );
-		if ( (int) filemtime( $file ) !== (int) $expected_modified || ! hash_equals( hash_file( 'sha256', $file ), (string) $expected_hash ) ) {
-			return $this->error( 'stale_file', __( 'The file changed after you opened it. Reload it before saving.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'edit:' . $file );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		if ( ! is_writable( $file ) || ! is_writable( dirname( $file ) ) ) {
-			return $this->error( 'not_writable', __( 'This file is not writable.', 'siteintelix' ) );
+		try {
+			$file = $this->editable_file( $path );
+			if ( is_wp_error( $file ) ) {
+				return $file;
+			}
+			clearstatcache( true, $file );
+			if ( (int) filemtime( $file ) !== (int) $expected_modified || ! hash_equals( hash_file( 'sha256', $file ), (string) $expected_hash ) ) {
+				return $this->error( 'stale_file', __( 'The file changed after you opened it. Reload it before saving.', 'siteintelix' ) );
+			}
+			if ( ! is_writable( $file ) || ! is_writable( dirname( $file ) ) ) {
+				return $this->error( 'not_writable', __( 'This file is not writable.', 'siteintelix' ) );
+			}
+			$backup = $this->backups->create( $path, 'edit' );
+			if ( is_wp_error( $backup ) ) {
+				return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
+			}
+			clearstatcache( true, $file );
+			if ( is_wp_error( $this->security->authorize_path( $path, 'edit' ) ) || (int) filemtime( $file ) !== (int) $expected_modified || ! hash_equals( hash_file( 'sha256', $file ), (string) $expected_hash ) ) {
+				return $this->error( 'stale_file', __( 'The file changed before it could be saved. Reload it and try again.', 'siteintelix' ) );
+			}
+			$written = $this->atomic_replace( $file, $content );
+			if ( is_wp_error( $written ) ) {
+				return $written;
+			}
+			clearstatcache( true, $file );
+			do_action( 'siteintelix_file_manager_file_saved', $path, (int) get_current_user_id() );
+			return array(
+				'modified' => (int) filemtime( $file ),
+				'sha256'   => hash_file( 'sha256', $file ),
+				'size'     => max( 0, (int) filesize( $file ) ),
+				'backup'   => $backup,
+			);
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		$backup = $this->backups->create( $path, 'edit' );
-		if ( is_wp_error( $backup ) ) {
-			return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
-		}
-		$written = $this->atomic_replace( $file, $content );
-		if ( is_wp_error( $written ) ) {
-			return $written;
-		}
-		clearstatcache( true, $file );
-		do_action( 'siteintelix_file_manager_file_saved', $path, (int) get_current_user_id() );
-		return array(
-			'modified' => (int) filemtime( $file ),
-			'sha256'   => hash_file( 'sha256', $file ),
-			'size'     => max( 0, (int) filesize( $file ) ),
-			'backup'   => $backup,
-		);
 	}
 
 	/**
@@ -126,19 +142,34 @@ class SITEINTELIX_File_Manager_Editor {
 		if ( ! is_file( $source ) || is_link( $source ) || ! is_readable( $source ) ) {
 			return $this->error( 'invalid_source', __( 'The replacement file is invalid.', 'siteintelix' ) );
 		}
-		$backup = $this->backups->create( $path, $operation );
-		if ( is_wp_error( $backup ) ) {
-			return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'replace:' . $file );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$content = file_get_contents( $source );
-		if ( false === $content ) {
-			return $this->error( 'invalid_source', __( 'The replacement file is invalid.', 'siteintelix' ) );
+		try {
+			$file = $this->editable_file( $path );
+			if ( is_wp_error( $file ) ) {
+				return $file;
+			}
+			$backup = $this->backups->create( $path, $operation );
+			if ( is_wp_error( $backup ) ) {
+				return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
+			}
+			if ( ! is_file( $source ) || is_link( $source ) || ! is_readable( $source ) || is_wp_error( $this->security->authorize_path( $path, 'edit' ) ) ) {
+				return $this->error( 'invalid_source', __( 'The replacement file is invalid.', 'siteintelix' ) );
+			}
+			$content = file_get_contents( $source );
+			if ( false === $content ) {
+				return $this->error( 'invalid_source', __( 'The replacement file is invalid.', 'siteintelix' ) );
+			}
+			$result = $this->atomic_replace( $file, $content );
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+			return array( 'modified' => (int) filemtime( $file ), 'sha256' => hash_file( 'sha256', $file ), 'backup' => $backup );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		$result = $this->atomic_replace( $file, $content );
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-		return array( 'modified' => (int) filemtime( $file ), 'sha256' => hash_file( 'sha256', $file ), 'backup' => $backup );
 	}
 
 	/**

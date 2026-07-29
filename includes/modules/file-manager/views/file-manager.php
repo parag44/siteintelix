@@ -56,7 +56,6 @@ $siteintelix_fm_base = admin_url( 'admin.php?page=siteintelix-file-manager' );
 					<?php require __DIR__ . '/partials/details-panel.php'; ?>
 				</div>
 				<?php require __DIR__ . '/partials/editor.php'; ?>
-				<?php require __DIR__ . '/partials/modals.php'; ?>
 			</section>
 		<?php elseif ( 'backups' === $siteintelix_fm_tab ) : ?>
 			<section class="sitx-fm-utility si-card" data-fm-backups>
@@ -74,6 +73,7 @@ $siteintelix_fm_base = admin_url( 'admin.php?page=siteintelix-file-manager' );
 			<section class="sitx-fm-utility si-card" id="siteintelix-file-manager-settings">
 				<?php require __DIR__ . '/settings.php'; ?>
 			</section>
-		<?php endif; ?>
+			<?php endif; ?>
+			<?php require __DIR__ . '/partials/modals.php'; ?>
 	</div>
 </div>

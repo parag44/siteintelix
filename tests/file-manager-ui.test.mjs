@@ -73,6 +73,7 @@ test('client rendering uses safe DOM assignment and accessible modal behavior', 
 	assert.match(source, /editorDirty/);
 	assert.match(source, /siteintelix_fm_preview_image/);
 	assert.match(source, /document\.createElement\(\s*'img'\s*\)/);
+	assert.match(source, /permanently_delete_item'[\s\S]*confirmation:\s*values\.confirmation/);
 	assert.match(source, /preventDefault\(\)/);
 });
 

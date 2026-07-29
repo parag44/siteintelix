@@ -35,6 +35,7 @@ class SITEINTELIX_File_Manager_Ajax {
 		add_action( 'wp_ajax_siteintelix_fm_list_backups', array( __CLASS__, 'list_backups' ) );
 		add_action( 'wp_ajax_siteintelix_fm_restore_backup', array( __CLASS__, 'restore_backup' ) );
 		add_action( 'admin_post_siteintelix_fm_download_file', array( __CLASS__, 'download_file' ) );
+		add_action( 'admin_post_siteintelix_fm_download_backup', array( __CLASS__, 'download_backup' ) );
 		add_action( 'admin_post_siteintelix_fm_preview_image', array( __CLASS__, 'preview_image' ) );
 		add_action( 'admin_post_siteintelix_save_file_manager_settings', array( __CLASS__, 'save_settings' ) );
 	}
@@ -65,9 +66,12 @@ class SITEINTELIX_File_Manager_Ajax {
 		self::authorize( 'siteintelix_fm_get_file' );
 		$path = self::post_path();
 		if ( '1' === self::post_text( 'edit' ) ) {
-			self::respond( ( new SITEINTELIX_File_Manager_Editor() )->open( $path ) );
+			$result = ( new SITEINTELIX_File_Manager_Editor() )->open( $path );
+		} else {
+			$result = ( new SITEINTELIX_File_Manager_Filesystem() )->preview( $path );
 		}
-		self::respond( ( new SITEINTELIX_File_Manager_Filesystem() )->preview( $path ) );
+		self::audit_result( 'view', $path, $result );
+		self::respond( $result );
 	}
 
 	/**
@@ -106,12 +110,13 @@ class SITEINTELIX_File_Manager_Ajax {
 	public static function upload_files() {
 		self::authorize( 'siteintelix_fm_upload_files' );
 		$destination = self::post_path( 'destination' );
+		$overwrite   = '1' === self::post_text( 'overwrite' );
 		$files       = self::normalize_uploads( isset( $_FILES['files'] ) ? $_FILES['files'] : array() ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- authorize() verified the nonce.
 		$uploader    = new SITEINTELIX_File_Manager_Upload();
 		$stored      = array();
 		$errors      = array();
 		foreach ( $files as $file ) {
-			$result = $uploader->store( $file, $destination );
+			$result = $uploader->store( $file, $destination, $overwrite );
 			if ( is_wp_error( $result ) ) {
 				$errors[] = array( 'name' => sanitize_file_name( isset( $file['name'] ) ? $file['name'] : '' ), 'code' => $result->get_error_code(), 'message' => $result->get_error_message() );
 			} else {
@@ -204,8 +209,9 @@ class SITEINTELIX_File_Manager_Ajax {
 	 */
 	public static function permanently_delete_item() {
 		self::authorize( 'siteintelix_fm_permanently_delete_item' );
-		$id     = self::post_identifier( 'id' );
-		$result = ( new SITEINTELIX_File_Manager_Trash() )->permanently_delete( $id );
+		$id           = self::post_identifier( 'id' );
+		$confirmation = self::post_text( 'confirmation' );
+		$result       = ( new SITEINTELIX_File_Manager_Trash() )->permanently_delete( $id, $confirmation );
 		self::audit_result( 'permanent_delete', 'trash/' . $id, $result );
 		self::respond( $result );
 	}
@@ -247,6 +253,29 @@ class SITEINTELIX_File_Manager_Ajax {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- check_admin_referer() verified this request.
 		$path   = isset( $_GET['path'] ) ? wp_unslash( $_GET['path'] ) : '';
 		$result = ( new SITEINTELIX_File_Manager_Filesystem() )->stream_file( is_string( $path ) ? $path : '' );
+		SITEINTELIX_File_Manager_Audit::record( 'download', is_string( $path ) ? $path : '', is_wp_error( $result ) ? 'failure' : 'success', is_wp_error( $result ) ? $result->get_error_code() : '' );
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+		exit;
+	}
+
+	/**
+	 * Stream one verified private backup.
+	 *
+	 * @return void
+	 */
+	public static function download_backup() {
+		if ( ! is_user_logged_in() || ! SITEINTELIX_File_Manager_Security::current_user_can_manage() ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'siteintelix' ) );
+		}
+		check_admin_referer( 'siteintelix_fm_download_backup' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- check_admin_referer() verified this request.
+		$id       = isset( $_GET['id'] ) && is_string( $_GET['id'] ) ? sanitize_text_field( wp_unslash( $_GET['id'] ) ) : '';
+		$metadata = SITEINTELIX_File_Manager_Storage::read_metadata( 'backups', $id );
+		$result   = ( new SITEINTELIX_File_Manager_Backups() )->stream( $id );
+		$path     = is_wp_error( $metadata ) ? 'backups/' . $id : $metadata['original_path'];
+		SITEINTELIX_File_Manager_Audit::record( 'download', $path, is_wp_error( $result ) ? 'failure' : 'success', is_wp_error( $result ) ? $result->get_error_code() : '' );
 		if ( is_wp_error( $result ) ) {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
@@ -266,6 +295,7 @@ class SITEINTELIX_File_Manager_Ajax {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- check_admin_referer() verified this request.
 		$path   = isset( $_GET['path'] ) ? wp_unslash( $_GET['path'] ) : '';
 		$result = ( new SITEINTELIX_File_Manager_Filesystem() )->stream_image( is_string( $path ) ? $path : '' );
+		SITEINTELIX_File_Manager_Audit::record( 'view', is_string( $path ) ? $path : '', is_wp_error( $result ) ? 'failure' : 'success', is_wp_error( $result ) ? $result->get_error_code() : '' );
 		if ( is_wp_error( $result ) ) {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}

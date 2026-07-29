@@ -169,6 +169,13 @@ $audit_lines = file( SITEINTELIX_File_Manager_Audit::log_path(), FILE_IGNORE_NEW
 $audit = json_decode( end( $audit_lines ), true );
 siteintelix_test_assert( array( 'user_id', 'timestamp', 'operation', 'path', 'result', 'error_category' ) === array_keys( $audit ), 'audit schema is minimal and stable' );
 siteintelix_test_assert( false === strpos( json_encode( $audit ), 'secret' ), 'audit record has no content' );
+$audit_count = count( $audit_lines );
+$siteintelix_test_options['siteintelix_file_manager_settings'] = array( 'audit_enabled' => 1, 'audit_views' => 0, 'audit_downloads' => 1 );
+siteintelix_test_assert( true === SITEINTELIX_File_Manager_Audit::record( 'view', 'wp-content/uploads/note.txt', 'success', '' ), 'disabled view auditing is a no-op' );
+siteintelix_test_assert( $audit_count === count( file( SITEINTELIX_File_Manager_Audit::log_path(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) ), 'disabled view auditing writes no record' );
+siteintelix_test_assert( true === SITEINTELIX_File_Manager_Audit::record( 'download', 'wp-content/uploads/note.txt', 'success', '' ), 'enabled download auditing succeeds' );
+siteintelix_test_assert( $audit_count + 1 === count( file( SITEINTELIX_File_Manager_Audit::log_path(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) ), 'enabled download auditing writes one record' );
+$siteintelix_test_options = array();
 
 $trash = new SITEINTELIX_File_Manager_Trash( new SITEINTELIX_File_Manager_Security() );
 $trashed = $trash->trash( 'wp-content/uploads/trash-me.txt', false );
@@ -187,7 +194,8 @@ siteintelix_test_assert( ! is_wp_error( $trash->restore( $trashed_directory['id'
 
 $permanent = $trash->trash( 'wp-content/uploads/trash-me.txt', false );
 siteintelix_test_assert( ! is_wp_error( $permanent ), 'file can be trashed again' );
-siteintelix_test_assert( true === $trash->permanently_delete( $permanent['id'] ), 'owned trash item is permanently deleted' );
+siteintelix_test_assert( is_wp_error( $trash->permanently_delete( $permanent['id'], 'wrong-name.txt' ) ), 'permanent deletion rejects a mismatched confirmation' );
+siteintelix_test_assert( true === $trash->permanently_delete( $permanent['id'], 'trash-me.txt' ), 'owned trash item is permanently deleted after server confirmation' );
 siteintelix_test_assert( is_wp_error( $trash->trash( 'wp-content/plugins/siteintelix/siteintelix.php', false ) ), 'protected plugin file cannot be trashed' );
 
 echo "File Manager storage tests passed.\n";

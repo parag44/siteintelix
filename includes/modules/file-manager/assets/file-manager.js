@@ -223,6 +223,15 @@
 			return String(data.downloadUrl || '') + '?' + params.toString();
 		}
 
+		function backupDownloadUrl(id) {
+			var params = new URLSearchParams({
+				action: 'siteintelix_fm_download_backup',
+				id: id,
+				_wpnonce: data.backupDownloadNonce || '',
+			});
+			return String(data.downloadUrl || '') + '?' + params.toString();
+		}
+
 		function updateHistoryButtons() {
 			var snapshot = state.history.snapshot();
 			var backButton = select('[data-fm-back]');
@@ -457,14 +466,23 @@
 			clear(imagePreview);
 			clear(metadata);
 			clear(actions);
-			request('get_details', { path: item.path }).then(function (details) {
+			request('get_details', { path: item.path, hashes: '1' }).then(function (details) {
 				addMetadata(metadata, 'Path', details.path);
+				if (details.absolute_path) {
+					addMetadata(metadata, 'Absolute path', details.absolute_path);
+				}
 				addMetadata(metadata, 'Type', details.type);
 				addMetadata(metadata, 'Size', details.size === null ? '—' : formatBytes(details.size));
 				addMetadata(metadata, 'MIME', details.mime);
 				addMetadata(metadata, 'Modified', formatDate(details.modified));
 				addMetadata(metadata, 'Permissions', details.permissions);
 				addMetadata(metadata, 'Writable', details.writable ? 'Yes' : 'No');
+				if (details.md5) {
+					addMetadata(metadata, 'MD5', details.md5);
+				}
+				if (details.sha256) {
+					addMetadata(metadata, 'SHA-256', details.sha256);
+				}
 			}).catch(function (error) {
 				addMetadata(metadata, 'Error', errorMessage(error));
 			});
@@ -732,12 +750,13 @@
 			});
 		}
 
-		function uploadOne(file, destination, onProgress) {
+		function uploadOne(file, destination, overwrite, onProgress) {
 			return new Promise(function (resolve, reject) {
 				var form = new FormData();
 				form.set('action', 'siteintelix_fm_upload_files');
 				form.set('nonce', data.nonces.upload_files);
 				form.set('destination', destination);
+				form.set('overwrite', overwrite ? '1' : '0');
 				form.append('files[]', file, file.name);
 				var xhr = new XMLHttpRequest();
 				xhr.open('POST', data.ajaxUrl);
@@ -770,13 +789,13 @@
 			});
 		}
 
-		function uploadFiles(files) {
+		function uploadFiles(files, overwrite) {
 			var list = Array.prototype.slice.call(files || []);
 			var chain = Promise.resolve();
 			var failures = [];
 			list.forEach(function (file) {
 				chain = chain.then(function () {
-					return uploadOne(file, state.path, function (progress) {
+					return uploadOne(file, state.path, overwrite, function (progress) {
 						speak('Uploading ' + file.name + ': ' + progress + '%');
 					}).catch(function (error) {
 						failures.push(file.name + ': ' + errorMessage(error));
@@ -808,6 +827,9 @@
 				row.appendChild(node('td', '', type === 'trash' ? (item.type || '—') : formatBytes(item.size)));
 				var actions = node('td', 'sitx-fm-row-actions');
 				if (type === 'backups') {
+					var download = node('a', 'si-button si-button--secondary', 'Download');
+					download.href = backupDownloadUrl(item.id);
+					actions.appendChild(download);
 					actions.appendChild(button('Restore', function (event) {
 						openModal({
 							title: 'Restore backup?',
@@ -849,7 +871,7 @@
 								if (values.confirmation !== expectedName) {
 									throw new Error('The item name did not match.');
 								}
-								return request('permanently_delete_item', { id: item.id }).then(function () {
+								return request('permanently_delete_item', { id: item.id, confirmation: values.confirmation }).then(function () {
 									speak('Trash item permanently deleted.');
 									loadUtility('trash');
 								});
@@ -903,11 +925,25 @@
 			});
 			var uploadInput = select('[data-fm-upload-input]');
 			select('[data-fm-upload]').addEventListener('click', function () {
+				if (data.features && data.features.overwrite) {
+					openModal({
+						title: 'Upload files',
+						description: 'Files with matching names may replace existing files. A private backup is created first.',
+						confirmLabel: 'Choose files',
+						onConfirm: function () {
+							uploadInput.dataset.overwrite = '1';
+							uploadInput.click();
+						},
+					});
+					return;
+				}
+				uploadInput.dataset.overwrite = '0';
 				uploadInput.click();
 			});
 			uploadInput.addEventListener('change', function () {
-				uploadFiles(uploadInput.files);
+				uploadFiles(uploadInput.files, uploadInput.dataset.overwrite === '1');
 				uploadInput.value = '';
+				uploadInput.dataset.overwrite = '0';
 			});
 			select('[data-fm-prev]').addEventListener('click', function () {
 				state.page = Math.max(1, state.page - 1);

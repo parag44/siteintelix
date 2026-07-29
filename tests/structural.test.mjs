@@ -82,11 +82,13 @@ test('File Manager admin UI is accessible and its assets are screen-scoped', asy
 	assert.match(page, /data-file-manager-tab="backups"/);
 	assert.match(page, /data-file-manager-tab="trash"/);
 	assert.match(page, /data-file-manager-tab="settings"/);
+	assert.match(page, /<\?php endif; \?>\s*<\?php require __DIR__ \. '\/partials\/modals\.php'; \?>/);
 	assert.match(modals, /role="dialog"/);
 	assert.match(modals, /aria-modal="true"/);
 	assert.match(page, /aria-live="polite"/);
 	assert.match(css, /:focus-visible/);
 	assert.match(css, /prefers-reduced-motion/);
+	assert.match(admin, /'browser'\s*===\s*self::requested_manager_tab\(\)[\s\S]*wp_enqueue_code_editor\(/);
 });
 
 test('File Manager retention and uninstall lifecycle preserve site files', async () => {
@@ -103,7 +105,10 @@ test('File Manager retention and uninstall lifecycle preserve site files', async
 	assert.match(module, /wp_schedule_event\([\s\S]*'daily'[\s\S]*'siteintelix_file_manager_cleanup'/);
 	assert.match(module, /SITEINTELIX_File_Manager_Backups[\s\S]*cleanup\(\)/);
 	assert.match(module, /SITEINTELIX_File_Manager_Trash[\s\S]*cleanup\(\)/);
-	assert.match(backups, /public function cleanup\(\)/);
+	assert.match(main, /wp_doing_cron\(\)/);
+	assert.match(module, /\$siteintelix_file_manager_is_cron[\s\S]*class-siteintelix-file-manager-admin\.php/);
+	assert.match(backups, /\$this->cleanup\(\s*\$id\s*\)/);
+	assert.match(backups, /public function cleanup\([^)]*\)/);
 	assert.match(trash, /public function cleanup\(\)/);
 	assert.match(main, /SITEINTELIX_File_Manager_Module::deactivate\(\)/);
 	assert.match(module, /wp_clear_scheduled_hook\(\s*'siteintelix_file_manager_cleanup'\s*\)/);
@@ -116,6 +121,7 @@ test('File Manager retention and uninstall lifecycle preserve site files', async
 	assert.match(storage, /WP_CONTENT_DIR\s*\.\s*'\/siteintelix\/file-manager'/);
 	assert.match(storage, /public static function delete_all_owned_data\(\)/);
 	assert.match(storage, /is_link\(/);
+	assert.match(storage, /is_link\(\s*\$owner_path\s*\)/);
 	assert.doesNotMatch(uninstall, /original_path[\s\S]*(?:unlink|rmdir|wp_delete_file)/);
 });
 

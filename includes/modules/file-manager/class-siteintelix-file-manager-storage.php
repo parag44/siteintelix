@@ -37,6 +37,9 @@ class SITEINTELIX_File_Manager_Storage {
 		$parent = realpath( dirname( $base ) );
 		$owner_path = WP_CONTENT_DIR . '/siteintelix';
 		$owner      = untrailingslashit( wp_normalize_path( realpath( $owner_path ) ?: $owner_path ) );
+		if ( is_link( $owner_path ) || ! self::contains( untrailingslashit( wp_normalize_path( $owner_path ) ), $base ) ) {
+			return self::error( 'unsafe_storage', __( 'File Manager storage could not be initialized safely.', 'siteintelix' ) );
+		}
 		if ( false !== $parent && ! self::contains( $owner, wp_normalize_path( $parent ) ) ) {
 			return self::error( 'unsafe_storage', __( 'File Manager storage could not be initialized safely.', 'siteintelix' ) );
 		}
@@ -249,6 +252,45 @@ class SITEINTELIX_File_Manager_Storage {
 			return self::error( 'write_failed', __( 'File Manager data could not be written.', 'siteintelix' ) );
 		}
 		return true;
+	}
+
+	/**
+	 * Acquire an exclusive process lock for one mutation target.
+	 *
+	 * @param string $key Canonical operation key.
+	 * @return resource|WP_Error
+	 */
+	public static function acquire_lock( $key ) {
+		if ( '' === trim( (string) $key ) ) {
+			return self::error( 'invalid_lock', __( 'The File Manager operation lock is invalid.', 'siteintelix' ) );
+		}
+		$ready = self::ensure_directories();
+		if ( is_wp_error( $ready ) ) {
+			return $ready;
+		}
+		$path   = self::path( 'meta/operation-' . hash( 'sha256', wp_normalize_path( (string) $key ) ) . '.lock' );
+		$handle = fopen( $path, 'c+b' );
+		if ( false === $handle || ! flock( $handle, LOCK_EX ) ) {
+			if ( is_resource( $handle ) ) {
+				fclose( $handle );
+			}
+			return self::error( 'lock_failed', __( 'The File Manager operation could not be locked safely.', 'siteintelix' ) );
+		}
+		chmod( $path, 0640 );
+		return $handle;
+	}
+
+	/**
+	 * Release a process lock.
+	 *
+	 * @param resource $handle Lock handle.
+	 * @return void
+	 */
+	public static function release_lock( $handle ) {
+		if ( is_resource( $handle ) ) {
+			flock( $handle, LOCK_UN );
+			fclose( $handle );
+		}
 	}
 
 	/**
