@@ -9,6 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$siteintelix_file_manager_dir = __DIR__ . '/';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-settings.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-security.php';
+
 /**
  * Coordinates the enabled File Manager services.
  */
