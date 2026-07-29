@@ -21,6 +21,7 @@ require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-edi
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-upload.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-trash.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-ajax.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-admin.php';
 
 /**
  * Coordinates the enabled File Manager services.

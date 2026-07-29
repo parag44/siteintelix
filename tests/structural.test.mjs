@@ -51,6 +51,44 @@ test('File Manager is disabled by default and loads only when enabled', async ()
 	assert.match(cards, /siteintelix-file-manager-settings/);
 });
 
+test('File Manager admin UI is accessible and its assets are screen-scoped', async () => {
+	const required = [
+		'includes/modules/file-manager/class-siteintelix-file-manager-admin.php',
+		'includes/modules/file-manager/views/file-manager.php',
+		'includes/modules/file-manager/views/settings.php',
+		'includes/modules/file-manager/views/partials/toolbar.php',
+		'includes/modules/file-manager/views/partials/file-table.php',
+		'includes/modules/file-manager/views/partials/folder-tree.php',
+		'includes/modules/file-manager/views/partials/details-panel.php',
+		'includes/modules/file-manager/views/partials/editor.php',
+		'includes/modules/file-manager/views/partials/modals.php',
+		'includes/modules/file-manager/assets/file-manager.css',
+	];
+	for (const file of required) {
+		await access(path.join(root, file), constants.F_OK);
+	}
+	const [admin, page, modals, css] = await Promise.all([
+		read(required[0]),
+		read(required[1]),
+		read(required[8]),
+		read(required[9]),
+	]);
+	assert.match(admin, /siteintelix_page_siteintelix-file-manager/);
+	assert.match(admin, /SITEINTELIX_File_Manager_Security::capability\(\)/);
+	assert.match(admin, /wp_enqueue_code_editor\(/);
+	assert.match(admin, /siteintelix_render_module_settings_sections/);
+	assert.match(page, /data-siteintelix-file-manager/);
+	assert.match(page, /data-file-manager-tab="browser"/);
+	assert.match(page, /data-file-manager-tab="backups"/);
+	assert.match(page, /data-file-manager-tab="trash"/);
+	assert.match(page, /data-file-manager-tab="settings"/);
+	assert.match(modals, /role="dialog"/);
+	assert.match(modals, /aria-modal="true"/);
+	assert.match(page, /aria-live="polite"/);
+	assert.match(css, /:focus-visible/);
+	assert.match(css, /prefers-reduced-motion/);
+});
+
 test('shipped PHP files block direct access and dangerous process execution', async () => {
 	const phpFiles = (await listFiles(root)).filter((file) => file.endsWith('.php'));
 	let evalCount = 0;
