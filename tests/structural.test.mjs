@@ -107,7 +107,7 @@ test('File Manager retention and uninstall lifecycle preserve site files', async
 	assert.match(module, /SITEINTELIX_File_Manager_Trash[\s\S]*cleanup\(\)/);
 	assert.match(main, /wp_doing_cron\(\)/);
 	assert.match(module, /\$siteintelix_file_manager_is_cron[\s\S]*class-siteintelix-file-manager-admin\.php/);
-	assert.match(backups, /\$this->cleanup\(\s*\$id\s*\)/);
+	assert.match(backups, /\$this->cleanup\(\s*\$id\s*,\s*true\s*\)/);
 	assert.match(backups, /public function cleanup\([^)]*\)/);
 	assert.match(trash, /public function cleanup\(\)/);
 	assert.match(main, /SITEINTELIX_File_Manager_Module::deactivate\(\)/);
