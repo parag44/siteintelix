@@ -174,6 +174,10 @@ function siteintelix_load_includes() {
 		if ( SITEINTELIX_Modules::is_enabled( 'safe_mode_debugger' ) ) {
 			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/safe-mode-debugger/class-siteintelix-safe-mode-debugger-module.php';
 		}
+
+		if ( SITEINTELIX_Modules::is_enabled( 'file_manager' ) ) {
+			require_once SITEINTELIX_PLUGIN_DIR . 'includes/modules/file-manager/class-siteintelix-file-manager-module.php';
+		}
 	}
 
 	if ( SITEINTELIX_Modules::is_enabled( 'coming_soon' ) ) {
@@ -265,6 +269,10 @@ function siteintelix_boot_enabled_modules() {
 
 	if ( SITEINTELIX_Modules::is_enabled( 'code_snippets' ) && class_exists( 'SITEINTELIX_Code_Snippets_Module' ) ) {
 		SITEINTELIX_Code_Snippets_Module::init();
+	}
+
+	if ( SITEINTELIX_Modules::is_enabled( 'file_manager' ) && class_exists( 'SITEINTELIX_File_Manager_Module' ) ) {
+		SITEINTELIX_File_Manager_Module::init();
 	}
 }
 add_action( 'init', 'siteintelix_boot_enabled_modules', 20 );
@@ -970,6 +978,10 @@ function siteintelix_load_module_class_for_management( $module_id ) {
 			'class' => 'SITEINTELIX_Code_Snippets_Module',
 			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/code-snippets/class-siteintelix-code-snippets-module.php',
 		),
+		'file_manager'       => array(
+			'class' => 'SITEINTELIX_File_Manager_Module',
+			'file'  => SITEINTELIX_PLUGIN_DIR . 'includes/modules/file-manager/class-siteintelix-file-manager-module.php',
+		),
 	);
 
 	if ( isset( $classes[ $module_id ] ) && ! class_exists( $classes[ $module_id ]['class'] ) && file_exists( $classes[ $module_id ]['file'] ) ) {
@@ -1037,6 +1049,13 @@ function siteintelix_activate_module_runtime( $module_id ) {
 		siteintelix_load_module_class_for_management( $module_id );
 		if ( class_exists( 'SITEINTELIX_Code_Snippets_Module' ) ) {
 			SITEINTELIX_Code_Snippets_Module::activate();
+		}
+	}
+
+	if ( 'file_manager' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_File_Manager_Module' ) ) {
+			return SITEINTELIX_File_Manager_Module::activate();
 		}
 	}
 

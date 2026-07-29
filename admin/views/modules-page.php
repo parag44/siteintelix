@@ -44,7 +44,26 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 		<article class="sitx-module-card si-module-card si-card <?php echo $is_enabled ? 'is-active' : ''; ?> <?php echo ! $is_available ? 'is-disabled' : ''; ?>" data-siteintelix-module-card data-module-id="<?php echo esc_attr( $module_id ); ?>" data-module-title="<?php echo esc_attr( strtolower( (string) $module['title'] ) ); ?>" data-module-description="<?php echo esc_attr( strtolower( (string) $module['description'] ) ); ?>">
 			<div class="sitx-module-card__top">
 				<span class="sitx-module-card__icon sitx-module-card__icon--<?php echo esc_attr( $color ); ?>">
-					<span class="dashicons <?php echo esc_attr( (string) $module['icon'] ); ?>" aria-hidden="true"></span>
+					<?php if ( ! empty( $module['icon_svg'] ) ) : ?>
+						<?php
+						echo wp_kses(
+							(string) $module['icon_svg'],
+							array(
+								'svg'  => array(
+									'viewBox'    => true,
+									'aria-hidden' => true,
+									'focusable'   => true,
+								),
+								'path' => array(
+									'fill' => true,
+									'd'    => true,
+								),
+							)
+						);
+						?>
+					<?php else : ?>
+						<span class="dashicons <?php echo esc_attr( (string) $module['icon'] ); ?>" aria-hidden="true"></span>
+					<?php endif; ?>
 				</span>
 				<span class="sitx-badge si-badge <?php echo $is_enabled ? 'sitx-badge--good si-badge--success' : ( $is_available ? 'sitx-badge--default si-badge--neutral' : 'sitx-badge--warning si-badge--warning' ); ?>" data-siteintelix-module-status>
 					<?php
@@ -72,6 +91,7 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 					'safe_mode_debugger' => admin_url( 'admin.php?page=siteintelix-safe-mode' ),
 					'custom_code'        => admin_url( 'admin.php?page=siteintelix-custom-code' ),
 					'code_snippets'      => admin_url( 'admin.php?page=siteintelix-code-snippets' ),
+					'file_manager'       => admin_url( 'admin.php?page=siteintelix-file-manager' ),
 				);
 				$settings_links = array(
 					'debug_log'     => 'siteintelix-debug-log-settings',
@@ -81,6 +101,7 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 					'user_switcher' => 'siteintelix-user-switcher-settings',
 					'custom_code'   => 'siteintelix-custom-code-settings',
 					'code_snippets' => 'siteintelix-code-snippets-settings',
+					'file_manager'  => 'siteintelix-file-manager-settings',
 				);
 				if ( $can_manage && $is_enabled && isset( $module_links[ $module_id ] ) ) :
 					?>

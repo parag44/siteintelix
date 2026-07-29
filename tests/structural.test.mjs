@@ -35,6 +35,22 @@ test('plugin exposes the approved public name without changing internal identity
 	assert.match(main, /'siteintelix'/);
 });
 
+test('File Manager is disabled by default and loads only when enabled', async () => {
+	const [main, registry, cards] = await Promise.all([
+		read('siteintelix.php'),
+		read('includes/class-siteintelix-modules.php'),
+		read('admin/views/modules-page.php'),
+	]);
+	assert.match(registry, /'file_manager'\s*=>\s*array\(/);
+	assert.match(registry, /'slug'\s*=>\s*'file-manager'/);
+	assert.match(registry, /Safely browse, inspect, edit, upload, download, and manage files inside your WordPress installation\./);
+	assert.match(registry, /'default'\s*=>\s*false/);
+	assert.match(main, /SITEINTELIX_Modules::is_enabled\(\s*'file_manager'\s*\)[\s\S]*class-siteintelix-file-manager-module\.php/);
+	assert.match(main, /SITEINTELIX_File_Manager_Module::init\(\)/);
+	assert.match(cards, /'file_manager'\s*=>\s*admin_url\(\s*'admin\.php\?page=siteintelix-file-manager'/);
+	assert.match(cards, /siteintelix-file-manager-settings/);
+});
+
 test('shipped PHP files block direct access and dangerous process execution', async () => {
 	const phpFiles = (await listFiles(root)).filter((file) => file.endsWith('.php'));
 	let evalCount = 0;

@@ -144,10 +144,29 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can
 				<div class="sitx-settings-topbar">
 					<div class="sitx-settings-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Module settings', 'siteintelix' ); ?>">
 						<?php foreach ( $siteintelix_tabs as $siteintelix_tab_id => $siteintelix_tab ) : ?>
-							<button type="button" id="siteintelix-settings-tab-<?php echo esc_attr( $siteintelix_tab_id ); ?>" class="sitx-settings-tab <?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'is-active' : ''; ?>" role="tab" aria-controls="siteintelix-<?php echo esc_attr( str_replace( '_', '-', $siteintelix_tab_id ) ); ?>-settings" aria-selected="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'true' : 'false'; ?>" tabindex="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? '0' : '-1'; ?>" data-siteintelix-settings-tab="<?php echo esc_attr( $siteintelix_tab_id ); ?>">
-								<span class="sitx-settings-tab__icon sitx-module-card__icon--<?php echo esc_attr( sanitize_key( (string) $siteintelix_tab['color'] ) ); ?>">
-									<span class="dashicons <?php echo esc_attr( (string) $siteintelix_tab['icon'] ); ?>" aria-hidden="true"></span>
-								</span>
+								<button type="button" id="siteintelix-settings-tab-<?php echo esc_attr( $siteintelix_tab_id ); ?>" class="sitx-settings-tab <?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'is-active' : ''; ?>" role="tab" aria-controls="siteintelix-<?php echo esc_attr( str_replace( '_', '-', $siteintelix_tab_id ) ); ?>-settings" aria-selected="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? 'true' : 'false'; ?>" tabindex="<?php echo $siteintelix_tab_id === $siteintelix_active_tab ? '0' : '-1'; ?>" data-siteintelix-settings-tab="<?php echo esc_attr( $siteintelix_tab_id ); ?>">
+									<span class="sitx-settings-tab__icon sitx-module-card__icon--<?php echo esc_attr( sanitize_key( (string) $siteintelix_tab['color'] ) ); ?>">
+										<?php if ( ! empty( $siteintelix_tab['icon_svg'] ) ) : ?>
+											<?php
+											echo wp_kses(
+												(string) $siteintelix_tab['icon_svg'],
+												array(
+													'svg'  => array(
+														'viewBox'     => true,
+														'aria-hidden' => true,
+														'focusable'   => true,
+													),
+													'path' => array(
+														'fill' => true,
+														'd'    => true,
+													),
+												)
+											);
+											?>
+										<?php else : ?>
+											<span class="dashicons <?php echo esc_attr( (string) $siteintelix_tab['icon'] ); ?>" aria-hidden="true"></span>
+										<?php endif; ?>
+									</span>
 								<?php echo esc_html( (string) $siteintelix_tab['title'] ); ?>
 							</button>
 						<?php endforeach; ?>
