@@ -21,6 +21,7 @@ class SITEINTELIX_File_Manager_Ajax {
 	 */
 	public static function init() {
 		add_action( 'wp_ajax_siteintelix_fm_list_directory', array( __CLASS__, 'list_directory' ) );
+		add_action( 'wp_ajax_siteintelix_fm_list_tree', array( __CLASS__, 'list_tree' ) );
 		add_action( 'wp_ajax_siteintelix_fm_get_file', array( __CLASS__, 'get_file' ) );
 		add_action( 'wp_ajax_siteintelix_fm_get_details', array( __CLASS__, 'get_details' ) );
 		add_action( 'wp_ajax_siteintelix_fm_save_file', array( __CLASS__, 'save_file' ) );
@@ -55,6 +56,16 @@ class SITEINTELIX_File_Manager_Ajax {
 			'search'   => self::post_text( 'search' ),
 		);
 		self::respond( ( new SITEINTELIX_File_Manager_Filesystem() )->list_directory( self::post_path(), $args ) );
+	}
+
+	/**
+	 * List one immediate folder-tree branch.
+	 *
+	 * @return void
+	 */
+	public static function list_tree() {
+		self::authorize( 'siteintelix_fm_list_tree' );
+		self::respond( ( new SITEINTELIX_File_Manager_Tree() )->children( self::post_path() ) );
 	}
 
 	/**

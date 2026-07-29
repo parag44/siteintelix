@@ -93,6 +93,7 @@ class SITEINTELIX_File_Manager_Admin {
 		$settings = SITEINTELIX_File_Manager_Settings::get();
 		$actions  = array(
 			'list_directory',
+			'list_tree',
 			'get_file',
 			'get_details',
 			'save_file',

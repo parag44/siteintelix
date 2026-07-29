@@ -162,6 +162,7 @@
 
 		var fixedActions = [
 			'list_directory',
+			'list_tree',
 			'get_file',
 			'get_details',
 			'save_file',

@@ -20,6 +20,7 @@ if ( ! $siteintelix_file_manager_is_cron ) {
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-redactor.php';
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-audit.php';
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-filesystem.php';
+	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-tree.php';
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-editor.php';
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-upload.php';
 	require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-ajax.php';

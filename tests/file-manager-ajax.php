@@ -14,6 +14,7 @@ $source = file_get_contents( $file );
 
 $expected = array(
 	'siteintelix_fm_list_directory',
+	'siteintelix_fm_list_tree',
 	'siteintelix_fm_get_file',
 	'siteintelix_fm_get_details',
 	'siteintelix_fm_save_file',
@@ -40,6 +41,10 @@ foreach ( $expected as $action ) {
 	}
 }
 
+if ( false === strpos( $source, "self::authorize( 'siteintelix_fm_list_tree' )" ) ) {
+	fwrite( STDERR, "FAIL: tree handler must use an operation-specific nonce\n" );
+	exit( 1 );
+}
 if ( false !== strpos( $source, 'wp_ajax_nopriv_' ) ) {
 	fwrite( STDERR, "FAIL: unauthenticated handlers are forbidden\n" );
 	exit( 1 );

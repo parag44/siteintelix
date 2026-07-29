@@ -36,10 +36,11 @@ test('plugin exposes the approved public name without changing internal identity
 });
 
 test('File Manager is disabled by default and loads only when enabled', async () => {
-	const [main, registry, cards] = await Promise.all([
+	const [main, registry, cards, module] = await Promise.all([
 		read('siteintelix.php'),
 		read('includes/class-siteintelix-modules.php'),
 		read('admin/views/modules-page.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-module.php'),
 	]);
 	assert.match(registry, /'file_manager'\s*=>\s*array\(/);
 	assert.match(registry, /'slug'\s*=>\s*'file-manager'/);
@@ -49,6 +50,14 @@ test('File Manager is disabled by default and loads only when enabled', async ()
 	assert.match(main, /SITEINTELIX_File_Manager_Module::init\(\)/);
 	assert.match(cards, /'file_manager'\s*=>\s*admin_url\(\s*'admin\.php\?page=siteintelix-file-manager'/);
 	assert.match(cards, /siteintelix-file-manager-settings/);
+	assert.match(module, /class-siteintelix-file-manager-tree\.php[\s\S]*class-siteintelix-file-manager-ajax\.php/);
+});
+
+test('File Manager folder tree stays lazy and non-recursive', async () => {
+	const tree = await read('includes/modules/file-manager/class-siteintelix-file-manager-tree.php');
+	assert.match(tree, /class SITEINTELIX_File_Manager_Tree/);
+	assert.match(tree, /FilesystemIterator/);
+	assert.doesNotMatch(tree, /RecursiveDirectoryIterator/);
 });
 
 test('File Manager admin UI is accessible and its assets are screen-scoped', async () => {
