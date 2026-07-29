@@ -194,6 +194,7 @@ test('File Manager workspace matches the approved DirectAdmin two-pane design', 
 	assert.match(css, /\.sitx-fm-table-scroll\s*\{[\s\S]*height:\s*100%[\s\S]*overflow:\s*auto/);
 	assert.match(css, /\.sitx-fm-table thead\s*\{[\s\S]*position:\s*sticky/);
 	assert.match(css, /\.sitx-fm-file-icon--folder/);
+	assert.match(css, /\.sitx-file-manager\s+\.sitx-fm-file-icon\s*\{[\s\S]*position:\s*relative/);
 	assert.match(css, /\.sitx-fm-context-menu\s*\{[\s\S]*position:\s*fixed/);
 	assert.match(css, /\.sitx-fm-table tbody tr\.is-selected/);
 	assert.match(css, /@media \(max-width:\s*1100px\)/);

@@ -598,7 +598,7 @@
 	font-size: 19px;
 }
 
-.sitx-fm-file-icon {
+.sitx-file-manager .sitx-fm-file-icon {
 	position: relative;
 	display: inline-grid;
 	flex: 0 0 24px;
