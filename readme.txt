@@ -144,6 +144,7 @@ No. File Manager is Safe Mode-only in this release. PHP files remain view-only, 
 
 = 2.7.3 — 2026-07-28 =
 * Added an optional Safe Mode-only File Manager with canonical path controls, view-only PHP, authenticated previews and downloads, backed-up atomic text editing, restricted uploads, private trash, retention, and audit controls.
+* Improved File Manager with a DirectAdmin-inspired compact toolbar, an expandable folder tree, read-only WordPress root browsing, multi-selection actions, and bounded private temporary ZIP downloads.
 * Added Custom CSS & JS and isolated Code Snippets modules with focused management screens and module-specific settings.
 * Added a Media Library artwork selector for Maintenance Mode with responsive image output and automatic built-in SVG fallback.
 * Improved User Switcher recovery, admin-bar visibility, activity logging, and secure return-to-administrator handling.

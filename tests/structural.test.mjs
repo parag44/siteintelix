@@ -248,12 +248,22 @@ test('File Manager release documentation describes Safe Mode boundaries', async 
 		'multisite',
 		'retention',
 		'uninstall',
+		'WordPress root',
+		'read-only',
+		'ZIP',
+		'ZipArchive',
+		'5,000',
+		'250 MB',
+		'symlink',
+		'temporary',
 	]) {
 		assert.match(documentation, new RegExp(phrase, 'i'));
 	}
 	assert.match(readme, /\*\*File Manager\*\*/);
 	assert.match(readme, /PHP files remain view-only/i);
 	assert.match(readme, /File Manager-owned backups, trash, metadata, and audit records/i);
+	assert.match(readme, /expandable folder tree/i);
+	assert.match(readme, /private temporary ZIP/i);
 });
 
 test('shipped PHP files block direct access and dangerous process execution', async () => {

@@ -20,6 +20,18 @@ PHP files are view-only. They can be inspected as escaped text and downloaded, b
 
 Directory reads are non-recursive, paginated, sortable by a fixed allowlist, searchable within the current directory, and capped to prevent unbounded scans. Text previews have a configurable byte limit and binary detection. An explicitly permitted `wp-config.php` preview is redacted before display. Raster image previews use a separate authenticated, no-store, `nosniff` response. Downloads also use an authenticated attachment response and never expose a direct storage URL.
 
+### WordPress root and folder tree
+
+The WordPress root is visible so administrators can understand the full installation layout. Safe Mode still decides every item action: WordPress core, protected configuration, SiteIntelix, must-use plugins, active plugins, the active theme, and PHP source remain read-only wherever their policy forbids changes.
+
+The expandable folder tree loads one directory level per authenticated request. Tree reads are lazy and non-recursive, do not follow a symlink, and reuse the same canonical-path and protected-location checks as the file list.
+
+### ZIP downloads
+
+Selected permitted files and folders can be compressed for download when PHP's `ZipArchive` extension is available. One request accepts at most 100 selected sources, 5,000 archive entries, and 250 MB of total uncompressed content.
+
+Archive traversal omits symlinks, `wp-config.php`, sensitive server configuration, and File Manager private storage. A ZIP exists only in private temporary storage while it is being streamed through an authenticated response, and it is removed afterward. Safe Mode does not include archive extraction, and Advanced Mode is not available in this release.
+
 ## Editing and backups
 
 Only configured non-PHP text extensions can be edited. Opening a file records its modification time and SHA-256 hash. Saving fails if either value changed, preventing accidental overwrite of a newer version.
