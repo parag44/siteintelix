@@ -1,6 +1,67 @@
 (function () {
 	'use strict';
 
+	function initMaintenanceMediaPickers(documentObject, windowObject) {
+		Array.prototype.slice.call(
+			documentObject.querySelectorAll('[data-siteintelix-maintenance-media-picker]')
+		).forEach(function (picker) {
+			var select = picker.querySelector('[data-siteintelix-media-select]');
+			var remove = picker.querySelector('[data-siteintelix-media-remove]');
+			var preview = picker.querySelector('[data-siteintelix-media-preview]');
+			var idInput = picker.querySelector('[data-siteintelix-media-id]');
+			var urlInput = picker.querySelector('[data-siteintelix-media-url]');
+			var mediaFrame;
+
+			function preferredUrl(item) {
+				var size = picker.getAttribute('data-media-size') || 'medium';
+				return item && item.sizes && item.sizes[size] ? item.sizes[size].url : (item.url || '');
+			}
+
+			function setPreview(url) {
+				preview.textContent = '';
+				if (url) {
+					var image = documentObject.createElement('img');
+					image.src = url;
+					image.alt = '';
+					preview.appendChild(image);
+				}
+				picker.classList.toggle('has-image', !!url);
+			}
+
+			select.addEventListener('click', function () {
+				if (!windowObject.wp || !windowObject.wp.media) { return; }
+				if (!mediaFrame) {
+					mediaFrame = windowObject.wp.media({
+						title: picker.getAttribute('data-media-title') || 'Choose Image',
+						button: { text: picker.getAttribute('data-media-button') || 'Use this image' },
+						library: { type: 'image' },
+						multiple: false
+					});
+					mediaFrame.on('select', function () {
+						var item = mediaFrame.state().get('selection').first().toJSON();
+						var url = preferredUrl(item);
+						idInput.value = item.id || '';
+						if (urlInput) { urlInput.value = url; }
+						setPreview(url);
+					});
+				}
+				mediaFrame.open();
+			});
+
+			remove.addEventListener('click', function () {
+				idInput.value = '';
+				if (urlInput) { urlInput.value = ''; }
+				setPreview('');
+			});
+
+			if (urlInput) {
+				urlInput.addEventListener('input', function () {
+					setPreview(urlInput.value.trim());
+				});
+			}
+		});
+	}
+
 	function initSettings(documentObject, windowObject) {
 		var root = documentObject.querySelector('[data-siteintelix-settings-tabs]');
 		if (!root) { return; }
@@ -71,33 +132,15 @@
 		}
 		if (initial) { activate(initial, false, false); }
 
-		var picker = documentObject.querySelector('[data-siteintelix-maintenance-logo-picker]');
-		if (picker && windowObject.wp && windowObject.wp.media) {
-			var select = picker.querySelector('[data-siteintelix-maintenance-logo-select]');
-			var remove = picker.querySelector('[data-siteintelix-maintenance-logo-remove]');
-			var preview = picker.querySelector('[data-siteintelix-maintenance-logo-preview]');
-			var idInput = picker.querySelector('[data-siteintelix-maintenance-logo-id]');
-			var urlInput = picker.querySelector('[data-siteintelix-maintenance-logo-url]');
-			var mediaFrame;
-			function setPreview(url) {
-				preview.textContent = '';
-				if (url) { var image = documentObject.createElement('img'); image.src = url; image.alt = ''; preview.appendChild(image); }
-				picker.classList.toggle('has-image', !!url);
-			}
-			select.addEventListener('click', function () {
-				if (!mediaFrame) {
-					var labels = windowObject.siteintelixSettingsData || {};
-					mediaFrame = windowObject.wp.media({ title: labels.chooseLogo || 'Choose Logo', button: { text: labels.useLogo || 'Use this logo' }, multiple: false });
-					mediaFrame.on('select', function () { var item = mediaFrame.state().get('selection').first().toJSON(); idInput.value = item.id || ''; urlInput.value = item.url || ''; setPreview(item.url || ''); });
-				}
-				mediaFrame.open();
-			});
-			remove.addEventListener('click', function () { idInput.value = ''; urlInput.value = ''; setPreview(''); });
-			urlInput.addEventListener('input', function () { setPreview(urlInput.value.trim()); });
-		}
+		initMaintenanceMediaPickers(documentObject, windowObject);
 	}
 
-	if (typeof module !== 'undefined' && module.exports) { module.exports = { initSettings: initSettings }; }
+	if (typeof module !== 'undefined' && module.exports) {
+		module.exports = {
+			initSettings: initSettings,
+			initMaintenanceMediaPickers: initMaintenanceMediaPickers
+		};
+	}
 	if (typeof document !== 'undefined') {
 		document.addEventListener('DOMContentLoaded', function () { initSettings(document, window); });
 	}

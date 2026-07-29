@@ -42,8 +42,10 @@ class SITEINTELIX_Coming_Soon_Module {
 			return;
 		}
 
-		$settings = self::get_settings();
-		$logo_url = ! empty( $settings['logo_url'] ) ? $settings['logo_url'] : '';
+		$settings            = self::get_settings();
+		$logo_url            = ! empty( $settings['logo_url'] ) ? $settings['logo_url'] : '';
+		$artwork_id          = absint( $settings['artwork_id'] );
+		$artwork_preview_url = $artwork_id ? wp_get_attachment_image_url( $artwork_id, 'medium_large' ) : '';
 		?>
 		<section class="sitx-settings-panel-tab <?php echo 'coming_soon' === $active_tab ? 'is-active' : ''; ?>" id="siteintelix-coming-soon-settings" role="tabpanel" aria-labelledby="siteintelix-settings-tab-coming_soon" data-siteintelix-settings-panel="coming_soon" <?php echo 'coming_soon' === $active_tab ? '' : 'hidden'; ?>>
 			<div class="sitx-settings-content-grid">
@@ -63,20 +65,52 @@ class SITEINTELIX_Coming_Soon_Module {
 						<div class="sitx-form-grid">
 							<div class="sitx-form-field sitx-form-field--full sitx-maintenance-logo-field">
 								<span><?php esc_html_e( 'Logo', 'siteintelix' ); ?></span>
-								<div class="sitx-maintenance-logo-picker" data-siteintelix-maintenance-logo-picker>
-									<div class="sitx-maintenance-logo-preview" data-siteintelix-maintenance-logo-preview>
+								<div
+									class="sitx-maintenance-logo-picker sitx-maintenance-media-picker"
+									data-siteintelix-maintenance-media-picker
+									data-media-title="<?php esc_attr_e( 'Choose Logo', 'siteintelix' ); ?>"
+									data-media-button="<?php esc_attr_e( 'Use this logo', 'siteintelix' ); ?>"
+									data-media-size="medium"
+								>
+									<div class="sitx-maintenance-logo-preview sitx-maintenance-media-preview" data-siteintelix-media-preview>
 										<?php if ( $logo_url ) : ?>
 											<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php esc_attr_e( 'Selected logo preview', 'siteintelix' ); ?>">
 										<?php else : ?>
 											<span class="dashicons dashicons-format-image" aria-hidden="true"></span>
 										<?php endif; ?>
 									</div>
-									<div class="sitx-maintenance-logo-controls">
-										<input type="hidden" name="logo_id" value="<?php echo esc_attr( absint( $settings['logo_id'] ) ); ?>" data-siteintelix-maintenance-logo-id>
-										<input type="url" name="logo_url" value="<?php echo esc_attr( $logo_url ); ?>" placeholder="https://example.com/logo.png" data-siteintelix-maintenance-logo-url>
-										<div class="sitx-maintenance-logo-actions">
-											<button type="button" class="si-button si-button--secondary" data-siteintelix-maintenance-logo-select><?php esc_html_e( 'Choose from Media', 'siteintelix' ); ?></button>
-											<button type="button" class="si-button si-button--ghost" data-siteintelix-maintenance-logo-remove><?php esc_html_e( 'Remove', 'siteintelix' ); ?></button>
+									<div class="sitx-maintenance-logo-controls sitx-maintenance-media-controls">
+										<input type="hidden" name="logo_id" value="<?php echo esc_attr( absint( $settings['logo_id'] ) ); ?>" data-siteintelix-media-id>
+										<input type="url" name="logo_url" value="<?php echo esc_attr( $logo_url ); ?>" placeholder="https://example.com/logo.png" data-siteintelix-media-url>
+										<div class="sitx-maintenance-logo-actions sitx-maintenance-media-actions">
+											<button type="button" class="si-button si-button--secondary" data-siteintelix-media-select><?php esc_html_e( 'Choose from Media', 'siteintelix' ); ?></button>
+											<button type="button" class="si-button si-button--ghost" data-siteintelix-media-remove><?php esc_html_e( 'Remove', 'siteintelix' ); ?></button>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="sitx-form-field sitx-form-field--full sitx-maintenance-artwork-field">
+								<span><?php esc_html_e( 'Maintenance artwork', 'siteintelix' ); ?></span>
+								<p class="description"><?php esc_html_e( 'Choose an image from the Media Library, or keep the built-in illustration.', 'siteintelix' ); ?></p>
+								<div
+									class="sitx-maintenance-media-picker sitx-maintenance-media-picker--artwork"
+									data-siteintelix-maintenance-media-picker
+									data-media-title="<?php esc_attr_e( 'Choose Maintenance Artwork', 'siteintelix' ); ?>"
+									data-media-button="<?php esc_attr_e( 'Use this artwork', 'siteintelix' ); ?>"
+									data-media-size="large"
+								>
+									<div class="sitx-maintenance-media-preview sitx-maintenance-media-preview--artwork" data-siteintelix-media-preview>
+										<?php if ( $artwork_preview_url ) : ?>
+											<img src="<?php echo esc_url( $artwork_preview_url ); ?>" alt="">
+										<?php else : ?>
+											<span class="dashicons dashicons-format-image" aria-hidden="true"></span>
+										<?php endif; ?>
+									</div>
+									<div class="sitx-maintenance-media-controls">
+										<input type="hidden" name="artwork_id" value="<?php echo esc_attr( $artwork_id ); ?>" data-siteintelix-media-id>
+										<div class="sitx-maintenance-media-actions">
+											<button type="button" class="si-button si-button--secondary" data-siteintelix-media-select><?php esc_html_e( 'Choose from Media', 'siteintelix' ); ?></button>
+											<button type="button" class="si-button si-button--ghost" data-siteintelix-media-remove><?php esc_html_e( 'Use Default SVG', 'siteintelix' ); ?></button>
 										</div>
 									</div>
 								</div>

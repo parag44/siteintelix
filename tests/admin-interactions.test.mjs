@@ -201,6 +201,154 @@ test('Shared confirmation preserves link navigation and cancellation', async () 
 	assert.deepEqual(cancelFixture.navigations, []);
 });
 
+function createSettingsMediaPickerFixture() {
+	const frames = [];
+
+	function createButton() {
+		let clickListener = null;
+		return {
+			addEventListener(type, listener) {
+				if ('click' === type) { clickListener = listener; }
+			},
+			click() {
+				clickListener();
+			},
+		};
+	}
+
+	function createPreview() {
+		let text = '';
+		return {
+			children: [],
+			appendChild(child) {
+				this.children.push(child);
+			},
+			get textContent() {
+				return text;
+			},
+			set textContent(value) {
+				text = value;
+				if ('' === value) { this.children = []; }
+			},
+		};
+	}
+
+	function createPicker(size, withUrl) {
+		const select = createButton();
+		const remove = createButton();
+		const preview = createPreview();
+		const id = { value: '' };
+		const url = withUrl ? { value: '', addEventListener() {} } : undefined;
+		const attributes = {
+			'data-media-title': 'Choose Image',
+			'data-media-button': 'Use this image',
+			'data-media-size': size,
+		};
+		const children = {
+			'[data-siteintelix-media-select]': select,
+			'[data-siteintelix-media-remove]': remove,
+			'[data-siteintelix-media-preview]': preview,
+			'[data-siteintelix-media-id]': id,
+			'[data-siteintelix-media-url]': url ?? null,
+		};
+
+		return {
+			select,
+			remove,
+			preview,
+			id,
+			url,
+			classList: { toggle() {} },
+			getAttribute(name) {
+				return attributes[name] ?? null;
+			},
+			querySelector(selector) {
+				return children[selector] ?? null;
+			},
+		};
+	}
+
+	const logo = createPicker('medium', true);
+	const artwork = createPicker('large', false);
+	const documentObject = {
+		createElement() {
+			return { alt: '', src: '' };
+		},
+		querySelectorAll(selector) {
+			return '[data-siteintelix-maintenance-media-picker]' === selector ? [logo, artwork] : [];
+		},
+	};
+	const windowObject = {
+		wp: {
+			media(config) {
+				let selected = null;
+				let selectListener = null;
+				const frame = {
+					config,
+					on(type, listener) {
+						if ('select' === type) { selectListener = listener; }
+					},
+					open() {},
+					state() {
+						return {
+							get() {
+								return {
+									first() {
+										return { toJSON: () => selected };
+									},
+								};
+							},
+						};
+					},
+					choose(item) {
+						selected = item;
+						selectListener();
+					},
+				};
+				frames.push(frame);
+				return frame;
+			},
+		},
+	};
+
+	return {
+		logo,
+		artwork,
+		frames,
+		async load() {
+			const script = await read('assets/admin/js/siteintelix-settings.js');
+			const moduleObject = { exports: {} };
+			vm.runInNewContext(script, { module: moduleObject });
+			moduleObject.exports.initMaintenanceMediaPickers(documentObject, windowObject);
+		},
+	};
+}
+
+test('Maintenance logo and artwork use independent image-only media pickers', async () => {
+	const fixture = createSettingsMediaPickerFixture();
+	await fixture.load();
+
+	fixture.logo.select.click();
+	assert.equal(fixture.frames[0].config.multiple, false);
+	assert.equal(fixture.frames[0].config.library.type, 'image');
+	fixture.frames[0].choose({ id: 11, url: 'logo-full.png', sizes: { medium: { url: 'logo-medium.png' } } });
+	assert.equal(fixture.logo.id.value, 11);
+	assert.equal(fixture.logo.url.value, 'logo-medium.png');
+
+	fixture.artwork.select.click();
+	assert.equal(fixture.frames[1].config.multiple, false);
+	assert.equal(fixture.frames[1].config.library.type, 'image');
+	fixture.frames[1].choose({ id: 17, url: 'art-full.jpg', sizes: { large: { url: 'art-large.jpg' } } });
+	assert.equal(fixture.artwork.id.value, 17);
+	assert.equal(fixture.artwork.url, undefined);
+	assert.equal(fixture.artwork.preview.children[0].src, 'art-large.jpg');
+
+	fixture.artwork.remove.click();
+	assert.equal(fixture.artwork.id.value, '');
+	assert.equal(fixture.artwork.preview.children.length, 0);
+	assert.equal(fixture.logo.id.value, 11, 'clearing artwork must not change the logo');
+});
+
 function createOverviewToggleFixture(responseFactory) {
 	const domReadyListeners = [];
 	const changeListeners = [];
