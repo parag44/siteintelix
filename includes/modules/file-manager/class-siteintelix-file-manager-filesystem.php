@@ -325,12 +325,24 @@ class SITEINTELIX_File_Manager_Filesystem {
 		if ( is_wp_error( $destination ) ) {
 			return $destination;
 		}
-		if ( ! wp_mkdir_p( $destination ) || ! is_dir( $destination ) ) {
-			return $this->error( 'create_failed', __( 'The folder could not be created.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$relative = $this->security->relative_path( $destination );
-		do_action( 'siteintelix_file_manager_after_operation', 'create_directory', is_wp_error( $relative ) ? '' : $relative, 'success' );
-		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+		try {
+			$destination = $this->security->resolve_destination( $parent, $name, 'create' );
+			if ( is_wp_error( $destination ) ) {
+				return $destination;
+			}
+			if ( ! mkdir( $destination, 0755 ) || ! is_dir( $destination ) ) {
+				return $this->error( 'create_failed', __( 'The folder could not be created.', 'siteintelix' ) );
+			}
+			$relative = $this->security->relative_path( $destination );
+			do_action( 'siteintelix_file_manager_after_operation', 'create_directory', is_wp_error( $relative ) ? '' : $relative, 'success' );
+			return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
+		}
 	}
 
 	/**
@@ -354,27 +366,39 @@ class SITEINTELIX_File_Manager_Filesystem {
 		if ( is_wp_error( $destination ) ) {
 			return $destination;
 		}
-		$handle = fopen( $destination, 'x+b' );
-		if ( false === $handle ) {
-			return $this->error( 'create_failed', __( 'The file could not be created.', 'siteintelix' ) );
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$length  = strlen( $content );
-		$written = 0;
-		while ( $written < $length ) {
-			$chunk = fwrite( $handle, substr( $content, $written ) );
-			if ( false === $chunk || 0 === $chunk ) {
-				fclose( $handle );
-				unlink( $destination );
+		try {
+			$destination = $this->security->resolve_destination( $parent, $name, 'create' );
+			if ( is_wp_error( $destination ) ) {
+				return $destination;
+			}
+			$handle = fopen( $destination, 'x+b' );
+			if ( false === $handle ) {
 				return $this->error( 'create_failed', __( 'The file could not be created.', 'siteintelix' ) );
 			}
-			$written += $chunk;
+			$length  = strlen( $content );
+			$written = 0;
+			while ( $written < $length ) {
+				$chunk = fwrite( $handle, substr( $content, $written ) );
+				if ( false === $chunk || 0 === $chunk ) {
+					fclose( $handle );
+					unlink( $destination );
+					return $this->error( 'create_failed', __( 'The file could not be created.', 'siteintelix' ) );
+				}
+				$written += $chunk;
+			}
+			fflush( $handle );
+			fclose( $handle );
+			chmod( $destination, 0644 );
+			$relative = $this->security->relative_path( $destination );
+			do_action( 'siteintelix_file_manager_after_operation', 'create_file', is_wp_error( $relative ) ? '' : $relative, 'success' );
+			return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		fflush( $handle );
-		fclose( $handle );
-		chmod( $destination, 0644 );
-		$relative = $this->security->relative_path( $destination );
-		do_action( 'siteintelix_file_manager_after_operation', 'create_file', is_wp_error( $relative ) ? '' : $relative, 'success' );
-		return array( 'path' => is_wp_error( $relative ) ? '' : $relative );
 	}
 
 	/**

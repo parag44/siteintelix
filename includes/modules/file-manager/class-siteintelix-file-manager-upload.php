@@ -118,7 +118,7 @@ class SITEINTELIX_File_Manager_Upload {
 				$existing_modified = (int) filemtime( $target );
 				$existing_hash     = hash_file( 'sha256', $target );
 				$relative_target = $this->security->relative_path( $target );
-				$backup = is_wp_error( $relative_target ) ? $relative_target : $this->backups->create( $relative_target, 'upload_overwrite' );
+				$backup = is_wp_error( $relative_target ) ? $relative_target : $this->backups->create( $relative_target, 'upload_overwrite', true );
 				if ( is_wp_error( $backup ) ) {
 					return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the existing file was not replaced.', 'siteintelix' ) );
 				}

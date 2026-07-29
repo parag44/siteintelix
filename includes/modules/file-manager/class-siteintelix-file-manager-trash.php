@@ -126,32 +126,40 @@ class SITEINTELIX_File_Manager_Trash {
 		if ( empty( $settings['trash_auto_cleanup'] ) ) {
 			return 0;
 		}
-		$day           = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : 86400;
-		$retention     = max( 1, (int) $settings['trash_retention_days'] ) * $day;
-		$storage_limit = max( MB_IN_BYTES, (int) $settings['trash_max_storage_bytes'] );
-		$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
-		$cutoff        = time() - $retention;
-		$kept_bytes    = 0;
-		$removed       = 0;
-
-		foreach ( $this->all( 500 ) as $entry ) {
-			$payload = SITEINTELIX_File_Manager_Storage::path( 'trash/' . $entry['id'] );
-			$size    = $this->payload_size( $payload, $storage_limit + 1 );
-			$created = strtotime( (string) $entry['created_at'] );
-			$expired = false === $created || $created < $cutoff;
-			$over_storage = $kept_bytes + $size > $storage_limit;
-
-			if ( $removed < $delete_limit && ( $expired || $over_storage ) ) {
-				$deleted = $this->delete_entry( $entry['id'], $entry );
-				if ( ! is_wp_error( $deleted ) ) {
-					++$removed;
-					continue;
-				}
-			}
-			$kept_bytes += $size;
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+		if ( is_wp_error( $lock ) ) {
+			return 0;
 		}
+		try {
+			$day           = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : 86400;
+			$retention     = max( 1, (int) $settings['trash_retention_days'] ) * $day;
+			$storage_limit = max( MB_IN_BYTES, (int) $settings['trash_max_storage_bytes'] );
+			$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
+			$cutoff        = time() - $retention;
+			$kept_bytes    = 0;
+			$removed       = 0;
 
-		return $removed;
+			foreach ( $this->all( 500 ) as $entry ) {
+				$payload = SITEINTELIX_File_Manager_Storage::path( 'trash/' . $entry['id'] );
+				$size    = $this->payload_size( $payload, $storage_limit + 1 );
+				$created = strtotime( (string) $entry['created_at'] );
+				$expired = false === $created || $created < $cutoff;
+				$over_storage = $kept_bytes + $size > $storage_limit;
+
+				if ( $removed < $delete_limit && ( $expired || $over_storage ) ) {
+					$deleted = $this->delete_entry( $entry['id'], $entry );
+					if ( ! is_wp_error( $deleted ) ) {
+						++$removed;
+						continue;
+					}
+				}
+				$kept_bytes += $size;
+			}
+
+			return $removed;
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
+		}
 	}
 
 	/**
@@ -207,15 +215,23 @@ class SITEINTELIX_File_Manager_Trash {
 	 * @return true|WP_Error
 	 */
 	public function permanently_delete( $id, $confirmation ) {
-		$metadata = SITEINTELIX_File_Manager_Storage::read_metadata( 'trash', $id );
-		if ( is_wp_error( $metadata ) ) {
-			return $metadata;
+		$lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		$expected = basename( (string) $metadata['original_path'] );
-		if ( '' === $expected || ! hash_equals( $expected, (string) $confirmation ) ) {
-			return $this->error( 'confirmation_failed', __( 'The typed item name does not match.', 'siteintelix' ) );
+		try {
+			$metadata = SITEINTELIX_File_Manager_Storage::read_metadata( 'trash', $id );
+			if ( is_wp_error( $metadata ) ) {
+				return $metadata;
+			}
+			$expected = basename( (string) $metadata['original_path'] );
+			if ( '' === $expected || ! hash_equals( $expected, (string) $confirmation ) ) {
+				return $this->error( 'confirmation_failed', __( 'The typed item name does not match.', 'siteintelix' ) );
+			}
+			return $this->delete_entry( $id, $metadata );
+		} finally {
+			SITEINTELIX_File_Manager_Storage::release_lock( $lock );
 		}
-		return $this->delete_entry( $id, $metadata );
 	}
 
 	/**

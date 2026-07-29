@@ -101,7 +101,7 @@ class SITEINTELIX_File_Manager_Editor {
 			if ( ! is_writable( $file ) || ! is_writable( dirname( $file ) ) ) {
 				return $this->error( 'not_writable', __( 'This file is not writable.', 'siteintelix' ) );
 			}
-			$backup = $this->backups->create( $path, 'edit' );
+			$backup = $this->backups->create( $path, 'edit', true );
 			if ( is_wp_error( $backup ) ) {
 				return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
 			}
@@ -151,7 +151,7 @@ class SITEINTELIX_File_Manager_Editor {
 			if ( is_wp_error( $file ) ) {
 				return $file;
 			}
-			$backup = $this->backups->create( $path, $operation );
+			$backup = $this->backups->create( $path, $operation, true );
 			if ( is_wp_error( $backup ) ) {
 				return $this->error( 'backup_failed', __( 'A safety backup could not be created, so the file was not changed.', 'siteintelix' ) );
 			}
