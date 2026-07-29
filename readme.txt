@@ -25,6 +25,7 @@ It brings debug logs, outgoing email history, server checks, cron inspection, da
 * ⏱️ **Cron Events** — inspect scheduled WP-Cron events, run due events manually, and remove selected events safely.
 * 🗄️ **Database Manager** — browse tables, inspect rows, search records, review sizes, and edit selected rows from wp-admin.
 * 📦 **Download Manager** — add secure download links for installed plugin and theme ZIP packages.
+* 📁 **File Manager** — browse, preview, download, edit approved text, upload allowed files, and use private backups and trash under enforced Safe Mode rules.
 * 🛡️ **Safe Mode Debugger** — test plugin and theme conflict scenarios privately without affecting normal visitors.
 * 👥 **User Switcher** — temporarily enter an allowed user account for support without requesting or changing its password, then return securely.
 * 🎨 **Custom CSS & JS** — manage reusable administrator-authored CSS and JavaScript with frontend/admin scope, placement, priority, and inline or generated-file loading.
@@ -64,6 +65,7 @@ It brings debug logs, outgoing email history, server checks, cron inspection, da
 * Enabled Code Snippets execute locally authored PHP through the module's isolated runner. SiteIntelix does not retrieve or execute remote snippet code.
 * Custom CSS & JS can add administrator-authored executable JavaScript to configured frontend or admin pages.
 * User Switcher uses WordPress-native authentication, signed short-lived state, dedicated capabilities, protected roles, and optional local audit logs.
+* File Manager canonicalizes every path, blocks symbolic-link traversal and protected locations, and keeps PHP files view-only.
 * Debug logs, email logs, database values, diagnostic reports, and switching records can contain sensitive information and should be shared only with trusted people.
 
 = Shortcode =
@@ -121,7 +123,10 @@ Add `[siteintelix_panel]` to a page or post. Only administrators can see the out
 Yes. Site-scoped tools can be activated per site. Tools that can execute code, inspect network-wide database data, read installed source packages, write MU files, or change debug configuration require a Multisite super administrator.
 
 = What happens when I delete the plugin? =
-SiteIntelix removes its settings, scheduled events, logs, and only signature-verified SiteIntelix MU bootstrap files. Custom CSS & JS entries, generated assets, and Code Snippets are removed only when their independent uninstall-retention settings are enabled. SiteIntelix never deletes unverified MU files owned by another plugin and does not automatically undo a previously written `wp-config.php` debug block.
+SiteIntelix removes its settings, scheduled events, logs, and only signature-verified SiteIntelix MU bootstrap files. Custom CSS & JS entries, generated assets, Code Snippets, and File Manager-owned backups, trash, metadata, and audit records are removed only when their independent uninstall-retention settings are enabled. SiteIntelix never deletes unverified MU files owned by another plugin and does not automatically undo a previously written `wp-config.php` debug block.
+
+= Can File Manager edit PHP or WordPress core files? =
+No. File Manager is Safe Mode-only in this release. PHP files remain view-only, while WordPress core, `wp-config.php` writes, SiteIntelix, must-use plugins, active plugins, and the active theme are protected. WordPress' `DISALLOW_FILE_EDIT` and `DISALLOW_FILE_MODS` constants are also enforced.
 
 == Screenshots ==
 
@@ -138,6 +143,7 @@ SiteIntelix removes its settings, scheduled events, logs, and only signature-ver
 == Changelog ==
 
 = 2.7.3 — 2026-07-28 =
+* Added an optional Safe Mode-only File Manager with canonical path controls, view-only PHP, authenticated previews and downloads, backed-up atomic text editing, restricted uploads, private trash, retention, and audit controls.
 * Added Custom CSS & JS and isolated Code Snippets modules with focused management screens and module-specific settings.
 * Added a Media Library artwork selector for Maintenance Mode with responsive image output and automatic built-in SVG fallback.
 * Improved User Switcher recovery, admin-bar visibility, activity logging, and secure return-to-administrator handling.
@@ -173,14 +179,14 @@ Earlier release history remains available in previous WordPress.org tags.
 == Upgrade Notice ==
 
 = 2.7.3 =
-Security-focused major update with Custom CSS & JS, isolated Code Snippets, safer multisite permissions, and improved User Switcher recovery.
+Security-focused major update with Safe Mode File Manager, Custom CSS & JS, isolated Code Snippets, safer multisite permissions, and improved User Switcher recovery.
 
 = 2.7.2 =
 Recommended performance, security, accessibility, and admin workflow update for Debug Log, Email Log, Database Manager, and Server Diagnostics.
 
 == Privacy Policy ==
 
-SiteIntelix sends no telemetry and does not upload logs, email contents, database contents, snippets, custom code, or generated diagnostic reports. Stored logs, SMTP credentials, settings, snippets, and custom code remain in the WordPress installation and are available only through privileged administration interfaces. Enabled custom JavaScript and PHP snippets execute on the site according to their configured scope.
+SiteIntelix sends no telemetry and does not upload logs, email contents, database contents, snippets, custom code, File Manager data, or generated diagnostic reports. Stored logs, SMTP credentials, settings, snippets, custom code, and File Manager backups, trash, metadata, and audit records remain in the WordPress installation and are available only through privileged administration interfaces. Enabled custom JavaScript and PHP snippets execute on the site according to their configured scope.
 
 When an administrator runs or refreshes Server Diagnostics, reachability checks may make HTTP requests to WordPress.org endpoints and to the site's own loopback or REST URL. These requests include normal network metadata such as the site's public IP address and a SiteIntelix version user agent, but they do not include the contents of SiteIntelix reports.
 

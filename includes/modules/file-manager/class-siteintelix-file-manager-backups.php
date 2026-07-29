@@ -133,6 +133,48 @@ class SITEINTELIX_File_Manager_Backups {
 	}
 
 	/**
+	 * Remove a bounded number of expired or over-quota backups.
+	 *
+	 * @return int Number of removed backups.
+	 */
+	public function cleanup() {
+		$settings      = SITEINTELIX_File_Manager_Settings::get();
+		$retention     = max( 1, (int) $settings['backup_retention_days'] ) * DAY_IN_SECONDS;
+		$per_file      = max( 1, (int) $settings['backup_max_per_file'] );
+		$storage_limit = max( MB_IN_BYTES, (int) $settings['backup_max_storage_bytes'] );
+		$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
+		$cutoff        = time() - $retention;
+		$path_counts   = array();
+		$kept_bytes    = 0;
+		$removed       = 0;
+
+		foreach ( $this->all( 500 ) as $backup ) {
+			$path = (string) $backup['original_path'];
+			$path_counts[ $path ] = isset( $path_counts[ $path ] ) ? $path_counts[ $path ] + 1 : 1;
+			$payload = SITEINTELIX_File_Manager_Storage::path( 'backups/' . $backup['id'] );
+			$size    = is_file( $payload ) && ! is_link( $payload ) ? max( 0, (int) filesize( $payload ) ) : 0;
+			$created = strtotime( (string) $backup['created_at'] );
+			$expired = false === $created || $created < $cutoff;
+			$over_per_file = $path_counts[ $path ] > $per_file;
+			$over_storage  = $kept_bytes + $size > $storage_limit;
+
+			if ( $removed < $delete_limit && ( $expired || $over_per_file || $over_storage ) ) {
+				$deleted = SITEINTELIX_File_Manager_Storage::delete_owned_tree( 'backups', $backup['id'] );
+				if ( ! is_wp_error( $deleted ) ) {
+					$metadata_deleted = SITEINTELIX_File_Manager_Storage::delete_metadata( 'backups', $backup['id'] );
+					if ( ! is_wp_error( $metadata_deleted ) ) {
+						++$removed;
+						continue;
+					}
+				}
+			}
+			$kept_bytes += $size;
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * Restore a backup through the editor's atomic replacement primitive.
 	 *
 	 * @param string                          $id Backup ID.

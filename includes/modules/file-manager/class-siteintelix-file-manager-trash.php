@@ -105,6 +105,43 @@ class SITEINTELIX_File_Manager_Trash {
 	}
 
 	/**
+	 * Remove a bounded number of expired or over-quota trash entries.
+	 *
+	 * @return int Number of removed entries.
+	 */
+	public function cleanup() {
+		$settings = SITEINTELIX_File_Manager_Settings::get();
+		if ( empty( $settings['trash_auto_cleanup'] ) ) {
+			return 0;
+		}
+		$retention     = max( 1, (int) $settings['trash_retention_days'] ) * DAY_IN_SECONDS;
+		$storage_limit = max( MB_IN_BYTES, (int) $settings['trash_max_storage_bytes'] );
+		$delete_limit  = max( 1, min( 500, (int) apply_filters( 'siteintelix_file_manager_cleanup_batch_size', 100 ) ) );
+		$cutoff        = time() - $retention;
+		$kept_bytes    = 0;
+		$removed       = 0;
+
+		foreach ( $this->all( 500 ) as $entry ) {
+			$payload = SITEINTELIX_File_Manager_Storage::path( 'trash/' . $entry['id'] );
+			$size    = $this->payload_size( $payload, $storage_limit + 1 );
+			$created = strtotime( (string) $entry['created_at'] );
+			$expired = false === $created || $created < $cutoff;
+			$over_storage = $kept_bytes + $size > $storage_limit;
+
+			if ( $removed < $delete_limit && ( $expired || $over_storage ) ) {
+				$deleted = $this->permanently_delete( $entry['id'] );
+				if ( ! is_wp_error( $deleted ) ) {
+					++$removed;
+					continue;
+				}
+			}
+			$kept_bytes += $size;
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * Restore an entry to its original authorized location.
 	 *
 	 * @param string $id Trash identifier.
@@ -169,6 +206,43 @@ class SITEINTELIX_File_Manager_Trash {
 	private function directory_has_entries( $directory ) {
 		$iterator = new FilesystemIterator( $directory, FilesystemIterator::SKIP_DOTS );
 		return $iterator->valid();
+	}
+
+	/**
+	 * Return a bounded payload size without following symbolic links.
+	 *
+	 * @param string $path Payload.
+	 * @param int    $ceiling Stop counting after this value.
+	 * @return int
+	 */
+	private function payload_size( $path, $ceiling ) {
+		if ( is_link( $path ) || ! file_exists( $path ) ) {
+			return 0;
+		}
+		if ( is_file( $path ) ) {
+			return max( 0, (int) filesize( $path ) );
+		}
+		$size    = 0;
+		$scanned = 0;
+		try {
+			$iterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator( $path, FilesystemIterator::SKIP_DOTS )
+			);
+			foreach ( $iterator as $item ) {
+				if ( ++$scanned > 10000 || is_link( $item->getPathname() ) ) {
+					return $ceiling;
+				}
+				if ( $item->isFile() ) {
+					$size += max( 0, (int) $item->getSize() );
+					if ( $size >= $ceiling ) {
+						return $ceiling;
+					}
+				}
+			}
+		} catch ( UnexpectedValueException $exception ) {
+			return $ceiling;
+		}
+		return $size;
 	}
 
 	/**

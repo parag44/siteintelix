@@ -89,6 +89,58 @@ test('File Manager admin UI is accessible and its assets are screen-scoped', asy
 	assert.match(css, /prefers-reduced-motion/);
 });
 
+test('File Manager retention and uninstall lifecycle preserve site files', async () => {
+	const [main, module, backups, trash, storage, uninstall] = await Promise.all([
+		read('siteintelix.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-module.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-backups.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-trash.php'),
+		read('includes/modules/file-manager/class-siteintelix-file-manager-storage.php'),
+		read('uninstall.php'),
+	]);
+	assert.match(module, /add_action\(\s*'siteintelix_file_manager_cleanup'/);
+	assert.match(module, /wp_next_scheduled\(\s*'siteintelix_file_manager_cleanup'\s*\)/);
+	assert.match(module, /wp_schedule_event\([\s\S]*'daily'[\s\S]*'siteintelix_file_manager_cleanup'/);
+	assert.match(module, /SITEINTELIX_File_Manager_Backups[\s\S]*cleanup\(\)/);
+	assert.match(module, /SITEINTELIX_File_Manager_Trash[\s\S]*cleanup\(\)/);
+	assert.match(backups, /public function cleanup\(\)/);
+	assert.match(trash, /public function cleanup\(\)/);
+	assert.match(main, /SITEINTELIX_File_Manager_Module::deactivate\(\)/);
+	assert.match(module, /wp_clear_scheduled_hook\(\s*'siteintelix_file_manager_cleanup'\s*\)/);
+	assert.doesNotMatch(module, /function deactivate\(\)[\s\S]*delete_owned_tree/);
+
+	assert.match(uninstall, /get_option\(\s*'siteintelix_file_manager_settings'/);
+	assert.match(uninstall, /'siteintelix_file_manager_settings'/);
+	assert.match(uninstall, /remove_data_on_uninstall/);
+	assert.match(uninstall, /SITEINTELIX_File_Manager_Storage::delete_all_owned_data\(\)/);
+	assert.match(storage, /WP_CONTENT_DIR\s*\.\s*'\/siteintelix\/file-manager'/);
+	assert.match(storage, /public static function delete_all_owned_data\(\)/);
+	assert.match(storage, /is_link\(/);
+	assert.doesNotMatch(uninstall, /original_path[\s\S]*(?:unlink|rmdir|wp_delete_file)/);
+});
+
+test('File Manager release documentation describes Safe Mode boundaries', async () => {
+	const [readme, documentation] = await Promise.all([
+		read('readme.txt'),
+		read('docs/file-manager.md'),
+	]);
+	for (const phrase of [
+		'File Manager',
+		'Safe Mode',
+		'PHP',
+		'DISALLOW_FILE_EDIT',
+		'DISALLOW_FILE_MODS',
+		'multisite',
+		'retention',
+		'uninstall',
+	]) {
+		assert.match(documentation, new RegExp(phrase, 'i'));
+	}
+	assert.match(readme, /\*\*File Manager\*\*/);
+	assert.match(readme, /PHP files remain view-only/i);
+	assert.match(readme, /File Manager-owned backups, trash, metadata, and audit records/i);
+});
+
 test('shipped PHP files block direct access and dangerous process execution', async () => {
 	const phpFiles = (await listFiles(root)).filter((file) => file.endsWith('.php'));
 	let evalCount = 0;

@@ -167,6 +167,48 @@ class SITEINTELIX_File_Manager_Storage {
 	}
 
 	/**
+	 * Delete the complete fixed File Manager-owned root during opted-in uninstall.
+	 *
+	 * This method does not inspect or act on original paths stored in metadata.
+	 *
+	 * @return true|WP_Error
+	 */
+	public static function delete_all_owned_data() {
+		$expected   = untrailingslashit( wp_normalize_path( WP_CONTENT_DIR . '/siteintelix/file-manager' ) );
+		$configured = untrailingslashit( wp_normalize_path( self::path() ) );
+		if ( $configured !== $expected ) {
+			return self::error( 'invalid_owned_path', __( 'The File Manager storage path is invalid.', 'siteintelix' ) );
+		}
+		if ( ! file_exists( $expected ) && ! is_link( $expected ) ) {
+			return true;
+		}
+		if ( is_link( $expected ) || ! is_dir( $expected ) ) {
+			return self::error( 'symlink_blocked', __( 'Symbolic links cannot be removed by File Manager cleanup.', 'siteintelix' ) );
+		}
+		$real = realpath( $expected );
+		if ( false === $real || untrailingslashit( wp_normalize_path( $real ) ) !== $expected ) {
+			return self::error( 'invalid_owned_path', __( 'The File Manager storage path is invalid.', 'siteintelix' ) );
+		}
+		$iterator = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $real, FilesystemIterator::SKIP_DOTS ),
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
+		foreach ( $iterator as $item ) {
+			if ( is_link( $item->getPathname() ) ) {
+				return self::error( 'symlink_blocked', __( 'Symbolic links cannot be removed by File Manager cleanup.', 'siteintelix' ) );
+			}
+		}
+		$iterator->rewind();
+		foreach ( $iterator as $item ) {
+			$removed = $item->isDir() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
+			if ( ! $removed ) {
+				return self::error( 'delete_failed', __( 'The File Manager storage item could not be removed.', 'siteintelix' ) );
+			}
+		}
+		return rmdir( $real ) ? true : self::error( 'delete_failed', __( 'The File Manager storage item could not be removed.', 'siteintelix' ) );
+	}
+
+	/**
 	 * Atomically write bytes to an owned file.
 	 *
 	 * @param string $path Owned destination.

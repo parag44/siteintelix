@@ -34,6 +34,9 @@ class SITEINTELIX_File_Manager_Module {
 	 * @return void
 	 */
 	public static function init() {
+		add_action( 'siteintelix_file_manager_cleanup', array( __CLASS__, 'cleanup' ) );
+		self::schedule_cleanup();
+
 		if ( class_exists( 'SITEINTELIX_File_Manager_Admin' ) ) {
 			SITEINTELIX_File_Manager_Admin::init();
 		}
@@ -54,9 +57,45 @@ class SITEINTELIX_File_Manager_Module {
 		}
 
 		if ( class_exists( 'SITEINTELIX_File_Manager_Storage' ) ) {
-			return SITEINTELIX_File_Manager_Storage::ensure_directories();
+			$result = SITEINTELIX_File_Manager_Storage::ensure_directories();
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
 		}
 
+		self::schedule_cleanup();
 		return true;
+	}
+
+	/**
+	 * Stop scheduled work without deleting settings or owned data.
+	 *
+	 * @return void
+	 */
+	public static function deactivate() {
+		wp_clear_scheduled_hook( 'siteintelix_file_manager_cleanup' );
+	}
+
+	/**
+	 * Schedule bounded retention without creating duplicate events.
+	 *
+	 * @return void
+	 */
+	private static function schedule_cleanup() {
+		if ( ! wp_next_scheduled( 'siteintelix_file_manager_cleanup' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'siteintelix_file_manager_cleanup' );
+		}
+	}
+
+	/**
+	 * Apply backup and trash retention.
+	 *
+	 * @return void
+	 */
+	public static function cleanup() {
+		$backups = new SITEINTELIX_File_Manager_Backups();
+		$trash   = new SITEINTELIX_File_Manager_Trash();
+		$backups->cleanup();
+		$trash->cleanup();
 	}
 }

@@ -1101,6 +1101,13 @@ function siteintelix_deactivate_module_runtime( $module_id ) {
 			SITEINTELIX_User_Switcher_Activator::deactivate();
 		}
 	}
+
+	if ( 'file_manager' === $module_id ) {
+		siteintelix_load_module_class_for_management( $module_id );
+		if ( class_exists( 'SITEINTELIX_File_Manager_Module' ) ) {
+			SITEINTELIX_File_Manager_Module::deactivate();
+		}
+	}
 }
 
 /**
@@ -1365,6 +1372,11 @@ function siteintelix_deactivate() {
 
 	if ( class_exists( 'SITEINTELIX_MU_Files' ) ) {
 		SITEINTELIX_MU_Files::remove_all();
+	}
+
+	siteintelix_load_module_class_for_management( 'file_manager' );
+	if ( class_exists( 'SITEINTELIX_File_Manager_Module' ) ) {
+		SITEINTELIX_File_Manager_Module::deactivate();
 	}
 }
 register_deactivation_hook( __FILE__, 'siteintelix_deactivate' );

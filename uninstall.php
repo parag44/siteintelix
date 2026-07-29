@@ -24,6 +24,8 @@ if ( file_exists( $siteintelix_mu_files_class ) ) {
 $siteintelix_legacy_delete_custom_code = (bool) get_option( 'siteintelix_delete_custom_code_on_uninstall', false );
 $siteintelix_delete_custom_css_js      = (bool) get_option( 'siteintelix_delete_custom_css_js_on_uninstall', $siteintelix_legacy_delete_custom_code );
 $siteintelix_delete_code_snippets      = (bool) get_option( 'siteintelix_delete_code_snippets_on_uninstall', $siteintelix_legacy_delete_custom_code );
+$siteintelix_file_manager_settings     = get_option( 'siteintelix_file_manager_settings', array() );
+$siteintelix_delete_file_manager_data  = is_array( $siteintelix_file_manager_settings ) && ! empty( $siteintelix_file_manager_settings['remove_data_on_uninstall'] );
 
 // ---------------------------------------------------------------------------
 // Remove plugin options.
@@ -56,6 +58,7 @@ $siteintelix_options = array(
 	'siteintelix_delete_code_snippets_on_uninstall',
 	'siteintelix_custom_code_schema_version',
 	'siteintelix_snippets_schema_version',
+	'siteintelix_file_manager_settings',
 );
 
 // Remove only role capabilities that SiteIntelix recorded as module-managed.
@@ -78,6 +81,15 @@ delete_transient( 'siteintelix_overview_remote_health' );
 wp_clear_scheduled_hook( 'siteintelix_email_log_retention' );
 wp_clear_scheduled_hook( 'siteintelix_user_switcher_retention' );
 wp_clear_scheduled_hook( 'siteintelix_user_switcher_retention_continue' );
+wp_clear_scheduled_hook( 'siteintelix_file_manager_cleanup' );
+
+if ( $siteintelix_delete_file_manager_data ) {
+	$siteintelix_file_manager_storage_class = __DIR__ . '/includes/modules/file-manager/class-siteintelix-file-manager-storage.php';
+	if ( file_exists( $siteintelix_file_manager_storage_class ) ) {
+		require_once $siteintelix_file_manager_storage_class;
+		SITEINTELIX_File_Manager_Storage::delete_all_owned_data();
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Remove SiteIntelix-managed Custom Error UI drop-ins.
