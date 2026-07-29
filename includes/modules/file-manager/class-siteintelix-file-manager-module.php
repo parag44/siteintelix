@@ -12,6 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 $siteintelix_file_manager_dir = __DIR__ . '/';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-settings.php';
 require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-security.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-storage.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-redactor.php';
+require_once $siteintelix_file_manager_dir . 'class-siteintelix-file-manager-audit.php';
 
 /**
  * Coordinates the enabled File Manager services.
