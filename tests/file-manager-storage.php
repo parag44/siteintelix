@@ -7,9 +7,20 @@
 
 $siteintelix_test_root = sys_get_temp_dir() . '/siteintelix-fm-storage-' . bin2hex( random_bytes( 4 ) );
 mkdir( $siteintelix_test_root . '/wp-content', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/uploads/non-empty', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/plugins/siteintelix', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/themes/active', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/mu-plugins', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-content/languages', 0777, true );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/trash-me.txt', 'trash' );
+file_put_contents( $siteintelix_test_root . '/wp-content/uploads/non-empty/child.txt', 'child' );
+file_put_contents( $siteintelix_test_root . '/wp-content/plugins/siteintelix/siteintelix.php', '<?php' );
 
 define( 'ABSPATH', $siteintelix_test_root . '/' );
 define( 'WP_CONTENT_DIR', $siteintelix_test_root . '/wp-content' );
+define( 'WP_PLUGIN_DIR', $siteintelix_test_root . '/wp-content/plugins' );
+define( 'WPMU_PLUGIN_DIR', $siteintelix_test_root . '/wp-content/mu-plugins' );
+define( 'SITEINTELIX_PLUGIN_DIR', $siteintelix_test_root . '/wp-content/plugins/siteintelix/' );
 define( 'KB_IN_BYTES', 1024 );
 define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
 define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
@@ -40,6 +51,11 @@ function __( $text ) {
 function apply_filters( $hook, $value ) {
 	return $value;
 }
+function do_action() {
+}
+function sanitize_key( $value ) {
+	return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $value ) );
+}
 function wp_normalize_path( $path ) {
 	return str_replace( '\\', '/', (string) $path );
 }
@@ -62,6 +78,21 @@ function get_option( $key, $default = false ) {
 function get_current_user_id() {
 	return 7;
 }
+function wp_upload_dir() {
+	return array( 'basedir' => WP_CONTENT_DIR . '/uploads' );
+}
+function get_theme_root() {
+	return WP_CONTENT_DIR . '/themes';
+}
+function get_stylesheet_directory() {
+	return WP_CONTENT_DIR . '/themes/active';
+}
+function is_multisite() {
+	return false;
+}
+function current_user_can( $capability ) {
+	return true;
+}
 function siteintelix_test_assert( $condition, $message ) {
 	if ( ! $condition ) {
 		fwrite( STDERR, "FAIL: {$message}\n" );
@@ -78,6 +109,16 @@ siteintelix_test_assert( file_exists( $siteintelix_audit_class ), 'audit class e
 require_once $siteintelix_storage_class;
 require_once $siteintelix_redactor_class;
 require_once $siteintelix_audit_class;
+
+$siteintelix_settings_class = dirname( __DIR__ ) . '/includes/modules/file-manager/class-siteintelix-file-manager-settings.php';
+$siteintelix_security_class = dirname( __DIR__ ) . '/includes/modules/file-manager/class-siteintelix-file-manager-security.php';
+$siteintelix_trash_class = dirname( __DIR__ ) . '/includes/modules/file-manager/class-siteintelix-file-manager-trash.php';
+siteintelix_test_assert( file_exists( $siteintelix_settings_class ), 'settings class exists' );
+siteintelix_test_assert( file_exists( $siteintelix_security_class ), 'security class exists' );
+siteintelix_test_assert( file_exists( $siteintelix_trash_class ), 'trash class exists' );
+require_once $siteintelix_settings_class;
+require_once $siteintelix_security_class;
+require_once $siteintelix_trash_class;
 
 $created = SITEINTELIX_File_Manager_Storage::ensure_directories();
 siteintelix_test_assert( true === $created, 'owned directories are initialized' );
@@ -128,5 +169,25 @@ $audit_lines = file( SITEINTELIX_File_Manager_Audit::log_path(), FILE_IGNORE_NEW
 $audit = json_decode( end( $audit_lines ), true );
 siteintelix_test_assert( array( 'user_id', 'timestamp', 'operation', 'path', 'result', 'error_category' ) === array_keys( $audit ), 'audit schema is minimal and stable' );
 siteintelix_test_assert( false === strpos( json_encode( $audit ), 'secret' ), 'audit record has no content' );
+
+$trash = new SITEINTELIX_File_Manager_Trash( new SITEINTELIX_File_Manager_Security() );
+$trashed = $trash->trash( 'wp-content/uploads/trash-me.txt', false );
+siteintelix_test_assert( ! is_wp_error( $trashed ) && ! file_exists( $siteintelix_test_root . '/wp-content/uploads/trash-me.txt' ), 'file is moved to trash' );
+$restored = $trash->restore( $trashed['id'] );
+siteintelix_test_assert( ! is_wp_error( $restored ) && is_file( $siteintelix_test_root . '/wp-content/uploads/trash-me.txt' ), 'trashed file is restored' );
+
+$blocked_directory = $trash->trash( 'wp-content/uploads/non-empty', false );
+siteintelix_test_assert( is_wp_error( $blocked_directory ), 'non-empty directory requires confirmation' );
+$trashed_directory = $trash->trash( 'wp-content/uploads/non-empty', true );
+siteintelix_test_assert( ! is_wp_error( $trashed_directory ), 'confirmed non-empty directory is trashed' );
+mkdir( $siteintelix_test_root . '/wp-content/uploads/non-empty' );
+siteintelix_test_assert( is_wp_error( $trash->restore( $trashed_directory['id'] ) ), 'restore collision never overwrites' );
+rmdir( $siteintelix_test_root . '/wp-content/uploads/non-empty' );
+siteintelix_test_assert( ! is_wp_error( $trash->restore( $trashed_directory['id'] ) ), 'directory restore succeeds after collision is removed' );
+
+$permanent = $trash->trash( 'wp-content/uploads/trash-me.txt', false );
+siteintelix_test_assert( ! is_wp_error( $permanent ), 'file can be trashed again' );
+siteintelix_test_assert( true === $trash->permanently_delete( $permanent['id'] ), 'owned trash item is permanently deleted' );
+siteintelix_test_assert( is_wp_error( $trash->trash( 'wp-content/plugins/siteintelix/siteintelix.php', false ) ), 'protected plugin file cannot be trashed' );
 
 echo "File Manager storage tests passed.\n";

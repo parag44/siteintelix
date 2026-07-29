@@ -101,6 +101,27 @@ class SITEINTELIX_File_Manager_Storage {
 	}
 
 	/**
+	 * Delete one owned metadata record.
+	 *
+	 * @param string $area backups or trash.
+	 * @param string $id Owned identifier.
+	 * @return true|WP_Error
+	 */
+	public static function delete_metadata( $area, $id ) {
+		if ( ! self::valid_identifier( $area, $id ) ) {
+			return self::error( 'invalid_metadata', __( 'File Manager metadata is invalid.', 'siteintelix' ) );
+		}
+		$path = self::metadata_path( $area, $id );
+		if ( ! file_exists( $path ) ) {
+			return true;
+		}
+		if ( is_link( $path ) || ! is_file( $path ) ) {
+			return self::error( 'invalid_metadata', __( 'File Manager metadata is invalid.', 'siteintelix' ) );
+		}
+		return unlink( $path ) ? true : self::error( 'delete_failed', __( 'File Manager metadata could not be removed.', 'siteintelix' ) );
+	}
+
+	/**
 	 * Delete one owned payload tree without following links.
 	 *
 	 * @param string $area backups or trash.
