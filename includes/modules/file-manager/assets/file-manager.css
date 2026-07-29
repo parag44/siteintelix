@@ -726,7 +726,7 @@
 
 	.sitx-fm-tree {
 		left: 160px;
-		transform: translateX(-120%);
+		transform: translateX(calc(-100% - 160px));
 	}
 
 	.sitx-fm-details {

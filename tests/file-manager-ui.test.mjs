@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const scriptUrl = new URL('../includes/modules/file-manager/assets/file-manager.js', import.meta.url);
+const stylesheetUrl = new URL('../includes/modules/file-manager/assets/file-manager.css', import.meta.url);
 
 async function loadHelpers() {
 	const source = await readFile(scriptUrl, 'utf8');
@@ -137,4 +138,10 @@ test('client posts only fixed localized actions with operation-specific nonces',
 	assert.match(source, /data\.nonces\[action\]/);
 	assert.doesNotMatch(source, /eval\s*\(/);
 	assert.doesNotMatch(source, /new Function\s*\(/);
+});
+
+test('responsive folder drawer clears the WordPress admin menu when closed', async () => {
+	const css = await readFile(stylesheetUrl, 'utf8');
+
+	assert.match(css, /\.sitx-fm-tree\s*\{[\s\S]*?left:\s*160px;[\s\S]*?transform:\s*translateX\(calc\(-100%\s*-\s*160px\)\);/);
 });
