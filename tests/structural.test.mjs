@@ -111,6 +111,26 @@ test('File Manager uses one safely rendered folder SVG in every admin context', 
 	assert.doesNotMatch(registry, /'file_manager'[\s\S]{0,600}'icon'\s*=>\s*'dashicons-open-folder'/);
 });
 
+test('File Manager browser exposes the approved desktop workspace shell', async () => {
+	const [toolbar, table, details, modals] = await Promise.all([
+		read('includes/modules/file-manager/views/partials/toolbar.php'),
+		read('includes/modules/file-manager/views/partials/file-table.php'),
+		read('includes/modules/file-manager/views/partials/details-panel.php'),
+		read('includes/modules/file-manager/views/partials/modals.php'),
+	]);
+
+	assert.match(toolbar, /sitx-fm-toolbar__icon/);
+	assert.match(toolbar, /dashicons-arrow-left-alt2/);
+	assert.match(toolbar, /dashicons-plus-alt2/);
+	assert.doesNotMatch(table, />Actions</);
+	assert.match(table, /sitx-fm-table__menu-column/);
+	assert.match(table, /Item menu/);
+	assert.match(details, /data-fm-details-icon/);
+	assert.doesNotMatch(details, /data-fm-details-actions/);
+	assert.match(modals, /data-fm-context-menu/);
+	assert.match(modals, /role="menu"/);
+});
+
 test('File Manager retention and uninstall lifecycle preserve site files', async () => {
 	const [main, module, backups, trash, storage, uninstall] = await Promise.all([
 		read('siteintelix.php'),

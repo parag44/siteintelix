@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 				<th scope="col"><button type="button" data-fm-sort="modified"><?php esc_html_e( 'Modified', 'siteintelix' ); ?></button></th>
 				<th scope="col"><?php esc_html_e( 'Permissions', 'siteintelix' ); ?></th>
 				<th scope="col"><?php esc_html_e( 'Writable', 'siteintelix' ); ?></th>
-				<th scope="col"><?php esc_html_e( 'Actions', 'siteintelix' ); ?></th>
+				<th scope="col" class="sitx-fm-table__menu-column"><span class="screen-reader-text"><?php esc_html_e( 'Item menu', 'siteintelix' ); ?></span></th>
 			</tr></thead>
 			<tbody></tbody>
 		</table>

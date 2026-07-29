@@ -14,4 +14,5 @@ defined( 'ABSPATH' ) || exit;
 		<div class="sitx-fm-modal__actions"><button type="button" class="si-button si-button--secondary" data-fm-modal-cancel><?php esc_html_e( 'Cancel', 'siteintelix' ); ?></button><button type="button" class="si-button si-button--primary" data-fm-modal-confirm><?php esc_html_e( 'Confirm', 'siteintelix' ); ?></button></div>
 	</div>
 </div>
+<div class="sitx-fm-context-menu" data-fm-context-menu role="menu" aria-label="<?php esc_attr_e( 'Item actions', 'siteintelix' ); ?>" hidden></div>
 <input type="file" data-fm-upload-input multiple hidden>
