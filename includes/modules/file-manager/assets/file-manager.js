@@ -58,11 +58,87 @@
 		return value === 'desc' ? 'desc' : 'asc';
 	}
 
+	var fileCategories = {
+		php: ['php', 'phtml'],
+		javascript: ['js', 'mjs', 'json'],
+		css: ['css', 'scss', 'sass', 'less'],
+		html: ['html', 'htm', 'xml'],
+		text: ['txt', 'md', 'log', 'ini', 'conf', 'config', 'env', 'htaccess'],
+		image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'avif'],
+		archive: ['zip', 'tar', 'gz', 'gzip', 'tgz', 'bz2', '7z'],
+		document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv'],
+		media: ['mp3', 'wav', 'ogg', 'mp4', 'webm', 'mov'],
+	};
+
+	function itemExtension(item) {
+		var supplied = String((item && item.extension) || '').toLowerCase().replace(/^\./, '');
+		var name = String((item && item.name) || '');
+		if (name.charAt(0) === '.' && name.indexOf('.', 1) === -1) {
+			return name.slice(1).toLowerCase();
+		}
+		var suffix = name.indexOf('.') === -1 ? '' : name.split('.').pop().toLowerCase();
+		return supplied || suffix;
+	}
+
+	function fileCategory(item) {
+		if (item && item.type === 'directory') {
+			return 'folder';
+		}
+		var extension = itemExtension(item);
+		var category = Object.keys(fileCategories).find(function (key) {
+			return fileCategories[key].indexOf(extension) !== -1;
+		});
+		return category || 'file';
+	}
+
+	var contextActionMap = {
+		open: { id: 'open', label: 'Open', icon: 'dashicons-external' },
+		view: { id: 'view', label: 'Preview', icon: 'dashicons-visibility' },
+		details: { id: 'details', label: 'View details', icon: 'dashicons-info-outline' },
+		edit: { id: 'edit', label: 'Edit', icon: 'dashicons-edit-page' },
+		download: { id: 'download', label: 'Download', icon: 'dashicons-download' },
+		rename: { id: 'rename', label: 'Rename', icon: 'dashicons-edit' },
+		trash: { id: 'trash', label: 'Move to Trash', icon: 'dashicons-trash', destructive: true },
+	};
+
+	function contextActions(item) {
+		var available = (item && Array.isArray(item.actions)) ? item.actions : [];
+		return ['open', 'view', 'details', 'edit', 'download', 'rename', 'trash'].filter(function (id) {
+			return available.indexOf(id) !== -1;
+		}).map(function (id) {
+			return contextActionMap[id];
+		});
+	}
+
+	function primaryAction(item) {
+		var available = contextActions(item).map(function (action) {
+			return action.id;
+		});
+		var order = item && item.type === 'directory'
+			? ['open', 'details']
+			: ['open', 'view', 'edit', 'details'];
+		return order.find(function (id) {
+			return available.indexOf(id) !== -1;
+		}) || null;
+	}
+
+	function clampMenuPosition(point, menu, viewport) {
+		var padding = Number(viewport.padding || 0);
+		return {
+			left: Math.max(padding, Math.min(Number(point.x), Number(viewport.width) - Number(menu.width) - padding)),
+			top: Math.max(padding, Math.min(Number(point.y), Number(viewport.height) - Number(menu.height) - padding)),
+		};
+	}
+
 	global.siteintelixFileManagerTest = {
 		createHistory: createHistory,
 		debounce: debounce,
 		normalizeSort: normalizeSort,
 		normalizeOrder: normalizeOrder,
+		fileCategory: fileCategory,
+		contextActions: contextActions,
+		primaryAction: primaryAction,
+		clampMenuPosition: clampMenuPosition,
 	};
 
 	if (typeof document === 'undefined') {

@@ -61,6 +61,50 @@ test('sort parameters are restricted to the server allowlist', async () => {
 	assert.equal(helpers.normalizeOrder('sideways'), 'asc');
 });
 
+test('file categories are normalized to a fixed visual allowlist', async () => {
+	const { helpers } = await loadHelpers();
+
+	assert.equal(helpers.fileCategory({ type: 'directory', name: 'plugins' }), 'folder');
+	assert.equal(helpers.fileCategory({ type: 'file', name: 'plugin.php', extension: 'PHP' }), 'php');
+	assert.equal(helpers.fileCategory({ type: 'file', name: 'admin.css' }), 'css');
+	assert.equal(helpers.fileCategory({ type: 'file', name: 'photo.webp' }), 'image');
+	assert.equal(helpers.fileCategory({ type: 'file', name: 'bundle.zip' }), 'archive');
+	assert.equal(helpers.fileCategory({ type: 'file', name: '.env' }), 'text');
+	assert.equal(helpers.fileCategory({ type: 'file', name: 'unknown.xyz' }), 'file');
+});
+
+test('context actions preserve server permissions and stable labels', async () => {
+	const { helpers } = await loadHelpers();
+	const actions = helpers.contextActions({
+		type: 'file',
+		actions: ['open', 'details', 'download', 'rename', 'trash', 'arbitrary'],
+	});
+
+	assert.deepEqual(
+		Array.from(actions, (action) => `${action.id}:${action.label}:${action.icon}`),
+		[
+			'open:Open:dashicons-external',
+			'details:View details:dashicons-info-outline',
+			'download:Download:dashicons-download',
+			'rename:Rename:dashicons-edit',
+			'trash:Move to Trash:dashicons-trash',
+		],
+	);
+	assert.deepEqual(Array.from(helpers.contextActions({ type: 'file', actions: ['details'] }), (action) => action.id), ['details']);
+});
+
+test('primary actions and context-menu coordinates follow desktop conventions', async () => {
+	const { helpers } = await loadHelpers();
+
+	assert.equal(helpers.primaryAction({ type: 'directory', actions: ['open', 'details'] }), 'open');
+	assert.equal(helpers.primaryAction({ type: 'file', actions: ['edit', 'details'] }), 'edit');
+	assert.equal(helpers.primaryAction({ type: 'file', actions: ['details'] }), 'details');
+	assert.deepEqual(
+		{ ...helpers.clampMenuPosition({ x: 790, y: 590 }, { width: 180, height: 220 }, { width: 800, height: 600, padding: 8 }) },
+		{ left: 612, top: 372 },
+	);
+});
+
 test('client rendering uses safe DOM assignment and accessible modal behavior', async () => {
 	const { source } = await loadHelpers();
 
