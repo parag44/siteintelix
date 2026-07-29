@@ -139,6 +139,7 @@ SiteIntelix removes its settings, scheduled events, logs, and only signature-ver
 
 = 2.7.3 — 2026-07-28 =
 * Added Custom CSS & JS and isolated Code Snippets modules with focused management screens and module-specific settings.
+* Added a Media Library artwork selector for Maintenance Mode with responsive image output and automatic built-in SVG fallback.
 * Improved User Switcher recovery, admin-bar visibility, activity logging, and secure return-to-administrator handling.
 * Hardened sensitive tools, generated files, MU bootstrap ownership checks, transient previews, SMTP credential storage, and download responses.
 * Fixed the early Code Snippets bootstrap order so the security policy is available before active snippets run.
