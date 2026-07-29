@@ -52,8 +52,8 @@ if ( ! preg_match( '/function authorize\([\s\S]*is_user_logged_in\(\)[\s\S]*curr
 	fwrite( STDERR, "FAIL: request guard order is incomplete\n" );
 	exit( 1 );
 }
-if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_file' ) || false === strpos( $source, 'admin_post_siteintelix_save_file_manager_settings' ) ) {
-	fwrite( STDERR, "FAIL: download or settings handler is missing\n" );
+if ( false === strpos( $source, 'admin_post_siteintelix_fm_download_file' ) || false === strpos( $source, 'admin_post_siteintelix_fm_preview_image' ) || false === strpos( $source, 'admin_post_siteintelix_save_file_manager_settings' ) ) {
+	fwrite( STDERR, "FAIL: download, image preview, or settings handler is missing\n" );
 	exit( 1 );
 }
 

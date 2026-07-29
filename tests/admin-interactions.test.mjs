@@ -24,14 +24,16 @@ test('Settings tabs expose complete accessible relationships and search feedback
 });
 
 test('Plugin preserves WordPress notices and avoids native prompt/confirm dialogs', async () => {
-	const [main, shared, email] = await Promise.all([
+	const [main, shared, email, fileManager] = await Promise.all([
 		read('siteintelix.php'),
 		read('assets/admin/js/siteintelix-admin.js'),
 		read('assets/admin/js/siteintelix-email-log.js'),
+		read('includes/modules/file-manager/assets/file-manager.js').catch(() => ''),
 	]);
 	assert.doesNotMatch(main, /remove_all_actions\(\s*['"](?:admin_notices|all_admin_notices|network_admin_notices|user_admin_notices)/);
 	assert.doesNotMatch(shared, /window\.(?:prompt|confirm)\s*\(/);
 	assert.doesNotMatch(email, /window\.(?:prompt|confirm)\s*\(/);
+	assert.doesNotMatch(fileManager, /window\.(?:prompt|confirm)\s*\(/);
 	assert.match(shared, /role/);
 	assert.match(shared, /aria-live/);
 });

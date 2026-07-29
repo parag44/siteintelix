@@ -267,6 +267,50 @@ class SITEINTELIX_File_Manager_Filesystem {
 	}
 
 	/**
+	 * Stream an authorized raster image for an inline admin preview.
+	 *
+	 * @param string $path Relative path.
+	 * @return true|WP_Error
+	 */
+	public function stream_image( $path ) {
+		$file = $this->security->authorize_path( $path, 'preview' );
+		if ( is_wp_error( $file ) ) {
+			return $file;
+		}
+		$extension = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+		if ( ! is_file( $file ) || ! is_readable( $file ) || is_link( $file ) || ! in_array( $extension, array( 'jpg', 'jpeg', 'png', 'gif', 'webp' ), true ) ) {
+			return $this->error( 'invalid_image', __( 'This image cannot be previewed.', 'siteintelix' ) );
+		}
+		$maximum = (int) apply_filters( 'siteintelix_file_manager_preview_max_bytes', SITEINTELIX_File_Manager_Settings::get()['preview_max_bytes'] );
+		if ( filesize( $file ) > $maximum ) {
+			return $this->error( 'file_too_large', __( 'This image is too large to preview inline.', 'siteintelix' ) );
+		}
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+		header( 'Content-Type: ' . $this->mime( $file ) );
+		header( 'Content-Disposition: inline; filename="siteintelix-preview.' . $extension . '"' );
+		header( 'Content-Length: ' . (string) filesize( $file ) );
+		header( 'Cache-Control: no-store, private' );
+		header( 'Content-Security-Policy: default-src \'none\'' );
+		header( 'X-Content-Type-Options: nosniff' );
+		$handle = fopen( $file, 'rb' );
+		if ( false === $handle ) {
+			return $this->error( 'unreadable_file', __( 'This image cannot be previewed.', 'siteintelix' ) );
+		}
+		while ( ! feof( $handle ) ) {
+			$chunk = fread( $handle, 65536 );
+			if ( false === $chunk ) {
+				fclose( $handle );
+				return $this->error( 'preview_failed', __( 'The image preview could not be completed.', 'siteintelix' ) );
+			}
+			echo $chunk; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Authenticated binary image stream.
+		}
+		fclose( $handle );
+		return true;
+	}
+
+	/**
 	 * Create an authorized directory.
 	 *
 	 * @param string $parent Relative parent.

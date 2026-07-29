@@ -114,6 +114,7 @@ class SITEINTELIX_File_Manager_Admin {
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'downloadUrl'    => admin_url( 'admin-post.php' ),
 				'downloadNonce'  => wp_create_nonce( 'siteintelix_fm_download_file' ),
+				'previewNonce'   => wp_create_nonce( 'siteintelix_fm_preview_image' ),
 				'nonces'         => $nonces,
 				'startPath'      => (string) $settings['start_directory'],
 				'editorSettings' => is_array( $editor_settings ) ? $editor_settings : array(),

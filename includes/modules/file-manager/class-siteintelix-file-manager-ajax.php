@@ -35,6 +35,7 @@ class SITEINTELIX_File_Manager_Ajax {
 		add_action( 'wp_ajax_siteintelix_fm_list_backups', array( __CLASS__, 'list_backups' ) );
 		add_action( 'wp_ajax_siteintelix_fm_restore_backup', array( __CLASS__, 'restore_backup' ) );
 		add_action( 'admin_post_siteintelix_fm_download_file', array( __CLASS__, 'download_file' ) );
+		add_action( 'admin_post_siteintelix_fm_preview_image', array( __CLASS__, 'preview_image' ) );
 		add_action( 'admin_post_siteintelix_save_file_manager_settings', array( __CLASS__, 'save_settings' ) );
 	}
 
@@ -246,6 +247,25 @@ class SITEINTELIX_File_Manager_Ajax {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- check_admin_referer() verified this request.
 		$path   = isset( $_GET['path'] ) ? wp_unslash( $_GET['path'] ) : '';
 		$result = ( new SITEINTELIX_File_Manager_Filesystem() )->stream_file( is_string( $path ) ? $path : '' );
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ) );
+		}
+		exit;
+	}
+
+	/**
+	 * Stream one authenticated inline image preview.
+	 *
+	 * @return void
+	 */
+	public static function preview_image() {
+		if ( ! is_user_logged_in() || ! SITEINTELIX_File_Manager_Security::current_user_can_manage() ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'siteintelix' ) );
+		}
+		check_admin_referer( 'siteintelix_fm_preview_image' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- check_admin_referer() verified this request.
+		$path   = isset( $_GET['path'] ) ? wp_unslash( $_GET['path'] ) : '';
+		$result = ( new SITEINTELIX_File_Manager_Filesystem() )->stream_image( is_string( $path ) ? $path : '' );
 		if ( is_wp_error( $result ) ) {
 			wp_die( esc_html( $result->get_error_message() ) );
 		}
