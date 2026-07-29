@@ -14,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SITEINTELIX_File_Manager_Storage {
 
+	/** @var array<string,array{handle:resource,count:int}> */
+	private static $locks = array();
+
 	/**
 	 * Return an owned path.
 	 *
@@ -264,11 +267,16 @@ class SITEINTELIX_File_Manager_Storage {
 		if ( '' === trim( (string) $key ) ) {
 			return self::error( 'invalid_lock', __( 'The File Manager operation lock is invalid.', 'siteintelix' ) );
 		}
+		$lock_id = hash( 'sha256', wp_normalize_path( (string) $key ) );
+		if ( isset( self::$locks[ $lock_id ] ) && is_resource( self::$locks[ $lock_id ]['handle'] ) ) {
+			++self::$locks[ $lock_id ]['count'];
+			return self::$locks[ $lock_id ]['handle'];
+		}
 		$ready = self::ensure_directories();
 		if ( is_wp_error( $ready ) ) {
 			return $ready;
 		}
-		$path   = self::path( 'meta/operation-' . hash( 'sha256', wp_normalize_path( (string) $key ) ) . '.lock' );
+		$path   = self::path( 'meta/operation-' . $lock_id . '.lock' );
 		$handle = fopen( $path, 'c+b' );
 		if ( false === $handle || ! flock( $handle, LOCK_EX ) ) {
 			if ( is_resource( $handle ) ) {
@@ -277,6 +285,10 @@ class SITEINTELIX_File_Manager_Storage {
 			return self::error( 'lock_failed', __( 'The File Manager operation could not be locked safely.', 'siteintelix' ) );
 		}
 		chmod( $path, 0640 );
+		self::$locks[ $lock_id ] = array(
+			'handle' => $handle,
+			'count'  => 1,
+		);
 		return $handle;
 	}
 
@@ -287,9 +299,21 @@ class SITEINTELIX_File_Manager_Storage {
 	 * @return void
 	 */
 	public static function release_lock( $handle ) {
-		if ( is_resource( $handle ) ) {
+		if ( ! is_resource( $handle ) ) {
+			return;
+		}
+		foreach ( self::$locks as $lock_id => $lock ) {
+			if ( $lock['handle'] !== $handle ) {
+				continue;
+			}
+			--self::$locks[ $lock_id ]['count'];
+			if ( self::$locks[ $lock_id ]['count'] > 0 ) {
+				return;
+			}
+			unset( self::$locks[ $lock_id ] );
 			flock( $handle, LOCK_UN );
 			fclose( $handle );
+			return;
 		}
 	}
 

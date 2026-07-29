@@ -122,6 +122,13 @@ require_once $siteintelix_trash_class;
 
 $created = SITEINTELIX_File_Manager_Storage::ensure_directories();
 siteintelix_test_assert( true === $created, 'owned directories are initialized' );
+$first_lock  = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+$nested_lock = SITEINTELIX_File_Manager_Storage::acquire_lock( 'mutation:global' );
+siteintelix_test_assert( is_resource( $first_lock ) && $first_lock === $nested_lock, 'nested mutations reuse the process-local lock handle' );
+SITEINTELIX_File_Manager_Storage::release_lock( $nested_lock );
+siteintelix_test_assert( is_resource( $first_lock ), 'nested release preserves the outer mutation lock' );
+SITEINTELIX_File_Manager_Storage::release_lock( $first_lock );
+siteintelix_test_assert( ! is_resource( $first_lock ), 'outer release closes the mutation lock handle' );
 foreach ( array( 'backups', 'trash', 'meta', 'audit' ) as $area ) {
 	siteintelix_test_assert( is_dir( SITEINTELIX_File_Manager_Storage::path( $area ) ), "{$area} directory exists" );
 	siteintelix_test_assert( is_file( SITEINTELIX_File_Manager_Storage::path( $area . '/index.php' ) ), "{$area} has an index guard" );
