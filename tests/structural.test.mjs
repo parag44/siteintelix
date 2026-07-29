@@ -131,6 +131,22 @@ test('File Manager browser exposes the approved desktop workspace shell', async 
 	assert.match(modals, /role="menu"/);
 });
 
+test('File Manager workspace matches the approved contained three-pane design', async () => {
+	const css = await read('includes/modules/file-manager/assets/file-manager.css');
+
+	assert.match(css, /\.sitx-fm-browser\s*\{[\s\S]*overflow:\s*hidden/);
+	assert.match(css, /\.sitx-fm-workspace\s*\{[\s\S]*height:\s*clamp\(/);
+	assert.match(css, /\.sitx-fm-tree,[\s\S]*\.sitx-fm-files,[\s\S]*\.sitx-fm-details\s*\{[\s\S]*min-height:\s*0/);
+	assert.match(css, /\.sitx-fm-tree\s*\{[\s\S]*overflow-y:\s*auto/);
+	assert.match(css, /\.sitx-fm-table-scroll\s*\{[\s\S]*height:\s*100%[\s\S]*overflow:\s*auto/);
+	assert.match(css, /\.sitx-fm-details\s*\{[\s\S]*overflow-y:\s*auto/);
+	assert.match(css, /\.sitx-fm-table thead\s*\{[\s\S]*position:\s*sticky/);
+	assert.match(css, /\.sitx-fm-file-icon--folder/);
+	assert.match(css, /\.sitx-fm-context-menu\s*\{[\s\S]*position:\s*fixed/);
+	assert.match(css, /\.sitx-fm-table tbody tr\.is-selected/);
+	assert.match(css, /@media \(max-width:\s*1100px\)/);
+});
+
 test('File Manager retention and uninstall lifecycle preserve site files', async () => {
 	const [main, module, backups, trash, storage, uninstall] = await Promise.all([
 		read('siteintelix.php'),
