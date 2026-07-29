@@ -106,6 +106,20 @@ test('primary actions and context-menu coordinates follow desktop conventions', 
 	);
 });
 
+test('row primary actions ignore interactive descendants', async () => {
+	const { helpers } = await loadHelpers();
+	const interactiveTarget = {
+		closest: (selector) => selector.includes('button') ? {} : null,
+	};
+	const plainTarget = {
+		closest: () => null,
+	};
+
+	assert.equal(helpers.shouldHandleRowAction(interactiveTarget), false);
+	assert.equal(helpers.shouldHandleRowAction(plainTarget), true);
+	assert.equal(helpers.shouldHandleRowAction(null), true);
+});
+
 test('client rendering uses safe DOM assignment and accessible modal behavior', async () => {
 	const { source } = await loadHelpers();
 
@@ -128,6 +142,10 @@ test('client rendering uses safe DOM assignment and accessible modal behavior', 
 	assert.match(source, /addEventListener\(\s*'contextmenu'/);
 	assert.match(source, /data-fm-row-menu/);
 	assert.match(source, /detailsRequestId/);
+	assert.match(source, /event\.key\s*===\s*' '\s*\|\|\s*event\.key\s*===\s*'Spacebar'/);
+	assert.match(source, /document\.activeElement\.click\(\)/);
+	assert.match(source, /setPanelOpen/);
+	assert.match(source, /matchMedia\(\s*'\(max-width: 1100px\)'\s*\)/);
 	assert.doesNotMatch(source, /data-fm-details-actions/);
 });
 
@@ -144,4 +162,6 @@ test('responsive folder drawer clears the WordPress admin menu when closed', asy
 	const css = await readFile(stylesheetUrl, 'utf8');
 
 	assert.match(css, /\.sitx-fm-tree\s*\{[\s\S]*?left:\s*160px;[\s\S]*?transform:\s*translateX\(calc\(-100%\s*-\s*160px\)\);/);
+	assert.match(css, /body\.auto-fold \.sitx-fm-tree,[\s\S]*body\.folded \.sitx-fm-tree\s*\{[\s\S]*?left:\s*36px;[\s\S]*?translateX\(calc\(-100%\s*-\s*36px\)\)/);
+	assert.match(css, /body\.auto-fold \.sitx-fm-tree\.is-open,[\s\S]*body\.folded \.sitx-fm-tree\.is-open\s*\{[\s\S]*?transform:\s*translateX\(0\)/);
 });

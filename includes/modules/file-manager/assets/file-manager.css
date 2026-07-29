@@ -150,6 +150,19 @@
 	overflow: hidden;
 }
 
+.sitx-file-manager.is-tree-collapsed {
+	--sitx-fm-tree: 0px;
+}
+
+.sitx-file-manager.is-details-collapsed {
+	--sitx-fm-details: 0px;
+}
+
+.sitx-file-manager.is-tree-collapsed .sitx-fm-tree,
+.sitx-file-manager.is-details-collapsed .sitx-fm-details {
+	display: none;
+}
+
 .sitx-fm-tree,
 .sitx-fm-files,
 .sitx-fm-details {
@@ -729,6 +742,12 @@
 		transform: translateX(calc(-100% - 160px));
 	}
 
+	body.auto-fold .sitx-fm-tree,
+	body.folded .sitx-fm-tree {
+		left: 36px;
+		transform: translateX(calc(-100% - 36px));
+	}
+
 	.sitx-fm-details {
 		right: 0;
 		transform: translateX(120%);
@@ -739,6 +758,11 @@
 		transform: translateX(0);
 	}
 
+	body.auto-fold .sitx-fm-tree.is-open,
+	body.folded .sitx-fm-tree.is-open {
+		transform: translateX(0);
+	}
+
 	.sitx-fm-panel-heading button {
 		display: inline-grid;
 		place-items: center;
@@ -746,8 +770,11 @@
 }
 
 @media (max-width: 782px) {
-	.sitx-fm-tree {
+	.sitx-fm-tree,
+	body.auto-fold .sitx-fm-tree,
+	body.folded .sitx-fm-tree {
 		left: 0;
+		transform: translateX(-100%);
 	}
 
 	.sitx-fm-editor {

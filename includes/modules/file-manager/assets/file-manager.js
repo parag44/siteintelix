@@ -130,6 +130,13 @@
 		};
 	}
 
+	function shouldHandleRowAction(target) {
+		if (!target || typeof target.closest !== 'function') {
+			return true;
+		}
+		return !target.closest('button, a, input, select, textarea, [role="button"], [role="menuitem"]');
+	}
+
 	global.siteintelixFileManagerTest = {
 		createHistory: createHistory,
 		debounce: debounce,
@@ -139,6 +146,7 @@
 		contextActions: contextActions,
 		primaryAction: primaryAction,
 		clampMenuPosition: clampMenuPosition,
+		shouldHandleRowAction: shouldHandleRowAction,
 	};
 
 	if (typeof document === 'undefined') {
@@ -185,6 +193,7 @@
 			contextOrigin: null,
 			contextItem: null,
 			detailsRequestId: 0,
+			responsivePanels: null,
 		};
 
 		function select(selector, scope) {
@@ -199,6 +208,52 @@
 			if (element) {
 				element.textContent = '';
 			}
+		}
+
+		function panelsAreResponsive() {
+			return global.matchMedia('(max-width: 1100px)').matches;
+		}
+
+		function panelSelectors(type) {
+			return type === 'tree'
+				? { panel: '[data-fm-tree-panel]', toggle: '[data-fm-toggle-tree]', collapsed: 'is-tree-collapsed' }
+				: { panel: '[data-fm-details-panel]', toggle: '[data-fm-toggle-details]', collapsed: 'is-details-collapsed' };
+		}
+
+		function setPanelOpen(type, open, restoreFocus) {
+			var selectors = panelSelectors(type);
+			var panel = select(selectors.panel);
+			var toggle = select(selectors.toggle);
+			var responsive = panelsAreResponsive();
+			if (!panel || !toggle) {
+				return;
+			}
+			if (responsive && open) {
+				var otherType = type === 'tree' ? 'details' : 'tree';
+				var otherSelectors = panelSelectors(otherType);
+				var otherPanel = select(otherSelectors.panel);
+				var otherToggle = select(otherSelectors.toggle);
+				if (otherPanel && otherToggle) {
+					otherPanel.classList.remove('is-open');
+					otherToggle.setAttribute('aria-expanded', 'false');
+				}
+			}
+			panel.classList.toggle('is-open', responsive && open);
+			root.classList.toggle(selectors.collapsed, !responsive && !open);
+			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (!open && restoreFocus && panel.contains(document.activeElement)) {
+				toggle.focus();
+			}
+		}
+
+		function syncPanelsForViewport(force) {
+			var responsive = panelsAreResponsive();
+			if (!force && state.responsivePanels === responsive) {
+				return;
+			}
+			state.responsivePanels = responsive;
+			setPanelOpen('tree', !responsive);
+			setPanelOpen('details', !responsive);
 		}
 
 		function node(tag, className, textValue) {
@@ -434,6 +489,9 @@
 						selectItem(item, row);
 					});
 					row.addEventListener('dblclick', function (event) {
+						if (!shouldHandleRowAction(event.target)) {
+							return;
+						}
 						event.preventDefault();
 						runPrimaryAction(item, row);
 					});
@@ -442,6 +500,9 @@
 						openContextMenu(item, row, row, { x: event.clientX, y: event.clientY });
 					});
 					row.addEventListener('keydown', function (event) {
+						if (!shouldHandleRowAction(event.target)) {
+							return;
+						}
 						if (event.key === 'Enter') {
 							event.preventDefault();
 							runPrimaryAction(item, row);
@@ -517,13 +578,16 @@
 			});
 		}
 
-		function selectItem(item, row) {
+		function selectItem(item, row, announce) {
 			state.selected = item;
 			selectAll('[data-fm-table] tbody tr').forEach(function (entry) {
 				entry.classList.toggle('is-selected', entry === row);
 				entry.setAttribute('aria-selected', entry === row ? 'true' : 'false');
 			});
 			showDetails(item);
+			if (announce !== false) {
+				speak(String(item.name || 'Item') + ' selected.');
+			}
 		}
 
 		function addMetadata(list, label, value) {
@@ -695,7 +759,7 @@
 				return;
 			}
 			closeContextMenu(false);
-			selectItem(item, row);
+			selectItem(item, row, false);
 			state.contextItem = item;
 			state.contextOrigin = origin;
 			clear(menu);
@@ -725,6 +789,7 @@
 			if (first) {
 				first.focus();
 			}
+			speak('Actions for ' + String(item.name || 'item') + ' opened.');
 		}
 
 		function handleItemAction(action, item, trigger) {
@@ -735,7 +800,7 @@
 					state.selected = item;
 					showDetails(item);
 				}
-				select('[data-fm-details-panel]').classList.add('is-open');
+				setPanelOpen('details', true);
 			} else if (action === 'edit') {
 				openEditor(item.path);
 			} else if (action === 'rename') {
@@ -1127,6 +1192,9 @@
 				} else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(event.key) !== -1) {
 					event.preventDefault();
 					moveContextFocus(event.key);
+				} else if ((event.key === ' ' || event.key === 'Spacebar') && document.activeElement && document.activeElement.tagName === 'A' && menu.contains(document.activeElement)) {
+					event.preventDefault();
+					document.activeElement.click();
 				}
 			});
 			document.addEventListener('pointerdown', function (event) {
@@ -1138,6 +1206,7 @@
 			});
 			global.addEventListener('resize', function () {
 				closeContextMenu(false);
+				syncPanelsForViewport(false);
 			});
 			global.addEventListener('scroll', function () {
 				closeContextMenu(false);
@@ -1208,20 +1277,16 @@
 				loadDirectory();
 			}, 250));
 			select('[data-fm-toggle-tree]').addEventListener('click', function (event) {
-				var panel = select('[data-fm-tree-panel]');
-				panel.classList.toggle('is-open');
-				event.currentTarget.setAttribute('aria-expanded', panel.classList.contains('is-open') ? 'true' : 'false');
+				setPanelOpen('tree', event.currentTarget.getAttribute('aria-expanded') !== 'true');
 			});
 			select('[data-fm-toggle-details]').addEventListener('click', function (event) {
-				var panel = select('[data-fm-details-panel]');
-				panel.classList.toggle('is-open');
-				event.currentTarget.setAttribute('aria-expanded', panel.classList.contains('is-open') ? 'true' : 'false');
+				setPanelOpen('details', event.currentTarget.getAttribute('aria-expanded') !== 'true');
 			});
 			select('[data-fm-close-tree]').addEventListener('click', function () {
-				select('[data-fm-tree-panel]').classList.remove('is-open');
+				setPanelOpen('tree', false, true);
 			});
 			select('[data-fm-close-details]').addEventListener('click', function () {
-				select('[data-fm-details-panel]').classList.remove('is-open');
+				setPanelOpen('details', false, true);
 			});
 			select('[data-fm-editor-save]').addEventListener('click', saveEditor);
 			select('[data-fm-editor-cancel]').addEventListener('click', function () {
@@ -1242,6 +1307,7 @@
 					event.returnValue = '';
 				}
 			});
+			syncPanelsForViewport(true);
 			loadDirectory();
 		}
 
