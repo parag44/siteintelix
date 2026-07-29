@@ -166,6 +166,13 @@ $valid    = $security->authorize_path( 'wp-content/uploads/photo.jpg', 'read' );
 
 siteintelix_test_assert( ! is_wp_error( $valid ), 'valid content file is readable' . ( is_wp_error( $valid ) ? ': ' . $valid->get_error_code() : '' ) );
 siteintelix_test_assert( ! is_wp_error( $security->authorize_path( 'wp-content/uploads/nested/note.txt', 'read' ) ), 'valid nested file is readable' );
+$root_list = $security->authorize_path( '', 'list' );
+$root_tree = $security->authorize_path( '', 'tree' );
+siteintelix_test_assert( ! is_wp_error( $root_list ) && untrailingslashit( wp_normalize_path( realpath( ABSPATH ) ?: ABSPATH ) ) === $root_list, 'empty list path resolves to WordPress root' );
+siteintelix_test_assert( ! is_wp_error( $root_tree ) && $root_list === $root_tree, 'empty tree path resolves to WordPress root' );
+foreach ( array( 'write', 'create', 'upload', 'rename', 'trash', 'edit', 'save' ) as $root_write_operation ) {
+	siteintelix_test_assert( is_wp_error( $security->authorize_path( '', $root_write_operation ) ), "empty path is rejected for {$root_write_operation}" );
+}
 siteintelix_test_assert( is_wp_error( $security->authorize_path( '../wp-config.php', 'read' ) ), 'plain traversal is blocked' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( '..%2fwp-config.php', 'read' ) ), 'encoded traversal is blocked' );
 siteintelix_test_assert( is_wp_error( $security->authorize_path( '..%252fwp-config.php', 'read' ) ), 'double-encoded traversal is blocked' );

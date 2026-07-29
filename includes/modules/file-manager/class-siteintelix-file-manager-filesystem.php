@@ -73,6 +73,7 @@ class SITEINTELIX_File_Manager_Filesystem {
 					continue;
 				}
 				$is_directory = $item->isDir() && ! $item->isLink();
+				$actions      = $this->actions( $absolute, $is_directory );
 				$items[]      = array(
 					'name'        => $name,
 					'path'        => $relative,
@@ -84,7 +85,8 @@ class SITEINTELIX_File_Manager_Filesystem {
 					'permissions' => $this->permissions( $absolute ),
 					'readable'    => is_readable( $absolute ),
 					'writable'    => is_writable( $absolute ) && ! $item->isLink() && ! is_wp_error( $this->security->authorize_path( $absolute, 'write' ) ),
-					'actions'     => $this->actions( $absolute, $is_directory ),
+					'actions'     => $actions,
+					'read_only'   => empty( array_intersect( $actions, array( 'edit', 'rename', 'trash' ) ) ),
 				);
 			}
 		} catch ( UnexpectedValueException $exception ) {
@@ -478,14 +480,27 @@ class SITEINTELIX_File_Manager_Filesystem {
 	 * @return string[]
 	 */
 	private function actions( $absolute, $directory ) {
-		$actions = $directory ? array( 'open', 'details' ) : array( 'view', 'details', 'download' );
+		$actions = array();
+		$checks  = $directory
+			? array( 'open' => 'list', 'details' => 'details', 'archive' => 'archive' )
+			: array( 'view' => 'preview', 'details' => 'details', 'download' => 'download', 'archive' => 'archive' );
+
+		foreach ( $checks as $action => $operation ) {
+			if ( ! is_wp_error( $this->security->authorize_path( $absolute, $operation ) ) ) {
+				$actions[] = $action;
+			}
+		}
 		if ( ! is_wp_error( $this->security->authorize_path( $absolute, 'rename' ) ) ) {
 			$actions[] = 'rename';
 		}
 		if ( ! is_wp_error( $this->security->authorize_path( $absolute, 'trash' ) ) ) {
 			$actions[] = 'trash';
 		}
-		if ( ! $directory && in_array( strtolower( pathinfo( $absolute, PATHINFO_EXTENSION ) ), SITEINTELIX_File_Manager_Settings::get()['editable_extensions'], true ) && ! is_wp_error( $this->security->authorize_path( $absolute, 'edit' ) ) ) {
+		if (
+			! $directory
+			&& in_array( strtolower( pathinfo( $absolute, PATHINFO_EXTENSION ) ), SITEINTELIX_File_Manager_Settings::get()['editable_extensions'], true )
+			&& ! is_wp_error( $this->security->authorize_path( $absolute, 'edit' ) )
+		) {
 			$actions[] = 'edit';
 		}
 		return $actions;

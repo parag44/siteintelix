@@ -54,9 +54,16 @@ class SITEINTELIX_File_Manager_Security {
 	 */
 	public function authorize_path( $path, $operation, $must_exist = true ) {
 		$operation = sanitize_key( $operation );
-		$decoded   = $this->validate_input( $path );
-		if ( is_wp_error( $decoded ) ) {
-			return $decoded;
+		if ( is_string( $path ) && '' === $path ) {
+			if ( ! in_array( $operation, array( 'list', 'tree', 'details' ), true ) ) {
+				return $this->error( 'invalid_path', __( 'The requested path is invalid.', 'siteintelix' ) );
+			}
+			$decoded = '';
+		} else {
+			$decoded = $this->validate_input( $path );
+			if ( is_wp_error( $decoded ) ) {
+				return $decoded;
+			}
 		}
 
 		$root      = untrailingslashit( wp_normalize_path( realpath( ABSPATH ) ?: ABSPATH ) );

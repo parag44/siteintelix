@@ -6,6 +6,8 @@
  */
 
 $siteintelix_test_root = sys_get_temp_dir() . '/siteintelix-fm-filesystem-' . bin2hex( random_bytes( 4 ) );
+mkdir( $siteintelix_test_root . '/wp-admin', 0777, true );
+mkdir( $siteintelix_test_root . '/wp-includes', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/uploads/folder', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/plugins/siteintelix', 0777, true );
 mkdir( $siteintelix_test_root . '/wp-content/themes/active', 0777, true );
@@ -16,6 +18,7 @@ file_put_contents( $siteintelix_test_root . '/wp-content/uploads/beta.log', "log
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/.secret', 'hidden' );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/binary.bin', "a\0b" );
 file_put_contents( $siteintelix_test_root . '/wp-content/uploads/large.txt', str_repeat( 'x', 128 ) );
+file_put_contents( $siteintelix_test_root . '/index.php', '<?php' );
 file_put_contents( $siteintelix_test_root . '/wp-config.php', "<?php define( 'DB_PASSWORD', 'visible-secret' );" );
 
 define( 'ABSPATH', $siteintelix_test_root . '/' );
@@ -134,6 +137,18 @@ siteintelix_test_assert( 2 === count( $listing['items'] ), 'listing is paginated
 siteintelix_test_assert( 'directory' === $listing['items'][0]['type'], 'directories sort first' );
 siteintelix_test_assert( false === in_array( '.secret', array_column( $listing['items'], 'name' ), true ), 'hidden files stay hidden' );
 siteintelix_test_assert( 3 === count( $listing['breadcrumbs'] ), 'breadcrumbs are rooted and bounded' );
+
+$root_listing = $filesystem->list_directory( '', array( 'per_page' => 50 ) );
+siteintelix_test_assert( ! is_wp_error( $root_listing ), 'WordPress root listing succeeds' );
+siteintelix_test_assert( '' === $root_listing['path'], 'WordPress root remains the empty relative path' );
+$root_items = array_column( $root_listing['items'], null, 'name' );
+siteintelix_test_assert( isset( $root_items['wp-admin'] ), 'WordPress root exposes wp-admin' );
+siteintelix_test_assert( in_array( 'open', $root_items['wp-admin']['actions'], true ), 'protected core directory remains browsable' );
+siteintelix_test_assert( ! in_array( 'rename', $root_items['wp-admin']['actions'], true ), 'protected core directory cannot be renamed' );
+siteintelix_test_assert( ! in_array( 'trash', $root_items['wp-admin']['actions'], true ), 'protected core directory cannot be trashed' );
+siteintelix_test_assert( isset( $root_items['wp-config.php'] ), 'wp-config remains visible in the root listing' );
+siteintelix_test_assert( array() === $root_items['wp-config.php']['actions'], 'wp-config exposes no unauthorized row action' );
+siteintelix_test_assert( true === $root_items['wp-config.php']['read_only'], 'wp-config is marked read-only' );
 
 $search = $filesystem->list_directory( 'wp-content/uploads', array( 'search' => 'beta', 'per_page' => 50 ) );
 siteintelix_test_assert( 1 === count( $search['items'] ) && 'beta.log' === $search['items'][0]['name'], 'search is limited to current-directory filenames' );
