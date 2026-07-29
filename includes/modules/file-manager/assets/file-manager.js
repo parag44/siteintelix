@@ -137,6 +137,145 @@
 		return !target.closest('button, a, input, select, textarea, [role="button"], [role="menuitem"]');
 	}
 
+	function createSelection(limit) {
+		var maximum = Math.max(1, Number(limit) || 1);
+		var selected = new Map();
+		return {
+			toggle: function (item) {
+				var path = String((item && item.path) || '');
+				if (!path) {
+					return false;
+				}
+				if (selected.has(path)) {
+					selected.delete(path);
+					return true;
+				}
+				if (selected.size >= maximum) {
+					return false;
+				}
+				selected.set(path, item);
+				return true;
+			},
+			clear: function () {
+				selected.clear();
+			},
+			items: function () {
+				return Array.from(selected.values());
+			},
+			paths: function () {
+				return Array.from(selected.keys());
+			},
+			has: function (path) {
+				return selected.has(String(path || ''));
+			},
+			reconcile: function (items) {
+				var visible = new Map();
+				(items || []).forEach(function (item) {
+					var path = String((item && item.path) || '');
+					if (path) {
+						visible.set(path, item);
+					}
+				});
+				Array.from(selected.keys()).forEach(function (path) {
+					if (!visible.has(path)) {
+						selected.delete(path);
+					} else {
+						selected.set(path, visible.get(path));
+					}
+				});
+			},
+		};
+	}
+
+	function selectionActions(items) {
+		if (!items || !items.length) {
+			return [];
+		}
+		var every = function (action) {
+			return items.every(function (item) {
+				return Array.isArray(item.actions) && item.actions.indexOf(action) !== -1;
+			});
+		};
+		var actions = [];
+		if (items.length === 1 && items[0].type === 'file' && every('download')) {
+			actions.push('download');
+		}
+		if (every('archive')) {
+			actions.push('archive');
+		}
+		if (items.length === 1 && every('details')) {
+			actions.push('details');
+		}
+		if (items.length === 1 && every('rename')) {
+			actions.push('rename');
+		}
+		if (every('trash')) {
+			actions.push('trash');
+		}
+		return actions;
+	}
+
+	function ancestorPaths(path) {
+		var ancestors = [''];
+		var parts = String(path || '').split('/').filter(Boolean);
+		parts.pop();
+		var current = [];
+		parts.forEach(function (part) {
+			current.push(part);
+			ancestors.push(current.join('/'));
+		});
+		return ancestors;
+	}
+
+	function treeLevel(path) {
+		return String(path || '').split('/').filter(Boolean).length;
+	}
+
+	function createTreeState() {
+		var expanded = new Set();
+		var active = '';
+		return {
+			expand: function (path) {
+				expanded.add(String(path || ''));
+			},
+			collapse: function (path) {
+				expanded.delete(String(path || ''));
+			},
+			isExpanded: function (path) {
+				return expanded.has(String(path || ''));
+			},
+			activate: function (path) {
+				active = String(path || '');
+			},
+			isActive: function (path) {
+				return active === String(path || '');
+			},
+		};
+	}
+
+	function archivePayload(currentPath, paths, limit) {
+		var maximum = Math.max(1, Number(limit) || 1);
+		if (!Array.isArray(paths) || !paths.length || paths.length > maximum) {
+			return null;
+		}
+		var current = String(currentPath || '').replace(/\\/g, '/');
+		var normalized = paths.map(function (path) {
+			return String(path || '').replace(/\\/g, '/');
+		});
+		var unsafe = function (path, allowEmpty) {
+			return (!allowEmpty && !path)
+				|| path.charAt(0) === '/'
+				|| /(^|\/)\.{1,2}(\/|$)/.test(path)
+				|| /^[a-z][a-z0-9+.-]*:\/\//i.test(path)
+				|| path.indexOf('//') !== -1
+				|| /[\u0000-\u001f\u007f]/.test(path);
+		};
+		if (unsafe(current, true) || normalized.some(function (path) { return unsafe(path, false); })) {
+			return null;
+		}
+		return { current_path: current, paths: normalized };
+	}
+
 	global.siteintelixFileManagerTest = {
 		createHistory: createHistory,
 		debounce: debounce,
@@ -147,6 +286,12 @@
 		primaryAction: primaryAction,
 		clampMenuPosition: clampMenuPosition,
 		shouldHandleRowAction: shouldHandleRowAction,
+		createSelection: createSelection,
+		selectionActions: selectionActions,
+		ancestorPaths: ancestorPaths,
+		treeLevel: treeLevel,
+		createTreeState: createTreeState,
+		archivePayload: archivePayload,
 	};
 
 	if (typeof document === 'undefined') {

@@ -120,6 +120,55 @@ test('row primary actions ignore interactive descendants', async () => {
 	assert.equal(helpers.shouldHandleRowAction(null), true);
 });
 
+test('selection is capped and reconciled by canonical relative path', async () => {
+	const { helpers } = await loadHelpers();
+	const selection = helpers.createSelection(2);
+	assert.equal(selection.toggle({ path: 'wp-content/a.txt', actions: ['archive', 'trash'] }), true);
+	assert.equal(selection.toggle({ path: 'wp-content/b.txt', actions: ['archive', 'trash'] }), true);
+	assert.equal(selection.toggle({ path: 'wp-content/c.txt' }), false);
+	assert.deepEqual(Array.from(selection.paths()), ['wp-content/a.txt', 'wp-content/b.txt']);
+	selection.reconcile([{ path: 'wp-content/b.txt', actions: ['archive'] }]);
+	assert.deepEqual(Array.from(selection.paths()), ['wp-content/b.txt']);
+	assert.deepEqual(Array.from(selection.items()[0].actions), ['archive']);
+	selection.clear();
+	assert.deepEqual(Array.from(selection.paths()), []);
+});
+
+test('combined selection actions require validity for the complete selection', async () => {
+	const { helpers } = await loadHelpers();
+	const file = { type: 'file', actions: ['view', 'details', 'download', 'archive', 'rename', 'trash'] };
+	const folder = { type: 'directory', actions: ['open', 'details', 'archive', 'rename', 'trash'] };
+	assert.deepEqual(Array.from(helpers.selectionActions([file])), ['download', 'archive', 'details', 'rename', 'trash']);
+	assert.deepEqual(Array.from(helpers.selectionActions([file, folder])), ['archive', 'trash']);
+	assert.deepEqual(Array.from(helpers.selectionActions([])), []);
+});
+
+test('tree helpers retain expanded ancestors and build safe levels', async () => {
+	const { helpers } = await loadHelpers();
+	const state = helpers.createTreeState();
+	state.expand('');
+	state.expand('wp-content');
+	state.activate('wp-content/uploads/2026');
+	assert.equal(state.isExpanded(''), true);
+	assert.equal(state.isExpanded('wp-content'), true);
+	assert.equal(state.isActive('wp-content/uploads/2026'), true);
+	assert.deepEqual(Array.from(helpers.ancestorPaths('wp-content/uploads/2026')), ['', 'wp-content', 'wp-content/uploads']);
+	assert.equal(helpers.treeLevel('wp-content/uploads'), 2);
+});
+
+test('archive form fields stay bounded and relative', async () => {
+	const { helpers } = await loadHelpers();
+	assert.deepEqual(
+		{ ...helpers.archivePayload('wp-content/uploads', ['wp-content/uploads/a.txt', 'wp-content/uploads/folder'], 100) },
+		{ current_path: 'wp-content/uploads', paths: ['wp-content/uploads/a.txt', 'wp-content/uploads/folder'] },
+	);
+	assert.equal(helpers.archivePayload('wp-content/uploads', Array(101).fill('wp-content/uploads/a.txt'), 100), null);
+	assert.equal(helpers.archivePayload('wp-content/uploads', ['../wp-config.php'], 100), null);
+	assert.equal(helpers.archivePayload('wp-content/uploads', ['/etc/passwd'], 100), null);
+	assert.equal(helpers.archivePayload('wp-content/uploads', ['wp-content/./uploads/a.txt'], 100), null);
+	assert.equal(helpers.archivePayload('wp-content/uploads', ['php://filter/resource=index.php'], 100), null);
+});
+
 test('client rendering uses safe DOM assignment and accessible modal behavior', async () => {
 	const { source } = await loadHelpers();
 
