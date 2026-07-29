@@ -598,7 +598,7 @@
 	font-size: 19px;
 }
 
-.sitx-file-manager span.sitx-fm-file-icon {
+.sitx-fm-file-icon {
 	position: relative;
 	display: inline-grid;
 	flex: 0 0 24px;
@@ -614,6 +614,10 @@
 	font-weight: 800;
 	line-height: 1;
 	text-transform: uppercase;
+}
+
+.sitx-file-manager span.sitx-fm-file-icon {
+	position: relative;
 }
 
 .sitx-fm-file-icon::after {
