@@ -56,8 +56,9 @@ $siteintelix_fm_module  = isset( $siteintelix_fm_modules['file_manager'] ) ? $si
 				<div class="sitx-fm-workspace">
 					<?php require __DIR__ . '/partials/folder-tree.php'; ?>
 					<?php require __DIR__ . '/partials/file-table.php'; ?>
-					<?php require __DIR__ . '/partials/details-panel.php'; ?>
 				</div>
+				<?php require __DIR__ . '/partials/details-panel.php'; ?>
+				<iframe class="sitx-fm-download-target" name="siteintelix-file-manager-download" data-fm-archive-target title="<?php esc_attr_e( 'File download', 'siteintelix' ); ?>" hidden></iframe>
 				<?php require __DIR__ . '/partials/editor.php'; ?>
 			</section>
 		<?php elseif ( 'backups' === $siteintelix_fm_tab ) : ?>

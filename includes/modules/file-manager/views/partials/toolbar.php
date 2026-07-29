@@ -6,19 +6,18 @@
  */
 defined( 'ABSPATH' ) || exit;
 ?>
-<div class="sitx-fm-toolbar si-toolbar">
-	<div class="sitx-fm-toolbar__group">
-		<button type="button" class="si-button si-button--secondary" data-fm-back disabled><span class="sitx-fm-toolbar__icon dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span><span><?php esc_html_e( 'Back', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-forward disabled><span class="sitx-fm-toolbar__icon dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span><span><?php esc_html_e( 'Forward', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-up><span class="sitx-fm-toolbar__icon dashicons dashicons-arrow-up-alt2" aria-hidden="true"></span><span><?php esc_html_e( 'Up', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-refresh><span class="sitx-fm-toolbar__icon dashicons dashicons-update" aria-hidden="true"></span><span><?php esc_html_e( 'Refresh', 'siteintelix' ); ?></span></button>
+<div class="sitx-fm-toolbar si-toolbar" aria-label="<?php esc_attr_e( 'File actions', 'siteintelix' ); ?>">
+	<button type="button" class="sitx-fm-tool" data-fm-new-folder><span class="dashicons dashicons-category" aria-hidden="true"></span><span><?php esc_html_e( 'New Folder', 'siteintelix' ); ?></span></button>
+	<button type="button" class="sitx-fm-tool" data-fm-new-file><span class="dashicons dashicons-media-default" aria-hidden="true"></span><span><?php esc_html_e( 'New File', 'siteintelix' ); ?></span></button>
+	<button type="button" class="sitx-fm-tool" data-fm-upload><span class="dashicons dashicons-upload" aria-hidden="true"></span><span><?php esc_html_e( 'Upload', 'siteintelix' ); ?></span></button>
+	<div class="sitx-fm-sort">
+		<button type="button" class="sitx-fm-tool" data-fm-sort-toggle aria-expanded="false" aria-controls="siteintelix-file-manager-sort"><span class="dashicons dashicons-sort" aria-hidden="true"></span><span><?php esc_html_e( 'Sort by', 'siteintelix' ); ?></span></button>
+		<div id="siteintelix-file-manager-sort" class="sitx-fm-sort__menu" data-fm-sort-menu role="menu" hidden></div>
 	</div>
-	<div class="sitx-fm-toolbar__group">
-		<button type="button" class="si-button si-button--primary" data-fm-new><span class="sitx-fm-toolbar__icon dashicons dashicons-plus-alt2" aria-hidden="true"></span><span><?php esc_html_e( 'New', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-upload><span class="sitx-fm-toolbar__icon dashicons dashicons-upload" aria-hidden="true"></span><span><?php esc_html_e( 'Upload', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-toggle-tree aria-controls="siteintelix-file-manager-tree" aria-expanded="true"><span class="sitx-fm-toolbar__icon dashicons dashicons-category" aria-hidden="true"></span><span><?php esc_html_e( 'Folders', 'siteintelix' ); ?></span></button>
-		<button type="button" class="si-button si-button--secondary" data-fm-toggle-details aria-controls="siteintelix-file-manager-details" aria-expanded="true"><span class="sitx-fm-toolbar__icon dashicons dashicons-info-outline" aria-hidden="true"></span><span><?php esc_html_e( 'Details', 'siteintelix' ); ?></span></button>
-	</div>
-	<label class="sitx-fm-search"><span class="sitx-fm-search__icon dashicons dashicons-search" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Search current directory', 'siteintelix' ); ?></span><input type="search" data-fm-search placeholder="<?php esc_attr_e( 'Search current folder', 'siteintelix' ); ?>"></label>
+	<button type="button" class="sitx-fm-tool" data-fm-refresh><span class="dashicons dashicons-update" aria-hidden="true"></span><span><?php esc_html_e( 'Refresh', 'siteintelix' ); ?></span></button>
 </div>
-<nav class="sitx-fm-breadcrumbs" aria-label="<?php esc_attr_e( 'Current directory', 'siteintelix' ); ?>" data-fm-breadcrumbs></nav>
+<div class="sitx-fm-locationbar">
+	<button type="button" class="sitx-fm-tree-trigger" data-fm-toggle-tree aria-controls="siteintelix-file-manager-tree" aria-expanded="false"><span class="dashicons dashicons-category" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Show folders', 'siteintelix' ); ?></span></button>
+	<nav class="sitx-fm-breadcrumbs" aria-label="<?php esc_attr_e( 'Current directory', 'siteintelix' ); ?>" data-fm-breadcrumbs></nav>
+	<label class="sitx-fm-search"><span class="screen-reader-text"><?php esc_html_e( 'Search current directory', 'siteintelix' ); ?></span><input type="search" data-fm-search placeholder="<?php esc_attr_e( 'Search current folder', 'siteintelix' ); ?>"><span class="dashicons dashicons-search" aria-hidden="true"></span></label>
+</div>

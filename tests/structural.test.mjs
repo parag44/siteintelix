@@ -145,28 +145,39 @@ test('File Manager uses one safely rendered folder SVG in every admin context', 
 });
 
 test('File Manager browser exposes the approved desktop workspace shell', async () => {
-	const [toolbar, tree, table, details, modals] = await Promise.all([
+	const [toolbar, tree, table, details, modals, page] = await Promise.all([
 		read('includes/modules/file-manager/views/partials/toolbar.php'),
 		read('includes/modules/file-manager/views/partials/folder-tree.php'),
 		read('includes/modules/file-manager/views/partials/file-table.php'),
 		read('includes/modules/file-manager/views/partials/details-panel.php'),
 		read('includes/modules/file-manager/views/partials/modals.php'),
+		read('includes/modules/file-manager/views/file-manager.php'),
 	]);
 
-	assert.match(toolbar, /sitx-fm-toolbar__icon/);
-	assert.match(toolbar, /dashicons-arrow-left-alt2/);
-	assert.match(toolbar, /dashicons-plus-alt2/);
-	assert.match(toolbar, /aria-controls="siteintelix-file-manager-tree"/);
-	assert.match(toolbar, /aria-controls="siteintelix-file-manager-details"/);
+	assert.match(toolbar, /data-fm-new-folder/);
+	assert.match(toolbar, /data-fm-new-file/);
+	assert.match(toolbar, /data-fm-upload/);
+	assert.match(toolbar, /data-fm-sort-menu/);
+	assert.match(toolbar, /data-fm-refresh/);
+	assert.doesNotMatch(toolbar, /data-fm-(?:back|forward|up|toggle-details)(?:\s|>)/);
 	assert.match(tree, /id="siteintelix-file-manager-tree"/);
+	assert.match(tree, /data-fm-tree-root/);
+	assert.match(tree, /role="tree"/);
+	assert.match(table, /data-fm-select-all/);
+	assert.match(table, /data-fm-selection-actions/);
+	assert.match(table, /data-fm-selection-archive/);
 	assert.doesNotMatch(table, />Actions</);
 	assert.match(table, /sitx-fm-table__menu-column/);
 	assert.match(table, /Item menu/);
 	assert.match(details, /id="siteintelix-file-manager-details"/);
 	assert.match(details, /data-fm-details-icon/);
+	assert.match(details, /role="dialog"/);
+	assert.match(details, /aria-modal="true"/);
+	assert.match(details, /hidden/);
 	assert.doesNotMatch(details, /data-fm-details-actions/);
 	assert.match(modals, /data-fm-context-menu/);
 	assert.match(modals, /role="menu"/);
+	assert.match(page, /data-fm-archive-target/);
 });
 
 test('File Manager workspace matches the approved contained three-pane design', async () => {
