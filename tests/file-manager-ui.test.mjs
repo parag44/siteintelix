@@ -193,9 +193,26 @@ test('client rendering uses safe DOM assignment and accessible modal behavior', 
 	assert.match(source, /detailsRequestId/);
 	assert.match(source, /event\.key\s*===\s*' '\s*\|\|\s*event\.key\s*===\s*'Spacebar'/);
 	assert.match(source, /document\.activeElement\.click\(\)/);
-	assert.match(source, /setPanelOpen/);
+	assert.match(source, /setDetailsOpen/);
 	assert.match(source, /matchMedia\(\s*'\(max-width: 1100px\)'\s*\)/);
 	assert.doesNotMatch(source, /data-fm-details-actions/);
+});
+
+test('DirectAdmin browser wires lazy tree, selection, archives, and on-demand details', async () => {
+	const { source } = await loadHelpers();
+
+	assert.match(source, /request\(\s*'list_tree'/);
+	assert.match(source, /data-fm-tree-children/);
+	assert.match(source, /aria-level/);
+	assert.match(source, /data-fm-tree-retry/);
+	assert.match(source, /data-fm-select-item/);
+	assert.match(source, /data-fm-selection-actions/);
+	assert.match(source, /archivePayload/);
+	assert.match(source, /siteintelix-file-manager-download/);
+	assert.match(source, /form\.method\s*=\s*'post'/);
+	assert.match(source, /form\.target\s*=\s*'siteintelix-file-manager-download'/);
+	assert.match(source, /setDetailsOpen/);
+	assert.doesNotMatch(source, /data-fm-(?:back|forward|up)(?:['"\]\s>])/);
 });
 
 test('client posts only fixed localized actions with operation-specific nonces', async () => {

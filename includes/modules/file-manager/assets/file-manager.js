@@ -97,13 +97,14 @@
 		details: { id: 'details', label: 'View details', icon: 'dashicons-info-outline' },
 		edit: { id: 'edit', label: 'Edit', icon: 'dashicons-edit-page' },
 		download: { id: 'download', label: 'Download', icon: 'dashicons-download' },
+		archive: { id: 'archive', label: 'Archive ZIP', icon: 'dashicons-media-archive' },
 		rename: { id: 'rename', label: 'Rename', icon: 'dashicons-edit' },
 		trash: { id: 'trash', label: 'Move to Trash', icon: 'dashicons-trash', destructive: true },
 	};
 
 	function contextActions(item) {
 		var available = (item && Array.isArray(item.actions)) ? item.actions : [];
-		return ['open', 'view', 'details', 'edit', 'download', 'rename', 'trash'].filter(function (id) {
+		return ['open', 'view', 'details', 'edit', 'download', 'archive', 'rename', 'trash'].filter(function (id) {
 			return available.indexOf(id) !== -1;
 		}).map(function (id) {
 			return contextActionMap[id];
@@ -322,15 +323,22 @@
 			'list_backups',
 			'restore_backup',
 		];
+		var selectionLimit = Number((data.limits && data.limits.archiveSelection) || 100);
 		var state = {
 			path: String(data.startPath || 'wp-content'),
-			history: createHistory(String(data.startPath || 'wp-content')),
 			page: 1,
 			perPage: 50,
 			sort: 'name',
 			order: 'asc',
 			search: '',
 			selected: null,
+			currentItems: [],
+			selectionLimit: selectionLimit,
+			selection: createSelection(selectionLimit),
+			tree: createTreeState(),
+			treeChildren: new Map(),
+			treeLoading: new Set(),
+			treeInitialized: false,
 			editorDirty: false,
 			editorFile: null,
 			editorInstance: null,
@@ -340,6 +348,7 @@
 			contextItem: null,
 			detailsRequestId: 0,
 			responsivePanels: null,
+			detailsRestoreFocus: null,
 		};
 
 		function select(selector, scope) {
@@ -360,35 +369,43 @@
 			return global.matchMedia('(max-width: 1100px)').matches;
 		}
 
-		function panelSelectors(type) {
-			return type === 'tree'
-				? { panel: '[data-fm-tree-panel]', toggle: '[data-fm-toggle-tree]', collapsed: 'is-tree-collapsed' }
-				: { panel: '[data-fm-details-panel]', toggle: '[data-fm-toggle-details]', collapsed: 'is-details-collapsed' };
-		}
-
-		function setPanelOpen(type, open, restoreFocus) {
-			var selectors = panelSelectors(type);
-			var panel = select(selectors.panel);
-			var toggle = select(selectors.toggle);
+		function setTreeOpen(open, restoreFocus) {
+			var panel = select('[data-fm-tree-panel]');
+			var toggle = select('[data-fm-toggle-tree]');
 			var responsive = panelsAreResponsive();
 			if (!panel || !toggle) {
 				return;
 			}
-			if (responsive && open) {
-				var otherType = type === 'tree' ? 'details' : 'tree';
-				var otherSelectors = panelSelectors(otherType);
-				var otherPanel = select(otherSelectors.panel);
-				var otherToggle = select(otherSelectors.toggle);
-				if (otherPanel && otherToggle) {
-					otherPanel.classList.remove('is-open');
-					otherToggle.setAttribute('aria-expanded', 'false');
-				}
-			}
 			panel.classList.toggle('is-open', responsive && open);
-			root.classList.toggle(selectors.collapsed, !responsive && !open);
-			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			toggle.setAttribute('aria-expanded', responsive && open ? 'true' : 'false');
 			if (!open && restoreFocus && panel.contains(document.activeElement)) {
 				toggle.focus();
+			}
+		}
+
+		function setDetailsOpen(open, trigger) {
+			var panel = select('[data-fm-details-panel]');
+			if (!panel) {
+				return;
+			}
+			if (open) {
+				if (panelsAreResponsive()) {
+					setTreeOpen(false, false);
+				}
+				state.detailsRestoreFocus = trigger || document.activeElement;
+				panel.hidden = false;
+				panel.classList.add('is-open');
+				var close = select('[data-fm-close-details]', panel);
+				if (close) {
+					close.focus();
+				}
+			} else {
+				panel.classList.remove('is-open');
+				panel.hidden = true;
+				if (state.detailsRestoreFocus && typeof state.detailsRestoreFocus.focus === 'function') {
+					state.detailsRestoreFocus.focus();
+				}
+				state.detailsRestoreFocus = null;
 			}
 		}
 
@@ -398,8 +415,7 @@
 				return;
 			}
 			state.responsivePanels = responsive;
-			setPanelOpen('tree', !responsive);
-			setPanelOpen('details', !responsive);
+			setTreeOpen(false, false);
 		}
 
 		function node(tag, className, textValue) {
@@ -512,18 +528,6 @@
 			return String(data.downloadUrl || '') + '?' + params.toString();
 		}
 
-		function updateHistoryButtons() {
-			var snapshot = state.history.snapshot();
-			var backButton = select('[data-fm-back]');
-			var forwardButton = select('[data-fm-forward]');
-			if (backButton) {
-				backButton.disabled = snapshot.back.length === 0;
-			}
-			if (forwardButton) {
-				forwardButton.disabled = snapshot.forward.length === 0;
-			}
-		}
-
 		function setBrowserStatus(message, isError) {
 			var status = select('[data-fm-state]');
 			var table = select('[data-fm-table]');
@@ -559,15 +563,15 @@
 			});
 		}
 
-		function visit(path, addHistory) {
+		function visit(path) {
 			closeContextMenu(false);
 			guardDirty(function () {
 				state.path = String(path || '');
 				state.page = 1;
 				state.selected = null;
-				if (addHistory !== false) {
-					state.history.visit(state.path);
-				}
+				state.selection.clear();
+				updateSelectionUI();
+				setDetailsOpen(false);
 				loadDirectory();
 			});
 		}
@@ -591,25 +595,228 @@
 					container.appendChild(node('span', 'sitx-fm-breadcrumbs__separator', '/'));
 				}
 				container.appendChild(button(crumb.label || '/', function () {
-					visit(crumb.path || '', true);
+					visit(crumb.path || '');
 				}, 'sitx-fm-breadcrumbs__item'));
 			});
 		}
 
-		function renderTree(breadcrumbs) {
-			var tree = select('[data-fm-tree]');
-			if (!tree) {
+		function treeItemForPath(path) {
+			return selectAll('[data-fm-tree-path]').find(function (item) {
+				return item.getAttribute('data-fm-tree-path') === String(path || '');
+			}) || null;
+		}
+
+		function updateTreeCurrent() {
+			selectAll('[data-fm-tree-path]').forEach(function (item) {
+				var current = state.tree.isActive(item.getAttribute('data-fm-tree-path'));
+				item.classList.toggle('is-current', current);
+				if (current) {
+					item.setAttribute('aria-current', 'page');
+				} else {
+					item.removeAttribute('aria-current');
+				}
+			});
+		}
+
+		function renderTreeNode(directory, rootNode) {
+			var path = String(directory.path || '');
+			var hasChildren = rootNode || Boolean(directory.has_children);
+			var item = node('li', 'sitx-fm-tree__item');
+			item.setAttribute('role', 'treeitem');
+			item.setAttribute('data-fm-tree-path', path);
+			item.setAttribute('aria-level', String(rootNode ? 1 : Number(directory.level || treeLevel(path)) + 1));
+			item.style.setProperty('--fm-level', String(rootNode ? 1 : Number(directory.level || treeLevel(path)) + 1));
+			if (hasChildren) {
+				item.setAttribute('aria-expanded', state.tree.isExpanded(path) ? 'true' : 'false');
+			}
+
+			var row = node('div', 'sitx-fm-tree__row');
+			var toggle;
+			if (hasChildren) {
+				toggle = button('', function (event) {
+					event.stopPropagation();
+					var group = select('[data-fm-tree-children]', item);
+					if (state.tree.isExpanded(path)) {
+						state.tree.collapse(path);
+						item.setAttribute('aria-expanded', 'false');
+						group.hidden = true;
+					} else {
+						loadTreeBranch(path, group, item);
+					}
+				}, 'sitx-fm-tree__toggle');
+				toggle.setAttribute('data-fm-tree-toggle', '');
+				toggle.setAttribute('aria-label', 'Expand ' + String(directory.name || 'WordPress'));
+				toggle.appendChild(node('span', 'dashicons dashicons-arrow-right-alt2'));
+			} else {
+				toggle = node('span', 'sitx-fm-tree__toggle is-empty');
+			}
+			row.appendChild(toggle);
+
+			var selectNode = button('', function () {
+				visit(path);
+				if (panelsAreResponsive()) {
+					setTreeOpen(false, true);
+				}
+			}, 'sitx-fm-tree__select');
+			selectNode.setAttribute('data-fm-tree-select', '');
+			selectNode.appendChild(fileIcon({ type: 'directory', name: directory.name || 'WordPress' }, false));
+			selectNode.appendChild(node('span', 'sitx-fm-tree__label', directory.name || 'WordPress'));
+			if (directory.read_only) {
+				selectNode.appendChild(node('span', 'sitx-fm-tree__lock dashicons dashicons-lock', ''));
+			}
+			row.appendChild(selectNode);
+			item.appendChild(row);
+
+			var group = node('ul', 'sitx-fm-tree__group');
+			group.setAttribute('role', 'group');
+			group.setAttribute('data-fm-tree-children', '');
+			group.hidden = !state.tree.isExpanded(path);
+			item.appendChild(group);
+			return item;
+		}
+
+		function renderTreeBranch(children, group) {
+			clear(group);
+			(children || []).forEach(function (directory) {
+				group.appendChild(renderTreeNode(directory, false));
+			});
+		}
+
+		function loadTreeBranch(path, group, item) {
+			path = String(path || '');
+			if (state.treeLoading.has(path)) {
+				return Promise.resolve();
+			}
+			if (state.treeChildren.has(path)) {
+				renderTreeBranch(state.treeChildren.get(path), group);
+				state.tree.expand(path);
+				item.setAttribute('aria-expanded', 'true');
+				group.hidden = false;
+				return Promise.resolve();
+			}
+			state.treeLoading.add(path);
+			item.classList.add('is-loading');
+			return request('list_tree', { path: path }).then(function (result) {
+				var children = Array.isArray(result.children) ? result.children : [];
+				state.treeChildren.set(path, children);
+				renderTreeBranch(children, group);
+				state.tree.expand(path);
+				item.setAttribute('aria-expanded', 'true');
+				group.hidden = false;
+			}).catch(function (error) {
+				clear(group);
+				var failure = node('li', 'sitx-fm-tree__error', errorMessage(error));
+				var retry = button('Retry', function () {
+					state.treeChildren.delete(path);
+					loadTreeBranch(path, group, item);
+				}, 'sitx-fm-tree__retry');
+				retry.setAttribute('data-fm-tree-retry', '');
+				failure.appendChild(retry);
+				group.appendChild(failure);
+				group.hidden = false;
+			}).finally(function () {
+				state.treeLoading.delete(path);
+				item.classList.remove('is-loading');
+			});
+		}
+
+		function expandTreeTo(path) {
+			var chain = Promise.resolve();
+			ancestorPaths(path).forEach(function (ancestor) {
+				chain = chain.then(function () {
+					var item = treeItemForPath(ancestor);
+					var group = item ? select('[data-fm-tree-children]', item) : null;
+					return item && group ? loadTreeBranch(ancestor, group, item) : null;
+				});
+			});
+			return chain.then(updateTreeCurrent);
+		}
+
+		function initializeTree() {
+			var tree = select('[data-fm-tree-root]');
+			if (!tree || state.treeInitialized) {
 				return;
 			}
+			state.treeInitialized = true;
 			clear(tree);
-			(breadcrumbs || []).slice(0, 30).forEach(function (crumb) {
-				var item = button(crumb.label || '/', function () {
-					visit(crumb.path || '', true);
-				}, 'sitx-fm-tree__item');
-				item.setAttribute('role', 'treeitem');
-				item.setAttribute('aria-current', crumb.path === state.path ? 'true' : 'false');
-				tree.appendChild(item);
+			tree.appendChild(renderTreeNode({ name: 'WordPress', path: '', has_children: true, read_only: true, level: 1 }, true));
+			expandTreeTo(state.path);
+		}
+
+		function updateSelectionUI() {
+			var items = state.selection.items();
+			var available = selectionActions(items);
+			var bar = select('[data-fm-selection-actions]');
+			var count = select('[data-fm-selection-count]');
+			var selectAllControl = select('[data-fm-select-all]');
+			if (bar) {
+				bar.hidden = items.length === 0;
+			}
+			if (count) {
+				var singular = (data.i18n && data.i18n.selectedSingular) || '1 item selected';
+				var plural = (data.i18n && data.i18n.selectedPlural) || '%d items selected';
+				count.textContent = items.length === 1 ? singular : plural.replace('%d', String(items.length));
+			}
+			['download', 'archive', 'details', 'rename', 'trash'].forEach(function (action) {
+				var control = select('[data-fm-selection-' + action + ']');
+				if (control) {
+					control.disabled = available.indexOf(action) === -1
+						|| (action === 'archive' && data.features && data.features.archiveAvailable === false);
+				}
 			});
+			selectAll('[data-fm-select-item]').forEach(function (checkbox) {
+				var row = checkbox.closest('tr');
+				var path = row ? row.dataset.fmItemPath : '';
+				checkbox.checked = state.selection.has(path);
+				if (row) {
+					row.classList.toggle('is-checked', checkbox.checked);
+				}
+			});
+			if (selectAllControl) {
+				var visible = state.currentItems.length;
+				var selectedVisible = state.currentItems.filter(function (item) {
+					return state.selection.has(item.path);
+				}).length;
+				selectAllControl.checked = visible > 0 && selectedVisible === visible;
+				selectAllControl.indeterminate = selectedVisible > 0 && selectedVisible < visible;
+			}
+		}
+
+		function downloadArchive(items) {
+			var payload = archivePayload(state.path, (items || []).map(function (item) {
+				return item.path;
+			}), state.selectionLimit);
+			if (!payload || (data.features && data.features.archiveAvailable === false)) {
+				speak((data.i18n && data.i18n.operationFailed) || 'Archive download is unavailable.');
+				return;
+			}
+			var form = document.createElement('form');
+			form.method = 'post';
+			form.action = String(data.downloadUrl || '');
+			form.target = 'siteintelix-file-manager-download';
+			form.hidden = true;
+			[
+				['action', 'siteintelix_fm_download_archive'],
+				['nonce', data.archiveNonce || ''],
+				['current_path', payload.current_path],
+			].forEach(function (entry) {
+				var input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = entry[0];
+				input.value = entry[1];
+				form.appendChild(input);
+			});
+			payload.paths.forEach(function (path) {
+				var input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'paths[]';
+				input.value = path;
+				form.appendChild(input);
+			});
+			document.body.appendChild(form);
+			form.submit();
+			form.remove();
+			speak('Preparing ZIP archive download.');
 		}
 
 		function renderItems(result) {
@@ -620,16 +827,20 @@
 			if (!table || !body || !status) {
 				return;
 			}
+			state.currentItems = Array.isArray(result.items) ? result.items : [];
+			state.selection.reconcile(state.currentItems);
 			clear(body);
-			if (!result.items || result.items.length === 0) {
+			if (!state.currentItems.length) {
 				setBrowserStatus((data.i18n && data.i18n.empty) || 'This directory is empty.', false);
 			} else {
 				status.hidden = true;
 				table.hidden = false;
-				result.items.forEach(function (item) {
+				state.currentItems.forEach(function (item) {
 					var row = node('tr');
 					row.tabIndex = 0;
-					row.setAttribute('aria-selected', 'false');
+					row.setAttribute('aria-selected', state.selected && state.selected.path === item.path ? 'true' : 'false');
+					row.classList.toggle('is-selected', Boolean(state.selected && state.selected.path === item.path));
+					row.classList.toggle('is-checked', state.selection.has(item.path));
 					row.dataset.fmItemPath = item.path;
 					row.addEventListener('click', function () {
 						selectItem(item, row);
@@ -657,17 +868,32 @@
 							openContextMenu(item, row, row);
 						}
 					});
+					var selectCell = node('td', 'sitx-fm-select-column');
+					var checkbox = document.createElement('input');
+					checkbox.type = 'checkbox';
+					checkbox.checked = state.selection.has(item.path);
+					checkbox.setAttribute('data-fm-select-item', '');
+					checkbox.setAttribute('aria-label', 'Select ' + String(item.name || 'item'));
+					checkbox.addEventListener('click', function (event) {
+						event.stopPropagation();
+						if (!state.selection.toggle(item)) {
+							checkbox.checked = false;
+							speak('You can select up to ' + state.selectionLimit + ' items.');
+						}
+						updateSelectionUI();
+					});
+					selectCell.appendChild(checkbox);
+					row.appendChild(selectCell);
 					var nameCell = node('td', 'sitx-fm-name-cell');
 					var nameWrap = node('span', 'sitx-fm-name');
 					nameWrap.appendChild(fileIcon(item, false));
 					nameWrap.appendChild(node('span', 'sitx-fm-name__label', item.name));
 					nameCell.appendChild(nameWrap);
 					row.appendChild(nameCell);
-					row.appendChild(node('td', '', item.type === 'directory' ? 'Folder' : (item.extension || 'File')));
 					row.appendChild(node('td', '', item.size_label || '—'));
-					row.appendChild(node('td', '', formatDate(item.modified)));
 					row.appendChild(node('td', '', item.permissions || '—'));
-					row.appendChild(node('td', '', item.writable ? 'Yes' : 'No'));
+					row.appendChild(node('td', '', formatDate(item.modified)));
+					row.appendChild(node('td', '', item.read_only || !item.writable ? 'Read-only' : 'Writable'));
 					var menuCell = node('td', 'sitx-fm-table__menu-cell');
 					var menuButton = button('', function (event) {
 						event.stopPropagation();
@@ -683,6 +909,7 @@
 					body.appendChild(row);
 				});
 			}
+			updateSelectionUI();
 			if (pagination) {
 				pagination.hidden = Number(result.total_pages || 1) <= 1;
 				var label = select('[data-fm-page-label]');
@@ -702,7 +929,6 @@
 
 		function loadDirectory() {
 			closeContextMenu(false);
-			state.selected = null;
 			state.detailsRequestId += 1;
 			setBrowserStatus((data.i18n && data.i18n.loading) || 'Loading files…', false);
 			request('list_directory', {
@@ -715,9 +941,10 @@
 			}).then(function (result) {
 				state.path = String(result.path || '');
 				renderBreadcrumbs(result.breadcrumbs);
-				renderTree(result.breadcrumbs);
 				renderItems(result);
-				updateHistoryButtons();
+				state.tree.activate(state.path);
+				initializeTree();
+				expandTreeTo(state.path);
 			}).catch(function (error) {
 				setBrowserStatus(errorMessage(error), true);
 				speak(errorMessage(error));
@@ -730,10 +957,18 @@
 				entry.classList.toggle('is-selected', entry === row);
 				entry.setAttribute('aria-selected', entry === row ? 'true' : 'false');
 			});
-			showDetails(item);
 			if (announce !== false) {
 				speak(String(item.name || 'Item') + ' selected.');
 			}
+		}
+
+		function openDetailsFor(item, trigger, row) {
+			var activeRow = row || selectAll('[data-fm-table] tbody tr').find(function (entry) {
+				return entry.dataset.fmItemPath === item.path;
+			}) || null;
+			selectItem(item, activeRow, false);
+			showDetails(item);
+			setDetailsOpen(true, trigger || activeRow);
 		}
 
 		function addMetadata(list, label, value) {
@@ -840,7 +1075,7 @@
 				return;
 			}
 			if (action === 'view' || action === 'details') {
-				selectItem(item, row);
+				openDetailsFor(item, row, row);
 				return;
 			}
 			handleItemAction(action, item, row);
@@ -940,15 +1175,13 @@
 
 		function handleItemAction(action, item, trigger) {
 			if (action === 'open') {
-				visit(item.path, true);
+				visit(item.path);
 			} else if (action === 'view' || action === 'details') {
-				if (!state.selected || state.selected.path !== item.path) {
-					state.selected = item;
-					showDetails(item);
-				}
-				setPanelOpen('details', true);
+				openDetailsFor(item, trigger);
 			} else if (action === 'edit') {
 				openEditor(item.path);
+			} else if (action === 'archive') {
+				downloadArchive([item]);
 			} else if (action === 'rename') {
 				openRename(item, trigger);
 			} else if (action === 'trash') {
@@ -1127,18 +1360,18 @@
 			first.focus();
 		}
 
-		function openCreate(trigger) {
+		function openCreate(kind, trigger) {
+			var directory = kind === 'directory';
 			openModal({
-				title: 'Create an item',
-				description: 'Create a permitted text file or folder in the current directory.',
+				title: directory ? 'New Folder' : 'New File',
+				description: directory
+					? 'Create a folder in the current directory.'
+					: 'Create a permitted text file in the current directory.',
 				trigger: trigger,
 				confirmLabel: 'Create',
-				fields: [
-					{ name: 'kind', label: 'Item type', type: 'select', options: [{ value: 'file', label: 'File' }, { value: 'directory', label: 'Folder' }] },
-					{ name: 'name', label: 'Name', type: 'text' },
-				],
+				fields: [{ name: 'name', label: 'Name', type: 'text' }],
 				onConfirm: function (values) {
-					var action = values.kind === 'directory' ? 'create_directory' : 'create_file';
+					var action = directory ? 'create_directory' : 'create_file';
 					return request(action, { parent: state.path, name: values.name }).then(function () {
 						speak('Item created.');
 						loadDirectory();
@@ -1172,6 +1405,33 @@
 				onConfirm: function () {
 					return request('trash_item', { path: item.path, confirmed_non_empty: 1 }).then(function () {
 						speak('Item moved to trash.');
+						loadDirectory();
+					});
+				},
+			});
+		}
+
+		function openBulkTrash(items, trigger) {
+			var queue = (items || []).slice();
+			if (queue.length === 1) {
+				openTrash(queue[0], trigger);
+				return;
+			}
+			openModal({
+				title: 'Move selected items to trash?',
+				description: queue.length + ' items will be moved to private File Manager trash. Processing stops if an item fails.',
+				trigger: trigger,
+				confirmLabel: 'Move to trash',
+				onConfirm: function () {
+					var chain = Promise.resolve();
+					queue.forEach(function (item) {
+						chain = chain.then(function () {
+							return request('trash_item', { path: item.path, confirmed_non_empty: 1 });
+						});
+					});
+					return chain.then(function () {
+						state.selection.clear();
+						speak(queue.length + ' items moved to trash.');
 						loadDirectory();
 					});
 				},
@@ -1329,8 +1589,75 @@
 			});
 		}
 
+		function closeSortMenu(restoreFocus) {
+			var menu = select('[data-fm-sort-menu]');
+			var toggle = select('[data-fm-sort-toggle]');
+			if (!menu || menu.hidden) {
+				return;
+			}
+			menu.hidden = true;
+			toggle.setAttribute('aria-expanded', 'false');
+			if (restoreFocus) {
+				toggle.focus();
+			}
+		}
+
+		function sortMenuItems() {
+			var menu = select('[data-fm-sort-menu]');
+			return menu ? selectAll('[role="menuitemradio"]', menu) : [];
+		}
+
+		function renderSortMenu() {
+			var menu = select('[data-fm-sort-menu]');
+			var choices = [
+				['name', 'asc', 'Name (A–Z)'],
+				['name', 'desc', 'Name (Z–A)'],
+				['type', 'asc', 'Type (A–Z)'],
+				['type', 'desc', 'Type (Z–A)'],
+				['size', 'asc', 'Size (smallest first)'],
+				['size', 'desc', 'Size (largest first)'],
+				['modified', 'desc', 'Modified (newest first)'],
+				['modified', 'asc', 'Modified (oldest first)'],
+			];
+			clear(menu);
+			choices.forEach(function (choice) {
+				var control = button(choice[2], function () {
+					state.sort = choice[0];
+					state.order = choice[1];
+					state.page = 1;
+					closeSortMenu(true);
+					loadDirectory();
+				}, 'sitx-fm-sort__item');
+				control.setAttribute('role', 'menuitemradio');
+				control.setAttribute('aria-checked', state.sort === choice[0] && state.order === choice[1] ? 'true' : 'false');
+				control.tabIndex = -1;
+				menu.appendChild(control);
+			});
+		}
+
+		function moveSortFocus(key) {
+			var items = sortMenuItems();
+			if (!items.length) {
+				return;
+			}
+			var current = Math.max(0, items.indexOf(document.activeElement));
+			var next = current;
+			if (key === 'ArrowDown') {
+				next = (current + 1) % items.length;
+			} else if (key === 'ArrowUp') {
+				next = (current - 1 + items.length) % items.length;
+			} else if (key === 'Home') {
+				next = 0;
+			} else if (key === 'End') {
+				next = items.length - 1;
+			}
+			items[next].focus();
+		}
+
 		function bindBrowser() {
 			var menu = select('[data-fm-context-menu]');
+			var sortMenu = select('[data-fm-sort-menu]');
+			var sortToggle = select('[data-fm-sort-toggle]');
 			menu.addEventListener('keydown', function (event) {
 				if (event.key === 'Escape') {
 					event.preventDefault();
@@ -1343,11 +1670,26 @@
 					document.activeElement.click();
 				}
 			});
+			sortMenu.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape') {
+					event.preventDefault();
+					closeSortMenu(true);
+				} else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(event.key) !== -1) {
+					event.preventDefault();
+					moveSortFocus(event.key);
+				} else if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+					event.preventDefault();
+					document.activeElement.click();
+				}
+			});
 			document.addEventListener('pointerdown', function (event) {
 				var target = event.target;
 				var rowMenu = target && typeof target.closest === 'function' ? target.closest('[data-fm-row-menu]') : null;
 				if (!menu.hidden && !menu.contains(target) && !rowMenu) {
 					closeContextMenu(false);
+				}
+				if (!sortMenu.hidden && !sortMenu.contains(target) && !sortToggle.contains(target)) {
+					closeSortMenu(false);
 				}
 			});
 			global.addEventListener('resize', function () {
@@ -1357,26 +1699,29 @@
 			global.addEventListener('scroll', function () {
 				closeContextMenu(false);
 			}, true);
-			select('[data-fm-back]').addEventListener('click', function () {
-				guardDirty(function () {
-					state.path = state.history.back();
-					loadDirectory();
-				});
-			});
-			select('[data-fm-forward]').addEventListener('click', function () {
-				guardDirty(function () {
-					state.path = state.history.forward();
-					loadDirectory();
-				});
-			});
-			select('[data-fm-up]').addEventListener('click', function () {
-				var segments = state.path.split('/').filter(Boolean);
-				segments.pop();
-				visit(segments.join('/'), true);
-			});
 			select('[data-fm-refresh]').addEventListener('click', loadDirectory);
-			select('[data-fm-new]').addEventListener('click', function (event) {
-				openCreate(event.currentTarget);
+			select('[data-fm-new-folder]').addEventListener('click', function (event) {
+				openCreate('directory', event.currentTarget);
+			});
+			select('[data-fm-new-file]').addEventListener('click', function (event) {
+				openCreate('file', event.currentTarget);
+			});
+			sortToggle.addEventListener('click', function () {
+				var opening = sortMenu.hidden;
+				closeContextMenu(false);
+				if (!opening) {
+					closeSortMenu(false);
+					return;
+				}
+				renderSortMenu();
+				sortMenu.hidden = false;
+				sortToggle.setAttribute('aria-expanded', 'true');
+				var current = sortMenuItems().find(function (item) {
+					return item.getAttribute('aria-checked') === 'true';
+				}) || sortMenuItems()[0];
+				if (current) {
+					current.focus();
+				}
 			});
 			var uploadInput = select('[data-fm-upload-input]');
 			select('[data-fm-upload]').addEventListener('click', function () {
@@ -1423,16 +1768,58 @@
 				loadDirectory();
 			}, 250));
 			select('[data-fm-toggle-tree]').addEventListener('click', function (event) {
-				setPanelOpen('tree', event.currentTarget.getAttribute('aria-expanded') !== 'true');
-			});
-			select('[data-fm-toggle-details]').addEventListener('click', function (event) {
-				setPanelOpen('details', event.currentTarget.getAttribute('aria-expanded') !== 'true');
+				setTreeOpen(event.currentTarget.getAttribute('aria-expanded') !== 'true', false);
 			});
 			select('[data-fm-close-tree]').addEventListener('click', function () {
-				setPanelOpen('tree', false, true);
+				setTreeOpen(false, true);
 			});
 			select('[data-fm-close-details]').addEventListener('click', function () {
-				setPanelOpen('details', false, true);
+				setDetailsOpen(false);
+			});
+			select('[data-fm-select-all]').addEventListener('change', function (event) {
+				if (!event.currentTarget.checked) {
+					state.selection.clear();
+					updateSelectionUI();
+					return;
+				}
+				state.selection.clear();
+				state.currentItems.slice(0, state.selectionLimit).forEach(function (item) {
+					state.selection.toggle(item);
+				});
+				if (state.currentItems.length > state.selectionLimit) {
+					speak('Only the first ' + state.selectionLimit + ' visible items were selected.');
+				}
+				updateSelectionUI();
+			});
+			select('[data-fm-selection-clear]').addEventListener('click', function () {
+				state.selection.clear();
+				updateSelectionUI();
+			});
+			select('[data-fm-selection-download]').addEventListener('click', function () {
+				var item = state.selection.items()[0];
+				if (item && item.type === 'file') {
+					var link = document.createElement('a');
+					link.href = downloadUrl(item.path);
+					link.click();
+				}
+			});
+			select('[data-fm-selection-archive]').addEventListener('click', function () {
+				downloadArchive(state.selection.items());
+			});
+			select('[data-fm-selection-details]').addEventListener('click', function (event) {
+				var item = state.selection.items()[0];
+				if (item) {
+					openDetailsFor(item, event.currentTarget);
+				}
+			});
+			select('[data-fm-selection-rename]').addEventListener('click', function (event) {
+				var item = state.selection.items()[0];
+				if (item) {
+					openRename(item, event.currentTarget);
+				}
+			});
+			select('[data-fm-selection-trash]').addEventListener('click', function (event) {
+				openBulkTrash(state.selection.items(), event.currentTarget);
 			});
 			select('[data-fm-editor-save]').addEventListener('click', saveEditor);
 			select('[data-fm-editor-cancel]').addEventListener('click', function () {
@@ -1442,6 +1829,9 @@
 				select('[data-fm-editor]').classList.toggle('is-fullscreen');
 			});
 			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape' && !select('[data-fm-details-panel]').hidden) {
+					setDetailsOpen(false);
+				}
 				if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's' && !select('[data-fm-editor]').hidden) {
 					event.preventDefault();
 					saveEditor();
@@ -1454,6 +1844,8 @@
 				}
 			});
 			syncPanelsForViewport(true);
+			initializeTree();
+			updateSelectionUI();
 			loadDirectory();
 		}
 
