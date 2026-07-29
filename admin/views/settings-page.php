@@ -149,10 +149,13 @@ if ( SITEINTELIX_Modules::is_enabled( 'debug_log' ) && SITEINTELIX_Security::can
 										<?php if ( ! empty( $siteintelix_tab['icon_svg'] ) ) : ?>
 											<?php
 											echo wp_kses(
-												(string) $siteintelix_tab['icon_svg'],
+												SITEINTELIX_Admin_UI::svg_icon( (string) $siteintelix_tab['icon_svg'] ),
 												array(
+													'span' => array(
+														'class' => true,
+													),
 													'svg'  => array(
-														'viewBox'     => true,
+														'viewbox'     => true,
 														'aria-hidden' => true,
 														'focusable'   => true,
 													),

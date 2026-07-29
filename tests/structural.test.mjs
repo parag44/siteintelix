@@ -91,6 +91,26 @@ test('File Manager admin UI is accessible and its assets are screen-scoped', asy
 	assert.match(admin, /'browser'\s*===\s*self::requested_manager_tab\(\)[\s\S]*wp_enqueue_code_editor\(/);
 });
 
+test('File Manager uses one safely rendered folder SVG in every admin context', async () => {
+	const [ui, registry, modules, settings, page, css] = await Promise.all([
+		read('includes/class-siteintelix-admin-ui.php'),
+		read('includes/class-siteintelix-modules.php'),
+		read('admin/views/modules-page.php'),
+		read('admin/views/settings-page.php'),
+		read('includes/modules/file-manager/views/file-manager.php'),
+		read('assets/admin/css/siteintelix-admin.css'),
+	]);
+
+	assert.match(registry, /'file_manager'[\s\S]*'icon_svg'\s*=>\s*'<svg/);
+	assert.match(ui, /public static function svg_icon\(/);
+	assert.match(ui, /'icon_svg'\s*=>\s*''/);
+	assert.match(modules, /SITEINTELIX_Admin_UI::svg_icon\(/);
+	assert.match(settings, /SITEINTELIX_Admin_UI::svg_icon\(/);
+	assert.match(page, /'icon_svg'\s*=>\s*\$siteintelix_fm_module\['icon_svg'\]/);
+	assert.match(css, /\.sitx-module-card__icon\s*>\s*svg,[\s\S]*\.sitx-settings-tab__icon\s*>\s*svg/);
+	assert.doesNotMatch(registry, /'file_manager'[\s\S]{0,600}'icon'\s*=>\s*'dashicons-open-folder'/);
+});
+
 test('File Manager retention and uninstall lifecycle preserve site files', async () => {
 	const [main, module, backups, trash, storage, uninstall] = await Promise.all([
 		read('siteintelix.php'),

@@ -218,7 +218,7 @@ class SITEINTELIX_Modules {
 				'title'       => ( did_action( 'init' ) ? __( 'File Manager', 'siteintelix' ) : 'File Manager' ),
 				'menu_title'  => ( did_action( 'init' ) ? __( 'File Manager', 'siteintelix' ) : 'File Manager' ),
 				'description' => ( did_action( 'init' ) ? __( 'Safely browse, inspect, edit, upload, download, and manage files inside your WordPress installation.', 'siteintelix' ) : 'Safely browse, inspect, edit, upload, download, and manage files inside your WordPress installation.' ),
-				'icon'        => 'dashicons-open-folder',
+				'icon'        => 'dashicons-category',
 				'icon_svg'    => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 3v9h14V8H5Z"/></svg>',
 				'color'       => 'blue',
 				'status'      => 'core',

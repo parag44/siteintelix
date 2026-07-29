@@ -13,12 +13,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 $siteintelix_fm_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'browser';
 $siteintelix_fm_tab = in_array( $siteintelix_fm_tab, array( 'browser', 'backups', 'trash', 'settings' ), true ) ? $siteintelix_fm_tab : 'browser';
 $siteintelix_fm_base = admin_url( 'admin.php?page=siteintelix-file-manager' );
+$siteintelix_fm_modules = SITEINTELIX_Modules::get_all();
+$siteintelix_fm_module  = isset( $siteintelix_fm_modules['file_manager'] ) ? $siteintelix_fm_modules['file_manager'] : array();
 ?>
 <div class="wrap siteintelix-wrap si-admin-wrap sitx-file-manager" data-siteintelix-file-manager data-active-tab="<?php echo esc_attr( $siteintelix_fm_tab ); ?>">
 	<?php
 	SITEINTELIX_Admin_UI::page_header(
 		array(
-			'icon'        => 'dashicons-open-folder',
+			'icon'        => isset( $siteintelix_fm_module['icon'] ) ? $siteintelix_fm_module['icon'] : 'dashicons-category',
+			'icon_svg'    => $siteintelix_fm_module['icon_svg'],
 			'title'       => __( 'File Manager', 'siteintelix' ),
 			'description' => __( 'Browse and safely manage files inside this WordPress site.', 'siteintelix' ),
 			'badges'      => array(

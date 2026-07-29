@@ -28,6 +28,30 @@ class SITEINTELIX_Admin_UI {
 	}
 
 	/**
+	 * Render a fixed plugin-owned inline SVG inside the shared icon container.
+	 *
+	 * @param string $svg         Trusted plugin-owned SVG.
+	 * @param string $extra_class Extra wrapper classes.
+	 * @return string
+	 */
+	public static function svg_icon( $svg, $extra_class = '' ) {
+		$classes = trim( 'si-icon si-icon--svg ' . $extra_class );
+		$allowed = array(
+			'svg'  => array(
+				'aria-hidden' => true,
+				'focusable'   => true,
+				'viewbox'     => true,
+			),
+			'path' => array(
+				'd'    => true,
+				'fill' => true,
+			),
+		);
+
+		return '<span class="' . esc_attr( $classes ) . '">' . wp_kses( (string) $svg, $allowed ) . '</span>';
+	}
+
+	/**
 	 * Render a shared badge.
 	 *
 	 * @param string $label Badge label.
@@ -94,6 +118,7 @@ class SITEINTELIX_Admin_UI {
 	public static function page_header( $args ) {
 		$defaults = array(
 			'icon'        => 'dashicons-admin-generic',
+			'icon_svg'    => '',
 			'title'       => '',
 			'description' => '',
 			'badges'      => array(),
@@ -105,7 +130,28 @@ class SITEINTELIX_Admin_UI {
 		<header class="si-page-header siteintelix-header">
 			<div class="si-page-header__content siteintelix-header__content">
 				<div class="si-page-header__main siteintelix-header__title-group">
-					<?php echo wp_kses_post( self::icon( $args['icon'], 'si-page-header__icon siteintelix-header__icon' ) ); ?>
+					<?php
+					echo wp_kses(
+						$args['icon_svg']
+							? self::svg_icon( $args['icon_svg'], 'si-page-header__icon siteintelix-header__icon' )
+							: self::icon( $args['icon'], 'si-page-header__icon siteintelix-header__icon' ),
+						array(
+							'span' => array(
+								'aria-hidden' => true,
+								'class'       => true,
+							),
+							'svg'  => array(
+								'aria-hidden' => true,
+								'focusable'   => true,
+								'viewbox'     => true,
+							),
+							'path' => array(
+								'd'    => true,
+								'fill' => true,
+							),
+						)
+					);
+					?>
 					<div class="si-page-header__text siteintelix-header__text">
 						<h1 class="si-page-header__title siteintelix-header__title"><?php echo esc_html( $args['title'] ); ?></h1>
 						<?php if ( $args['description'] ) : ?>

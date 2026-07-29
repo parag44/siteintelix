@@ -47,10 +47,13 @@ if ( ! function_exists( 'siteintelix_render_module_card' ) ) {
 					<?php if ( ! empty( $module['icon_svg'] ) ) : ?>
 						<?php
 						echo wp_kses(
-							(string) $module['icon_svg'],
+							SITEINTELIX_Admin_UI::svg_icon( (string) $module['icon_svg'] ),
 							array(
+								'span' => array(
+									'class' => true,
+								),
 								'svg'  => array(
-									'viewBox'    => true,
+									'viewbox'     => true,
 									'aria-hidden' => true,
 									'focusable'   => true,
 								),
