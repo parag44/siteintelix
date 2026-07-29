@@ -1,7 +1,7 @@
 # File Manager Safe Mode Design
 
-**Date:** 2026-07-29  
-**Release:** SiteIntelix 2.7.3  
+**Date:** 2026-07-29
+**Release:** SiteIntelix 2.7.3
 **Status:** Approved design
 
 ## Purpose
