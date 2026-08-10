@@ -20,6 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SITEINTELIX_System_Info {
 
+	const OVERVIEW_REMOTE_HEALTH_TRANSIENT = 'siteintelix_overview_remote_health';
+
 	// -----------------------------------------------------------------------
 	// Public API
 	// -----------------------------------------------------------------------
@@ -27,7 +29,7 @@ class SITEINTELIX_System_Info {
 	/**
 	 * Return all system information as a single nested array.
 	 *
-	 * Keys: 'wordpress', 'server', 'environment'.
+	 * Keys: 'wordpress', 'server', 'environment', 'database'.
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
@@ -36,7 +38,34 @@ class SITEINTELIX_System_Info {
 			'wordpress'   => self::get_wordpress_info(),
 			'server'      => self::get_server_info(),
 			'environment' => self::get_environment_info(),
+			'database'    => self::get_database_info(),
 		);
+	}
+
+	/**
+	 * Return an export-safe copy of collected system information.
+	 *
+	 * @param array<string,array<string,mixed>> $info Collected system information.
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function get_redacted_export( array $info ) {
+		$redacted = $info;
+
+		unset( $redacted['wordpress']['admin_email'] );
+		unset( $redacted['server']['db_name'], $redacted['server']['db_host'], $redacted['server']['uploads_dir'] );
+		unset(
+			$redacted['database']['username'],
+			$redacted['database']['host'],
+			$redacted['database']['name'],
+			$redacted['database']['table_prefix']
+		);
+
+		$redacted['privacy'] = array(
+			'redacted' => true,
+			'note'     => __( 'Private paths, database identifiers, and administrator email are omitted.', 'siteintelix' ),
+		);
+
+		return $redacted;
 	}
 
 	// -----------------------------------------------------------------------
@@ -142,6 +171,82 @@ class SITEINTELIX_System_Info {
 	}
 
 	/**
+	 * Gather database connection and runtime information.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_database_info() {
+		global $wpdb;
+
+		return array(
+			'extension'          => self::get_database_extension( $wpdb ),
+			'server_version'     => self::get_mysql_version( $wpdb ),
+			'client_version'     => self::get_database_client_version(),
+			'username'           => defined( 'DB_USER' ) ? DB_USER : '',
+			'host'               => isset( $wpdb->dbhost ) ? $wpdb->dbhost : '',
+			'name'               => isset( $wpdb->dbname ) ? $wpdb->dbname : '',
+			'table_prefix'       => isset( $wpdb->prefix ) ? $wpdb->prefix : '',
+			'charset'            => isset( $wpdb->charset ) ? $wpdb->charset : '',
+			'collation'          => isset( $wpdb->collate ) ? $wpdb->collate : '',
+			'max_allowed_packet' => self::get_database_variable( 'max_allowed_packet' ),
+			'max_connections'    => self::get_database_variable( 'max_connections' ),
+		);
+	}
+
+	/**
+	 * Determine the active database PHP extension.
+	 *
+	 * @param wpdb $wpdb WordPress database abstraction object.
+	 * @return string
+	 */
+	private static function get_database_extension( $wpdb ) {
+		if ( isset( $wpdb->dbh ) && is_object( $wpdb->dbh ) ) {
+			return strtolower( get_class( $wpdb->dbh ) );
+		}
+
+		if ( extension_loaded( 'mysqli' ) ) {
+			return 'mysqli';
+		}
+
+		return extension_loaded( 'mysql' ) ? 'mysql' : __( 'Unknown', 'siteintelix' );
+	}
+
+	/**
+	 * Get the database client library version.
+	 *
+	 * @return string
+	 */
+	private static function get_database_client_version() {
+		global $wpdb;
+
+		if ( is_object( $wpdb ) && method_exists( $wpdb, 'db_server_info' ) ) {
+			return (string) $wpdb->db_server_info();
+		}
+
+		return __( 'Unknown', 'siteintelix' );
+	}
+
+	/**
+	 * Read a MySQL server variable.
+	 *
+	 * @param string $name Variable name.
+	 * @return string
+	 */
+	private static function get_database_variable( $name ) {
+		global $wpdb;
+
+		$allowed = array( 'max_allowed_packet', 'max_connections' );
+		if ( ! in_array( $name, $allowed, true ) ) {
+			return __( 'Unknown', 'siteintelix' );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$value = $wpdb->get_var( $wpdb->prepare( 'SHOW VARIABLES LIKE %s', $name ), 1 );
+
+		return null === $value ? __( 'Unknown', 'siteintelix' ) : (string) $value;
+	}
+
+	/**
 	 * Convert a PHP ini size string (e.g. "128M") to an integer in megabytes.
 	 *
 	 * Returns -1 for unlimited ("-1").
@@ -181,8 +286,11 @@ class SITEINTELIX_System_Info {
 	 * @return array<string, mixed>
 	 */
 	public static function get_environment_info() {
+		$rest_status = self::get_cached_rest_api_status();
+
 		return array(
-			'rest_api'     => self::check_rest_api(),
+			'rest_api'     => $rest_status['available'],
+			'rest_api_stale' => $rest_status['stale'],
 			'debug_mode'   => defined( 'WP_DEBUG' ) && WP_DEBUG,
 			'debug_log'    => defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG,
 			'cron'         => ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON ),
@@ -199,26 +307,25 @@ class SITEINTELIX_System_Info {
 	}
 
 	/**
-	 * Check whether the REST API is reachable with a local loopback request.
+	 * Read the most recently cached REST health result without making a request.
 	 *
-	 * Uses a 5-second timeout and skips SSL verification for local requests.
-	 *
-	 * @return bool  TRUE when the REST API responds with HTTP 200.
+	 * @return array{available:bool|null,stale:bool,collected_at:string}
 	 */
-	private static function check_rest_api() {
-		$response = wp_remote_get(
-			rest_url( '/' ),
-			array(
-				'timeout'   => 5,
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return false;
+	private static function get_cached_rest_api_status() {
+		$cached = get_transient( self::OVERVIEW_REMOTE_HEALTH_TRANSIENT );
+		if ( ! is_array( $cached ) || ! array_key_exists( 'available', $cached ) ) {
+			return array(
+				'available'    => null,
+				'stale'        => true,
+				'collected_at' => '',
+			);
 		}
 
-		return 200 === (int) wp_remote_retrieve_response_code( $response );
+		return array(
+			'available'    => (bool) $cached['available'],
+			'stale'        => ! empty( $cached['stale'] ),
+			'collected_at' => isset( $cached['collected_at'] ) ? sanitize_text_field( $cached['collected_at'] ) : '',
+		);
 	}
 
 	// -----------------------------------------------------------------------
@@ -247,6 +354,9 @@ class SITEINTELIX_System_Info {
 	 * @return string
 	 */
 	private static function get_disk_free() {
+		if ( ! function_exists( 'disk_free_space' ) ) {
+			return __( 'Unknown', 'siteintelix' );
+		}
 		$bytes = @disk_free_space( ABSPATH ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		return $bytes ? size_format( $bytes ) : __( 'Unknown', 'siteintelix' );
 	}

@@ -1,0 +1,1729 @@
+/* Server Diagnostics: scoped visual system. */
+#siteintelix-server-diagnostics-page {
+	--sitx-diag-canvas: #f8fafc;
+	--sitx-diag-surface: #fff;
+	--sitx-diag-border: #e5e7eb;
+	--sitx-diag-border-strong: #cbd5e1;
+	--sitx-diag-primary: #2563eb;
+	--sitx-diag-primary-hover: #1d4ed8;
+	--sitx-diag-primary-soft: #eff6ff;
+	--sitx-diag-success: #22c55e;
+	--sitx-diag-success-text: #166534;
+	--sitx-diag-success-soft: #f0fdf4;
+	--sitx-diag-warning: #f59e0b;
+	--sitx-diag-warning-text: #92400e;
+	--sitx-diag-warning-soft: #fffbeb;
+	--sitx-diag-danger: #ef4444;
+	--sitx-diag-danger-text: #991b1b;
+	--sitx-diag-danger-soft: #fef2f2;
+	--sitx-diag-info-text: #1e40af;
+	--sitx-diag-info-soft: #eff6ff;
+	--sitx-diag-text: #111827;
+	--sitx-diag-muted: #64748b;
+	--sitx-diag-radius-card: 12px;
+	--sitx-diag-radius-control: 7px;
+	--sitx-diag-space: 8px;
+	background: var(--sitx-diag-canvas);
+	color: var(--sitx-diag-text);
+	font-size: 14px;
+	line-height: 1.5;
+	overflow-x: clip;
+}
+
+#siteintelix-server-diagnostics-page *,
+#siteintelix-server-diagnostics-page *::before,
+#siteintelix-server-diagnostics-page *::after {
+	box-sizing: border-box;
+}
+
+#siteintelix-server-diagnostics-page [hidden] {
+	display: none !important;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-visually-hidden {
+	border: 0;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+#siteintelix-server-diagnostics-page :focus-visible {
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, .28) !important;
+	outline: 2px solid var(--sitx-diag-primary);
+	outline-offset: 1px;
+}
+
+/* Page shell and shared controls. */
+#siteintelix-server-diagnostics-page .si-page-header {
+	background: var(--sitx-diag-surface);
+	border-color: var(--sitx-diag-border);
+	box-shadow: none;
+}
+
+#siteintelix-server-diagnostics-page .si-page-header__content,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-container {
+	max-width: 1440px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-refresh-status {
+	margin: 0 0 calc(var(--sitx-diag-space) * 2);
+	color: var(--sitx-diag-muted);
+	font-size: 13px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-refresh-status.has-error {
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .si-page-header__title {
+	color: var(--sitx-diag-text) !important;
+	font-size: 24px !important;
+	letter-spacing: -0.02em;
+}
+
+#siteintelix-server-diagnostics-page .si-page-header__description {
+	color: var(--sitx-diag-muted);
+	line-height: 1.5;
+}
+
+#siteintelix-server-diagnostics-page .si-card,
+#siteintelix-server-diagnostics-page .si-toolbar {
+	background: var(--sitx-diag-surface);
+	border-color: var(--sitx-diag-border);
+	border-radius: var(--sitx-diag-radius-card);
+	box-shadow: none;
+}
+
+#siteintelix-server-diagnostics-page .si-button,
+#siteintelix-server-diagnostics-page input[type="search"],
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary {
+	border-radius: var(--sitx-diag-radius-control);
+	font-size: 13px;
+	min-height: 40px;
+}
+
+#siteintelix-server-diagnostics-page .si-button {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	color: var(--sitx-diag-text);
+	transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+#siteintelix-server-diagnostics-page .si-button:hover {
+	background: var(--sitx-diag-primary-soft);
+	border-color: #93c5fd;
+	color: var(--sitx-diag-primary-hover);
+}
+
+#siteintelix-server-diagnostics-page .si-button--primary {
+	background: var(--sitx-diag-primary);
+	border-color: var(--sitx-diag-primary);
+	color: #fff;
+}
+
+#siteintelix-server-diagnostics-page .si-button--primary:hover {
+	background: var(--sitx-diag-primary-hover);
+	border-color: var(--sitx-diag-primary-hover);
+	color: #fff;
+}
+
+#siteintelix-server-diagnostics-page input[type="search"] {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	box-shadow: none;
+	color: var(--sitx-diag-text);
+	padding-inline: 12px 36px;
+}
+
+#siteintelix-server-diagnostics-page input[type="search"]::placeholder {
+	color: #64748b;
+}
+
+/* Compact badges include a dot so status is not conveyed by color alone. */
+#siteintelix-server-diagnostics-page .si-badge {
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	gap: 6px;
+	letter-spacing: 0.01em;
+	min-height: 24px;
+	padding: 0 9px;
+}
+
+#siteintelix-server-diagnostics-page .si-badge::before {
+	background: currentColor;
+	border-radius: 50%;
+	content: "";
+	flex: 0 0 6px;
+	height: 6px;
+	width: 6px;
+}
+
+#siteintelix-server-diagnostics-page .si-badge .dashicons {
+	display: none;
+}
+
+#siteintelix-server-diagnostics-page .si-badge--success,
+#siteintelix-server-diagnostics-page .si-badge--good {
+	background: var(--sitx-diag-success-soft);
+	border-color: #bbf7d0;
+	color: var(--sitx-diag-success-text);
+}
+
+#siteintelix-server-diagnostics-page .si-badge--warning {
+	background: var(--sitx-diag-warning-soft);
+	border-color: #fde68a;
+	color: var(--sitx-diag-warning-text);
+}
+
+#siteintelix-server-diagnostics-page .si-badge--danger,
+#siteintelix-server-diagnostics-page .si-badge--critical {
+	background: var(--sitx-diag-danger-soft);
+	border-color: #fecaca;
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .si-badge--info {
+	background: var(--sitx-diag-info-soft);
+	border-color: #bfdbfe;
+	color: var(--sitx-diag-info-text);
+}
+
+#siteintelix-server-diagnostics-page .si-badge--neutral {
+	background: #f8fafc;
+	border-color: var(--sitx-diag-border);
+	color: var(--sitx-diag-muted);
+}
+
+/* Health-first overview. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-health {
+	background: var(--sitx-diag-canvas);
+	padding-bottom: var(--sitx-diag-space);
+	position: sticky;
+	top: 32px;
+	z-index: 30;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: minmax(280px, 1.45fr) repeat(3, minmax(150px, 1fr));
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat {
+	align-content: center;
+	display: grid;
+	min-height: 128px;
+	padding: 20px;
+	position: relative;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat > span {
+	color: var(--sitx-diag-muted);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat > strong {
+	color: var(--sitx-diag-text);
+	font-size: 30px;
+	line-height: 1.1;
+	margin: 6px 0 4px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat > small {
+	color: var(--sitx-diag-muted);
+	font-size: 11px;
+	line-height: 1.4;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+	align-items: center;
+	border-color: #bfdbfe;
+	column-gap: 20px;
+	grid-template-columns: 80px minmax(0, 1fr);
+	grid-template-rows: auto auto;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > span,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > small {
+	grid-column: 2;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > span {
+	align-self: end;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > strong {
+	align-items: center;
+	align-self: center;
+	background: var(--sitx-diag-surface);
+	border: 8px solid #dbeafe;
+	border-radius: 50%;
+	box-shadow: inset 0 0 0 2px var(--sitx-diag-primary);
+	display: flex;
+	font-size: 22px;
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	height: 80px;
+	justify-content: center;
+	margin: 0;
+	width: 80px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > strong {
+	color: var(--sitx-diag-primary-hover);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat--danger > strong {
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat--warning > strong {
+	color: var(--sitx-diag-warning-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat--success > strong {
+	color: var(--sitx-diag-success-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-healthy,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-empty--healthy {
+	align-items: center;
+	background: var(--sitx-diag-success-soft);
+	border-color: #bbf7d0;
+	color: var(--sitx-diag-success-text);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	margin-top: 16px;
+	min-height: 184px;
+	padding: 24px;
+	text-align: center;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-healthy .dashicons,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-empty--healthy .dashicons {
+	align-items: center;
+	background: var(--sitx-diag-success);
+	border-radius: 50%;
+	color: #fff;
+	display: flex;
+	font-size: 36px;
+	height: 64px;
+	justify-content: center;
+	margin-bottom: 12px;
+	width: 64px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-healthy p,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-empty--healthy p {
+	margin: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-alert {
+	background: var(--sitx-diag-warning-soft);
+	border: 1px solid #fde68a;
+	border-left: 4px solid var(--sitx-diag-warning);
+	border-radius: var(--sitx-diag-radius-card);
+	box-shadow: none;
+	margin: 8px 0 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-alert ul {
+	margin-bottom: 0;
+}
+
+/* Sticky filter and bulk action layer. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+	align-items: center;
+	column-gap: 16px;
+	margin: 8px 0 16px;
+	padding: 12px;
+	position: sticky;
+	top: 184px;
+	z-index: 25;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters {
+	display: flex;
+	flex: 1 1 auto;
+	gap: 4px;
+	min-width: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button {
+	border-color: transparent;
+	color: var(--sitx-diag-text);
+	padding-inline: 12px;
+	white-space: nowrap;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button > span {
+	align-items: center;
+	background: #e2e8f0;
+	border-radius: 999px;
+	color: var(--sitx-diag-text);
+	display: inline-flex;
+	font-size: 11px;
+	justify-content: center;
+	min-height: 20px;
+	min-width: 20px;
+	padding: 0 6px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button[aria-pressed="true"],
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button.is-active {
+	background: var(--sitx-diag-primary-soft);
+	border-color: #bfdbfe;
+	color: var(--sitx-diag-primary-hover);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button[aria-pressed="true"] > span,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button.is-active > span {
+	background: var(--sitx-diag-primary);
+	color: #fff;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools {
+	align-items: center;
+	display: flex;
+	flex: 0 1 auto;
+	gap: 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+	width: 220px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls {
+	display: none;
+	position: relative;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary {
+	align-items: center;
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	color: var(--sitx-diag-text);
+	cursor: pointer;
+	display: flex;
+	font-weight: 600;
+	list-style: none;
+	padding: 0 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary::-webkit-details-marker {
+	display: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary::after {
+	content: "\25BE";
+	font-size: 11px;
+	margin-left: 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls[open] > summary::after {
+	transform: rotate(180deg);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > .si-button {
+	display: flex;
+	margin-top: 6px;
+	width: 100%;
+}
+
+/* Main content and compact utilities. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-layout {
+	align-items: start;
+	display: grid;
+	gap: 16px;
+	grid-template-columns: minmax(0, 1fr) 240px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-main {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+	display: grid;
+	gap: 12px;
+	min-width: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility {
+	padding: 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility h2 {
+	color: var(--sitx-diag-text);
+	font-size: 15px;
+	line-height: 1.35;
+	margin: 0 0 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility p,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility > a:not(.si-button) {
+	color: var(--sitx-diag-muted);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility p {
+	margin: 0 0 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-utility .si-button {
+	display: flex;
+	margin-top: 8px;
+	width: 100%;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-report {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	line-height: 1.5;
+	margin-top: 8px;
+	max-height: 160px;
+	resize: vertical;
+	width: 100%;
+}
+
+/* Accordion cards. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section {
+	border-radius: var(--sitx-diag-radius-card);
+	overflow: clip;
+	padding: 0;
+	transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section:hover {
+	border-color: var(--sitx-diag-border-strong);
+	box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
+	transform: translateY(-1px);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section.is-open {
+	border-color: #bfdbfe;
+	transform: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section.has-render-error {
+	border-color: #fecaca;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section > h2 {
+	font-size: 15px;
+	line-height: 1.4;
+	margin: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: var(--sitx-diag-radius-card);
+	color: var(--sitx-diag-text);
+	cursor: pointer;
+	display: grid;
+	font: inherit;
+	gap: 8px;
+	grid-template-columns: 40px minmax(180px, 1fr) auto minmax(220px, auto) 64px 20px;
+	min-height: 76px;
+	padding: 12px 16px;
+	text-align: left;
+	width: 100%;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle:hover {
+	background: #fbfdff;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section.is-open .sitx-serverdiag-section__toggle {
+	background: var(--sitx-diag-primary-soft);
+	border-radius: var(--sitx-diag-radius-card) var(--sitx-diag-radius-card) 0 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .si-icon {
+	background: #f1f5f9;
+	border: 1px solid var(--sitx-diag-border);
+	border-radius: 8px;
+	color: var(--sitx-diag-muted);
+	height: 36px;
+	width: 36px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section[data-severity="danger"] .sitx-serverdiag-section__toggle > .si-icon {
+	background: var(--sitx-diag-danger-soft);
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section[data-severity="warning"] .sitx-serverdiag-section__toggle > .si-icon {
+	background: var(--sitx-diag-warning-soft);
+	color: var(--sitx-diag-warning-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section[data-severity="pass"] .sitx-serverdiag-section__toggle > .si-icon {
+	background: var(--sitx-diag-success-soft);
+	color: var(--sitx-diag-success-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__heading {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding-right: 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__heading strong {
+	font-size: 15px;
+	font-weight: 700;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__heading small,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__counts {
+	color: var(--sitx-diag-muted);
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__counts {
+	padding: 0 16px;
+	text-align: right;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .dashicons-arrow-down-alt2 {
+	align-self: center;
+	color: #64748b;
+	justify-self: center;
+	transition: transform 160ms ease;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section.is-open .sitx-serverdiag-section__toggle > .dashicons-arrow-down-alt2 {
+	transform: rotate(180deg);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel {
+	border-top: 1px solid var(--sitx-diag-border);
+	padding: 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel[data-render-failed="true"] {
+	background: var(--sitx-diag-danger-soft);
+	color: var(--sitx-diag-danger-text);
+	font-weight: 600;
+}
+
+/* Lazy issue, information, and passed rows. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-problems,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-information,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure__content {
+	display: grid;
+	gap: 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+	background: #f8fafc;
+	border: 1px solid var(--sitx-diag-border);
+	border-left: 3px solid #94a3b8;
+	border-radius: 8px;
+	display: grid;
+	gap: 8px 16px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	min-width: 0;
+	padding: 12px 14px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-danger {
+	border-left-color: var(--sitx-diag-danger);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-warning {
+	border-left-color: var(--sitx-diag-warning);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-pass {
+	border-left-color: var(--sitx-diag-success);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-info,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-neutral {
+	border-left-color: var(--sitx-diag-primary);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__header {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	grid-column: 1 / -1;
+	justify-content: space-between;
+	min-width: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__label {
+	color: var(--sitx-diag-text);
+	font-size: 14px;
+	overflow-wrap: anywhere;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status {
+	align-items: center;
+	background: #f1f5f9;
+	border-radius: 999px;
+	color: var(--sitx-diag-text);
+	display: inline-flex;
+	flex: 0 0 auto;
+	font-size: 11px;
+	font-weight: 700;
+	gap: 6px;
+	line-height: 1;
+	min-height: 24px;
+	padding: 0 9px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status::before {
+	background: #64748b;
+	border-radius: 50%;
+	content: "";
+	height: 6px;
+	width: 6px;
+}
+
+#siteintelix-server-diagnostics-page .is-danger .sitx-serverdiag-row__status {
+	background: var(--sitx-diag-danger-soft);
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .is-danger .sitx-serverdiag-row__status::before {
+	background: var(--sitx-diag-danger);
+}
+
+#siteintelix-server-diagnostics-page .is-warning .sitx-serverdiag-row__status {
+	background: var(--sitx-diag-warning-soft);
+	color: var(--sitx-diag-warning-text);
+}
+
+#siteintelix-server-diagnostics-page .is-warning .sitx-serverdiag-row__status::before {
+	background: var(--sitx-diag-warning);
+}
+
+#siteintelix-server-diagnostics-page .is-pass .sitx-serverdiag-row__status {
+	background: var(--sitx-diag-success-soft);
+	color: var(--sitx-diag-success-text);
+}
+
+#siteintelix-server-diagnostics-page .is-pass .sitx-serverdiag-row__status::before {
+	background: var(--sitx-diag-success);
+}
+
+#siteintelix-server-diagnostics-page .is-info .sitx-serverdiag-row__status,
+#siteintelix-server-diagnostics-page .is-neutral .sitx-serverdiag-row__status {
+	background: var(--sitx-diag-info-soft);
+	color: var(--sitx-diag-info-text);
+}
+
+#siteintelix-server-diagnostics-page .is-info .sitx-serverdiag-row__status::before,
+#siteintelix-server-diagnostics-page .is-neutral .sitx-serverdiag-row__status::before {
+	background: var(--sitx-diag-primary);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border);
+	border-radius: 7px;
+	min-width: 0;
+	padding: 10px 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended {
+	background: var(--sitx-diag-success-soft);
+	border-color: #bbf7d0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current strong,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended strong {
+	color: var(--sitx-diag-muted);
+	display: block;
+	font-size: 11px;
+	letter-spacing: 0.03em;
+	margin-bottom: 3px;
+	text-transform: uppercase;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row code {
+	background: transparent;
+	color: var(--sitx-diag-text);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+	padding: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail {
+	color: var(--sitx-diag-muted);
+	font-size: 12px;
+	grid-column: 1 / -1;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row .si-button {
+	justify-self: start;
+	min-height: 40px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure {
+	align-items: center;
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	border-radius: var(--sitx-diag-radius-control);
+	color: var(--sitx-diag-text);
+	cursor: pointer;
+	display: flex;
+	font-size: 12px;
+	font-weight: 700;
+	justify-content: space-between;
+	margin-top: 12px;
+	min-height: 40px;
+	padding: 0 12px;
+	width: 100%;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure::after {
+	content: "+";
+	font-size: 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure[aria-expanded="true"]::after {
+	content: "\2212";
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure__content {
+	margin-top: 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-virtual-list {
+	border: 1px solid var(--sitx-diag-border);
+	border-radius: 8px;
+	contain: layout paint;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-virtual-list .sitx-serverdiag-row {
+	border-left-width: 3px;
+	border-radius: 0;
+	border-width: 0 0 1px 3px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-virtual-spacer {
+	min-height: 0;
+	pointer-events: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__empty,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-no-results {
+	color: var(--sitx-diag-muted);
+	font-size: 13px;
+	text-align: center;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__empty {
+	margin: 12px 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-no-results {
+	grid-column: 1 / -1;
+	margin-bottom: 16px;
+	padding: 32px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-no-results p {
+	margin: 0 0 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-fallback-wrap {
+	overflow-x: auto;
+	padding: 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-fallback-table {
+	border-color: var(--sitx-diag-border);
+	font-size: 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-fallback-table th,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-fallback-table td {
+	overflow-wrap: anywhere;
+	vertical-align: top;
+}
+
+/* Tablet: two-column overview and a collapsed utility rail. */
+@media (max-width: 1024px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-health {
+		position: static;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+		grid-row: span 2;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat:not(.is-primary):last-child {
+		grid-column: 1 / -1;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+		top: 32px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools {
+		flex: 1 1 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+		flex: 1 1 240px;
+		width: auto;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls {
+		display: block;
+	}
+
+	#siteintelix-server-diagnostics-page [data-sitx-diag-expand-all],
+	#siteintelix-server-diagnostics-page [data-sitx-diag-collapse-all] {
+		display: none;
+	}
+}
+
+@media (max-width: 959px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		position: static;
+	}
+}
+
+/* WordPress uses a taller admin bar through its 782px breakpoint. */
+@media (max-width: 782px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+		top: 46px;
+	}
+}
+
+/* Mobile: touch targets, horizontal filters, and stacked issue data. */
+@media (max-width: 767px) {
+	#siteintelix-server-diagnostics-page .si-page-header__title {
+		font-size: 22px !important;
+	}
+
+	#siteintelix-server-diagnostics-page .si-button,
+	#siteintelix-server-diagnostics-page input[type="search"],
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure {
+		min-height: 44px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+		gap: 12px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat {
+		min-height: 112px;
+		padding: 16px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+		grid-column: 1 / -1;
+		grid-row: auto;
+		min-height: 128px;
+		grid-template-columns: 72px minmax(0, 1fr);
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat:not(.is-primary):last-child {
+		grid-column: auto;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat > strong {
+		font-size: 26px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > strong {
+		font-size: 20px;
+		height: 72px;
+		width: 72px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+		align-items: stretch;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		padding: 8px;
+		top: 46px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filters {
+		overflow-x: auto;
+		scrollbar-width: thin;
+		width: 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filters .si-button {
+		flex: 0 0 auto;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools {
+		align-items: stretch;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		width: 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+		grid-column: 1 / -1;
+		min-width: 0;
+		width: 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls {
+		grid-column: 1 / -1;
+		width: 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls > summary {
+		justify-content: space-between;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls[open] > .si-button {
+		background: var(--sitx-diag-surface);
+		position: relative;
+		z-index: 2;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle {
+		gap: 8px;
+		grid-template-columns: 36px minmax(0, 1fr) auto 20px;
+		min-height: 84px;
+		padding: 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .si-badge {
+		grid-column: 3;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__counts {
+		grid-column: 2 / 4;
+		grid-row: 2;
+		padding: 0;
+		text-align: left;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .dashicons-arrow-down-alt2 {
+		grid-column: 4;
+		grid-row: 1 / span 2;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel {
+		padding: 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__header,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail {
+		grid-column: 1;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-fallback-table {
+		min-width: 680px;
+	}
+}
+
+@media (max-width: 479px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-container {
+		padding: 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-utility {
+		padding: 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+		padding: 10px;
+	}
+}
+
+@media (min-width: 1025px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		position: sticky;
+		top: 256px;
+	}
+}
+
+/* Keep the utility rail sticky until the layout collapses at 959px. */
+@media (min-width: 960px) and (max-width: 1024px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		position: sticky;
+		top: 96px;
+	}
+}
+
+/* Reduced motion preserves all states without animated transitions. */
+@media (prefers-reduced-motion: reduce) {
+	#siteintelix-server-diagnostics-page *,
+	#siteintelix-server-diagnostics-page *::before,
+	#siteintelix-server-diagnostics-page *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* Compact diagnostics enhancement. */
+#siteintelix-server-diagnostics-page .sitx-serverdiag-container {
+	margin-inline: auto;
+	padding: 20px 24px 40px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu {
+	display: none;
+	margin: 0 0 12px auto;
+	position: relative;
+	width: max-content;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu > summary {
+	align-items: center;
+	cursor: pointer;
+	display: flex;
+	gap: 7px;
+	justify-content: center;
+	list-style: none;
+	padding: 0 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu > summary::-webkit-details-marker {
+	display: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu__panel {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border);
+	border-radius: 8px;
+	box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+	display: grid;
+	min-width: 190px;
+	padding: 6px;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	z-index: 60;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu__panel a,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu__panel button {
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--sitx-diag-text);
+	cursor: pointer;
+	font: inherit;
+	padding: 9px 10px;
+	text-align: left;
+	text-decoration: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu__panel a:hover,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu__panel button:hover {
+	background: var(--sitx-diag-primary-soft);
+	color: var(--sitx-diag-primary-hover);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-health {
+	position: static;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+	gap: 12px;
+	grid-template-columns: minmax(220px, 1.3fr) repeat(4, minmax(132px, 1fr));
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat {
+	min-height: 104px;
+	padding: 14px 16px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+	column-gap: 14px;
+	grid-template-columns: 72px minmax(0, 1fr);
+	grid-template-rows: 1fr;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-score-ring {
+	background: conic-gradient(var(--sitx-diag-primary) calc(var(--sitx-diag-score) * 1%), #dbeafe 0);
+	border-radius: 50%;
+	display: grid;
+	grid-column: 1 !important;
+	height: 72px;
+	letter-spacing: 0;
+	place-items: center;
+	position: relative;
+	text-transform: none;
+	width: 72px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-score-ring::before {
+	background: var(--sitx-diag-surface);
+	border-radius: inherit;
+	content: "";
+	inset: 7px;
+	position: absolute;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-score-ring > strong {
+	color: var(--sitx-diag-primary-hover);
+	font-size: 20px;
+	line-height: 1;
+	position: relative;
+	z-index: 1;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat__content {
+	align-self: center;
+	display: grid;
+	gap: 2px;
+	grid-column: 2 !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat__content small {
+	color: var(--sitx-diag-muted);
+	font-size: 11px;
+	font-style: normal;
+	font-weight: 700;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat__content strong {
+	color: var(--sitx-diag-success-text);
+	font-size: 15px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-stat__content em {
+	color: var(--sitx-diag-muted);
+	font-size: 11px;
+	font-style: normal;
+	font-weight: 400;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+	align-items: stretch;
+	display: grid;
+	gap: 10px 12px;
+	grid-template-columns: minmax(300px, 1fr) auto;
+	margin: 12px 0 16px;
+	padding: 10px 12px;
+	top: 44px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filters {
+	align-items: center;
+	overflow-x: auto;
+	scrollbar-width: thin;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+	min-width: 220px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-hide-passed {
+	align-items: center;
+	display: inline-flex;
+	gap: 7px;
+	min-height: 40px;
+	white-space: nowrap;
+}
+
+#siteintelix-server-diagnostics-page [data-sitx-diag-sort] {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	border-radius: var(--sitx-diag-radius-control);
+	min-height: 40px;
+	padding: 0 30px 0 10px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle {
+	min-height: 64px;
+	padding: 10px 14px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__heading small {
+	display: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-category-progress {
+	background: #e2e8f0;
+	border-radius: 999px;
+	display: block;
+	height: 5px;
+	overflow: hidden;
+	width: 64px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-category-progress > span {
+	background: var(--sitx-diag-success);
+	display: block;
+	height: 100%;
+	width: var(--sitx-diag-progress);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel {
+	padding: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+	display: grid;
+	grid-template-columns: 82px minmax(140px, 1fr) minmax(130px, .9fr) minmax(260px, 1.7fr) 74px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header {
+	background: #f8fafc;
+	border-bottom: 1px solid var(--sitx-diag-border);
+	color: #475569;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .03em;
+	text-transform: uppercase;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header > span {
+	padding: 9px 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-table {
+	background: var(--sitx-diag-surface);
+	border: 0;
+	border-radius: 0;
+	width: 100%;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+	align-items: center;
+	border: 0;
+	border-bottom: 1px solid var(--sitx-diag-border);
+	border-left: 3px solid transparent;
+	border-radius: 0;
+	box-shadow: none;
+	margin: 0;
+	min-height: 50px;
+	padding: 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-danger {
+	border-left-color: var(--sitx-diag-danger);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-warning {
+	border-left-color: var(--sitx-diag-warning);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row.is-pass {
+	border-left-color: var(--sitx-diag-success);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__header {
+	display: contents;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__label,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__summary {
+	margin: 0;
+	min-width: 0;
+	padding: 10px 12px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status {
+	font-size: 11px;
+	font-weight: 700;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status::before {
+	background: currentColor;
+	border-radius: 50%;
+	content: "";
+	display: inline-block;
+	height: 7px;
+	margin-right: 6px;
+	width: 7px;
+}
+
+#siteintelix-server-diagnostics-page .is-danger .sitx-serverdiag-row__status {
+	color: var(--sitx-diag-danger-text);
+}
+
+#siteintelix-server-diagnostics-page .is-warning .sitx-serverdiag-row__status {
+	color: var(--sitx-diag-warning-text);
+}
+
+#siteintelix-server-diagnostics-page .is-pass .sitx-serverdiag-row__status {
+	color: var(--sitx-diag-success-text);
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current strong,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended strong {
+	display: none;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row code {
+	background: transparent;
+	color: #334155;
+	font-size: 12px;
+	overflow-wrap: anywhere;
+	padding: 0;
+	white-space: normal;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__summary {
+	color: var(--sitx-diag-muted);
+	display: -webkit-box;
+	font-size: 12px;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__action,
+#siteintelix-server-diagnostics-page .sitx-serverdiag-show-all {
+	background: var(--sitx-diag-surface);
+	border: 1px solid var(--sitx-diag-border-strong);
+	border-radius: 6px;
+	color: var(--sitx-diag-primary-hover);
+	cursor: pointer;
+	font-size: 12px;
+	min-height: 32px;
+	padding: 5px 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__action {
+	justify-self: center;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail {
+	background: #f8fafc;
+	border-top: 1px dashed var(--sitx-diag-border-strong);
+	color: #475569;
+	grid-column: 1 / -1;
+	padding: 12px 16px 12px 94px;
+	width: 100%;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail p {
+	margin: 0 0 8px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail-value {
+	display: inline-flex;
+	gap: 5px;
+	margin: 0 18px 0 0;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-show-all {
+	display: block;
+	margin: 12px auto;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-layout {
+	gap: 16px;
+	grid-template-columns: minmax(0, 1fr) 248px;
+}
+
+#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+	top: 96px;
+}
+
+@media (max-width: 1180px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		position: static;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-actions-menu {
+		display: block;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-header-secondary {
+		display: none;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+		grid-column: span 2;
+	}
+}
+
+@media (max-width: 960px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar {
+		grid-template-columns: 1fr;
+		position: static;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools {
+		justify-content: flex-start;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+		grid-template-columns: 78px minmax(130px, 1fr) minmax(110px, .8fr) 68px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header > span:nth-child(4),
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__summary {
+		display: none;
+	}
+}
+
+@media (max-width: 782px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-container {
+		padding: 16px 12px 32px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary {
+		grid-column: 1 / -1;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+		width: 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar__tools input[type="search"] {
+		flex: 1 1 100%;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__counts,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-category-progress {
+		display: none;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-checks-header {
+		border: 0;
+		clip: rect(0 0 0 0);
+		height: 1px;
+		overflow: hidden;
+		position: absolute;
+		width: 1px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+		display: grid;
+		gap: 4px 10px;
+		grid-template-columns: 1fr auto;
+		padding: 11px 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__header {
+		display: grid;
+		gap: 3px;
+		grid-column: 1;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__status,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__label,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended {
+		padding: 0;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__label {
+		font-size: 14px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current {
+		grid-column: 1;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__current strong {
+		display: inline;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__recommended,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__summary {
+		display: none;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__action {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row__detail {
+		grid-column: 1 / -1;
+		padding: 10px 0 0;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 480px) {
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat {
+		min-height: 96px;
+		padding: 12px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat > strong {
+		font-size: 25px;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-hide-passed,
+	#siteintelix-server-diagnostics-page [data-sitx-diag-sort] {
+		flex: 1 1 auto;
+	}
+}
+
+/* Print a plain, expanded, readable diagnostics report. */
+@media print {
+	#siteintelix-server-diagnostics-page {
+		background: #fff !important;
+		color: #000 !important;
+		font-size: 11pt;
+		overflow: visible;
+	}
+
+	#siteintelix-server-diagnostics-page *,
+	#siteintelix-server-diagnostics-page *::before,
+	#siteintelix-server-diagnostics-page *::after {
+		background: #fff !important;
+		border-color: #000 !important;
+		box-shadow: none !important;
+		color: #000 !important;
+		text-shadow: none !important;
+	}
+
+	#siteintelix-server-diagnostics-page .si-page-header__actions,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-filterbar,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section-controls,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-sidebar,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row .si-button,
+	#siteintelix-server-diagnostics-page script,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure {
+		display: none !important;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-health,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section {
+		position: static !important;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-layout,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stats {
+		display: block;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-row {
+		background: #fff !important;
+		border: 1px solid #000 !important;
+		box-shadow: none !important;
+		break-inside: avoid;
+		color: #000 !important;
+		margin-bottom: 10pt;
+		transform: none !important;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-stat.is-primary > strong {
+		border-color: #000;
+		box-shadow: none;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__panel,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure__content {
+		display: block !important;
+	}
+
+	#siteintelix-server-diagnostics-page [data-sitx-diag-section][hidden],
+	#siteintelix-server-diagnostics-page [data-sitx-diag-panel][hidden],
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-disclosure__content[hidden] {
+		display: block !important;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle {
+		background: #fff !important;
+		color: #000 !important;
+		grid-template-columns: 1fr auto;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .si-icon,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__toggle > .dashicons,
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-section__counts {
+		display: none;
+	}
+
+	#siteintelix-server-diagnostics-page .sitx-serverdiag-virtual-list {
+		contain: none;
+		max-height: none !important;
+		overflow: visible !important;
+	}
+
+	#siteintelix-server-diagnostics-page a {
+		color: #000 !important;
+		text-decoration: underline;
+	}
+}

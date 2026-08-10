@@ -1,0 +1,119 @@
+.sitx-version-container {
+	display: grid;
+	gap: var(--si-space-5, 24px);
+}
+
+.sitx-version-warning,
+.sitx-version-upload,
+.sitx-version-group,
+.sitx-version-history {
+	border: 1px solid var(--si-border, #dcdcde);
+	border-radius: var(--si-radius-lg, 8px);
+	padding: var(--si-space-5, 24px);
+}
+
+.sitx-version-warning {
+	background: var(--si-warning-bg, #fcf9e8);
+	border-color: #dba617;
+}
+
+.sitx-version-warning h2,
+.sitx-version-upload h2,
+.sitx-version-history h2,
+.sitx-version-section-heading h2,
+.sitx-version-group h3 {
+	margin-top: 0;
+}
+
+.sitx-version-upload,
+.sitx-version-upload form,
+.sitx-version-section-heading,
+.sitx-version-group > header,
+.sitx-version-actions {
+	align-items: center;
+	display: flex;
+	gap: var(--si-space-4, 16px);
+	justify-content: space-between;
+}
+
+.sitx-version-upload form {
+	flex-wrap: wrap;
+}
+
+.sitx-version-file {
+	display: grid;
+	font-weight: 600;
+	gap: var(--si-space-2, 8px);
+}
+
+.sitx-version-file input {
+	font-weight: 400;
+}
+
+.sitx-version-section-heading {
+	margin-bottom: var(--si-space-4, 16px);
+}
+
+.sitx-version-section-heading p,
+.sitx-version-upload p {
+	color: var(--si-muted, #646970);
+	margin-bottom: 0;
+}
+
+.sitx-version-group {
+	margin-bottom: var(--si-space-4, 16px);
+}
+
+.sitx-version-group > header {
+	margin-bottom: var(--si-space-4, 16px);
+}
+
+.sitx-version-group > header > div:last-child {
+	align-items: center;
+	display: flex;
+	gap: var(--si-space-2, 8px);
+}
+
+.sitx-version-table td > small,
+.sitx-version-history td > small {
+	display: block;
+	margin-top: var(--si-space-1, 4px);
+}
+
+.sitx-version-error {
+	color: var(--si-danger, #b32d2e);
+}
+
+.sitx-version-actions {
+	justify-content: flex-start;
+}
+
+.siteintelix-version-toolbar-form[hidden] {
+	display: none !important;
+}
+
+#wpadminbar .siteintelix-version-toolbar-action > .ab-item::before {
+	content: "\f463";
+	font: normal 16px/1 dashicons;
+	margin-right: 6px;
+	vertical-align: -2px;
+}
+
+@media (max-width: 782px) {
+	.sitx-version-upload,
+	.sitx-version-section-heading,
+	.sitx-version-group > header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.sitx-version-upload form {
+		align-items: stretch;
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.sitx-version-table {
+		min-width: 900px;
+	}
+}

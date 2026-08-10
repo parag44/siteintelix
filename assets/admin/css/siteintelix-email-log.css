@@ -1,0 +1,82 @@
+.sitx-email-modal__status {
+	min-height: 20px;
+	color: var(--si-text-muted, #64748b);
+}
+
+.sitx-email-modal [data-siteintelix-email-preview-retry] {
+	margin-bottom: 12px;
+}
+
+.sitx-email-log-table td,
+.sitx-email-log-table th {
+	vertical-align: middle;
+}
+
+.sitx-action-dialog {
+	align-items: center;
+	background: rgba(15, 23, 42, .62);
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	padding: 20px;
+	position: fixed;
+	z-index: 100100;
+}
+
+.sitx-action-dialog__panel {
+	background: var(--si-surface, #fff);
+	border-radius: 12px;
+	box-shadow: 0 24px 64px rgba(15, 23, 42, .3);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	max-width: 480px;
+	padding: 24px;
+	width: 100%;
+}
+
+.sitx-action-dialog__panel h2,
+.sitx-action-dialog__panel p,
+.sitx-action-dialog__panel input {
+	flex-basis: 100%;
+}
+
+.sitx-action-dialog__actions {
+	display: flex;
+	flex-basis: 100%;
+	gap: 12px;
+	justify-content: flex-end;
+}
+
+.sitx-action-dialog .si-button {
+	border-radius: var(--si-radius-md, 6px);
+	min-height: 38px;
+	padding: 0 16px;
+}
+
+.sitx-action-dialog .si-button--primary {
+	background: var(--si-primary, #2271b1);
+	border-color: var(--si-primary, #2271b1);
+	color: #fff;
+}
+
+.sitx-action-dialog .si-button--secondary {
+	background: var(--si-surface, #fff);
+	border-color: var(--si-border, #dcdcde);
+	color: var(--si-text, #1d2327);
+}
+
+@media (max-width: 782px) {
+	.sitx-email-log-actions {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sitx-email-modal,
+	.sitx-email-modal__panel {
+		transition: none !important;
+	}
+}

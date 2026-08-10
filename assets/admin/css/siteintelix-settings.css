@@ -1,0 +1,146 @@
+[data-siteintelix-settings-clear] {
+	white-space: nowrap;
+}
+
+[data-siteintelix-settings-panel][hidden],
+.sitx-setting-row[hidden],
+.sitx-side-card[hidden] {
+	display: none !important;
+}
+
+/* Debug Log settings use the same predictable two-column control rhythm. */
+#siteintelix-debug-log-settings .sitx-settings-content-grid {
+	gap: var(--si-space-5);
+	grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+#siteintelix-debug-log-settings .sitx-settings-main {
+	gap: var(--si-space-3);
+	min-width: 0;
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row {
+	align-items: center;
+	border-radius: var(--si-radius-lg);
+	display: grid;
+	gap: var(--si-space-5);
+	grid-template-columns: minmax(0, 1fr) minmax(220px, 290px);
+	min-width: 0;
+	padding: var(--si-space-4) var(--si-space-5);
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row__copy {
+	min-width: 0;
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row h3 {
+	font-size: 14px !important;
+	margin-bottom: var(--si-space-1) !important;
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row p {
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row__value,
+#siteintelix-debug-log-settings .sitx-setting-row__code {
+	background: var(--si-surface-subtle);
+	border: 1px solid var(--si-border);
+	border-radius: var(--si-radius-md);
+	color: var(--si-text);
+	display: block;
+	font-size: 12px;
+	justify-self: stretch;
+	line-height: 1.45;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	padding: var(--si-space-3);
+	white-space: normal;
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row__value {
+	text-align: center;
+}
+
+#siteintelix-debug-log-settings .sitx-settings-toggle {
+	align-items: center;
+	background: var(--si-surface-subtle);
+	border: 1px solid var(--si-border);
+	border-radius: var(--si-radius-md);
+	cursor: pointer;
+	display: flex;
+	gap: var(--si-space-3);
+	justify-content: space-between;
+	justify-self: stretch;
+	min-height: 46px;
+	padding: var(--si-space-2) var(--si-space-3);
+}
+
+#siteintelix-debug-log-settings .sitx-settings-toggle:hover {
+	background: var(--si-primary-soft);
+	border-color: #9ec8f2;
+}
+
+#siteintelix-debug-log-settings .sitx-settings-toggle__text {
+	color: var(--si-text);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+#siteintelix-debug-log-settings .sitx-settings-toggle--danger .sitx-settings-toggle__text {
+	color: var(--si-danger-text);
+}
+
+#siteintelix-debug-log-settings .sitx-settings-toggle--warning .sitx-settings-toggle__text {
+	color: var(--si-warning-text);
+}
+
+#siteintelix-debug-log-settings .sitx-toggle {
+	flex: 0 0 44px;
+}
+
+#siteintelix-debug-log-settings .sitx-toggle input:checked + .sitx-toggle__slider {
+	background: var(--si-primary);
+}
+
+#siteintelix-debug-log-settings .sitx-setting-row__number {
+	justify-self: stretch;
+	max-width: 100% !important;
+	min-width: 0 !important;
+	width: 100%;
+}
+
+#siteintelix-debug-log-settings .si-badge {
+	justify-self: end;
+	max-width: 100%;
+	text-align: center;
+	white-space: normal;
+}
+
+@media (max-width: 782px) {
+	.sitx-settings-topbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	#siteintelix-debug-log-settings .sitx-settings-content-grid,
+	#siteintelix-debug-log-settings .sitx-setting-row {
+		grid-template-columns: 1fr;
+	}
+
+	#siteintelix-debug-log-settings .sitx-setting-row {
+		gap: var(--si-space-3);
+		padding: var(--si-space-4);
+	}
+
+	#siteintelix-debug-log-settings .si-badge {
+		justify-self: start;
+	}
+}
+
+@media (min-width: 783px) and (max-width: 1100px) {
+	#siteintelix-debug-log-settings .sitx-settings-content-grid {
+		grid-template-columns: 1fr;
+	}
+}
